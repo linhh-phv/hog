@@ -1,0 +1,100 @@
+name: Release & bump Homebrew formula
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v0.2.0)'
+        required: true
+
+jobs:
+  bump-formula:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag and version
+        id: ver
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG"        >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing $TAG (version $VERSION)"
+
+      - name: Compute tarball SHA256
+        id: sha
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          URL="https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
+
+          # GitHub may take a few seconds to make the tag tarball reachable
+          for attempt in 1 2 3 4 5; do
+            if curl -fsSL "$URL" -o /tmp/source.tar.gz; then
+              break
+            fi
+            echo "attempt $attempt failed, retrying in 5s..."
+            sleep 5
+          done
+
+          if [[ ! -s /tmp/source.tar.gz ]]; then
+            echo "::error::Failed to download $URL after 5 attempts"
+            exit 1
+          fi
+
+          SHA=$(sha256sum /tmp/source.tar.gz | awk '{print $1}')
+          echo "sha=$SHA"   >> "$GITHUB_OUTPUT"
+          echo "url=$URL"   >> "$GITHUB_OUTPUT"
+          echo "SHA256: $SHA"
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Update formula
+        working-directory: tap
+        run: |
+          FORMULA="Formula/lps.rb"
+          VERSION="${{ steps.ver.outputs.version }}"
+          URL="${{ steps.sha.outputs.url }}"
+          SHA="${{ steps.sha.outputs.sha }}"
+
+          if [[ ! -f "$FORMULA" ]]; then
+            echo "::error::$FORMULA not found in tap repo"
+            exit 1
+          fi
+
+          # Bump url, sha256, version. Preserves the rest of the formula
+          # (including custom Ruby methods like detect_and_clean_duplicates!).
+          sed -i -E "s|^(  url \").+(\")$|\1${URL}\2|"     "$FORMULA"
+          sed -i -E "s|^(  sha256 \").+(\")$|\1${SHA}\2|"  "$FORMULA"
+          sed -i -E "s|^(  version \").+(\")$|\1${VERSION}\2|" "$FORMULA"
+
+          echo "--- updated $FORMULA ---"
+          cat "$FORMULA"
+
+      - name: Commit and push
+        working-directory: tap
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet; then
+            echo "No formula changes — nothing to commit."
+            exit 0
+          fi
+
+          git add Formula/lps.rb
+          git commit -m "chore: bump lps to ${{ steps.ver.outputs.tag }}
+
+          Triggered by release of ${{ github.repository }} ${{ steps.ver.outputs.tag }}.
+          See https://github.com/${{ github.repository }}/releases/tag/${{ steps.ver.outputs.tag }}"
+          git push
