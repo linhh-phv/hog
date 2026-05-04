@@ -35,6 +35,56 @@ for tool in curl lsof ps awk; do
   command -v "$tool" >/dev/null 2>&1 || error "missing required tool: $tool"
 done
 
+# Detect ANY existing lps installation (brew or manual) and remove it,
+# so the user ends up with exactly one copy after this script runs.
+cleanup_existing() {
+  local existing
+  existing=$(command -v -a lps 2>/dev/null \
+    || which -a lps 2>/dev/null \
+    || true)
+  [[ -z "$existing" ]] && return 0
+
+  local removed=0
+  while IFS= read -r path; do
+    [[ -z "$path" || ! -e "$path" ]] && continue
+
+    local resolved
+    resolved=$(readlink "$path" 2>/dev/null || echo "$path")
+
+    # Brew install: symlink → Cellar, or path under brew prefix
+    if [[ "$resolved" == */Cellar/lps/* ]] \
+       || [[ "$path" == */homebrew/bin/lps ]] \
+       || [[ "$path" == /opt/homebrew/* ]] \
+       || [[ "$path" == /home/linuxbrew/* ]]; then
+      if command -v brew >/dev/null 2>&1; then
+        log "found brew install at $path — running 'brew uninstall lps'"
+        brew uninstall --force lps >/dev/null 2>&1 \
+          || warn "brew uninstall failed; continuing"
+        removed=$((removed + 1))
+      fi
+      continue
+    fi
+
+    # Manual install: rm
+    log "found manual install at $path — removing"
+    local dir
+    dir=$(dirname "$path")
+    if [[ -w "$dir" ]]; then
+      rm -f "$path"
+    elif command -v sudo >/dev/null 2>&1; then
+      sudo rm -f "$path"
+    else
+      warn "cannot remove $path (no write access, no sudo); duplicate may remain"
+      continue
+    fi
+    removed=$((removed + 1))
+  done <<< "$existing"
+
+  [[ $removed -gt 0 ]] && log "removed $removed existing install(s)"
+}
+
+cleanup_existing
+
 # Need write access to INSTALL_DIR
 SUDO=""
 if [[ ! -w "$INSTALL_DIR" ]]; then
