@@ -37,13 +37,21 @@ The `[orphan]` tag flags processes whose parent terminal died (PPID=1) but kept 
 
 ## Install
 
-### One-liner (macOS / Linux)
+### Homebrew (recommended, macOS / Linux)
+
+```bash
+brew install linhh-phv/tap/lps
+```
+
+Upgrade later with `brew upgrade lps`, uninstall with `brew uninstall lps`.
+
+### Curl one-liner
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/linhh-phv/lps/main/install.sh | bash
 ```
 
-This installs `lps` to `/usr/local/bin/lps`. Override with `INSTALL_DIR=~/bin`.
+Installs to `/usr/local/bin/lps`. Override with `INSTALL_DIR=~/bin`.
 
 ### Manual
 
