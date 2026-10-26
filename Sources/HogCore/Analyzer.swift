@@ -1,0 +1,385 @@
+import Foundation
+
+/// Turns a `Scan` into a `Snapshot`: items + facts, rules, findings, owners, headline (design sections 3.4–7).
+public struct Analyzer: Sendable {
+    public var catalog: Catalog
+    public var rules: RuleSet
+    public var explain: Explanations
+    public var lang: Lang
+    /// Include every own process in `processes` (`--full`), not only significant ones.
+    public var full: Bool
+    /// `launchctl print` for a label; injected so tests do not call launchctl.
+    public var launchdPrint: @Sendable (String) -> String?
+
+    public static let significantFootprint: Int64 = 50 * 1_048_576
+    public static let significantCPU: Double = 5
+
+    public init(catalog: Catalog, rules: RuleSet, explain: Explanations, lang: Lang, full: Bool = false,
+                launchdPrint: @escaping @Sendable (String) -> String? = { _ in nil }) {
+        self.catalog = catalog; self.rules = rules; self.explain = explain; self.lang = lang; self.full = full
+        self.launchdPrint = launchdPrint
+    }
+
+    /// Bundled data plus `~/.config/hog/*.d` overrides.
+    public static func standard(lang: Lang, full: Bool = false, home: String = NSHomeDirectory(),
+                                external: ExternalSensors = ExternalSensors()) -> Analyzer {
+        Analyzer(catalog: .load(.standard("catalog", home: home)), rules: .load(.standard("rules", home: home)),
+                 explain: .load(.standard("explain", home: home)), lang: lang, full: full,
+                 launchdPrint: { external.launchdPrint(label: $0) })
+    }
+
+    // MARK: - Analysis
+
+    public func analyze(_ scan: Scan) -> Snapshot {
+        let own = Ownership.resolve(scan)
+        let selfChain = Ownership.ancestors(of: scan.selfPid, in: scan.processes)
+        let selfSet = Set([scan.selfPid] + selfChain.chain.filter { $0 != 1 })
+        let catalogOf = matchCatalog(scan)
+        let sessionPids = Set(own.values.compactMap(\.session)).filter { own[$0]?.session == $0 }
+
+        // Items
+        var items: [Item] = []
+        var itemOfPid: [Int32: String] = [:]
+        for (pid, p) in scan.processes {
+            let isSession = sessionPids.contains(pid)
+            let ownUid = p.uid.map { $0 == scan.selfUid }
+            let significant = (p.footprintBytes ?? 0) >= Self.significantFootprint || catalogOf[pid] != nil
+                || own[pid]?.orphan == true || !(scan.network?.listening[pid] ?? []).isEmpty
+            guard isSession || (ownUid == true && significant) else { continue }
+            let id = isSession ? "claude:\(pid)" : "proc:\(pid):\(p.startSec ?? 0)"
+            itemOfPid[pid] = id
+            items.append(Item(id: id, kind: isSession ? .claudeSession : .process,
+                              label: label(pid: pid, p: p, catalogId: catalogOf[pid], ownership: own[pid], scan: scan),
+                              catalogId: catalogOf[pid], pids: [pid], ownerId: own[pid]?.ownerId,
+                              footprintBytes: Measured(p.footprintBytes), residentRatio: Measured(residentRatio(p))))
+        }
+        for c in scan.containers ?? [] {
+            items.append(Item(id: "ctr:\(c.id.prefix(12))", kind: .container, label: c.name,
+                              catalogId: catalog.match(MatchSubject(containerImage: c.image)), pids: []))
+        }
+
+        // Facts
+        for i in items.indices {
+            items[i].facts = facts(for: items[i], scan: scan, own: own, catalogOf: catalogOf, selfSet: selfSet, items: items)
+        }
+
+        // Rules → protection + findings
+        var findings: [Finding] = []
+        for i in items.indices {
+            let outcome = RuleEngine.run(rules.rules, kind: items[i].kind, facts: items[i].facts)
+            items[i].protection = Measured(outcome.protection)
+            guard let verdict = outcome.verdict else { continue }
+            findings.append(finding(for: items[i], outcome: outcome, verdict: verdict))
+        }
+        findings.sort { a, b in
+            if a.verdict != b.verdict { return rank(a.verdict) > rank(b.verdict) }
+            return footprint(of: a.itemId, items) > footprint(of: b.itemId, items)
+        }
+        items.sort { ($0.footprintBytes.value ?? -1, $0.id) > ($1.footprintBytes.value ?? -1, $1.id) }
+
+        let owners = buildOwners(scan: scan, own: own)
+        let processes = buildProcesses(scan: scan, own: own, catalogOf: catalogOf, itemOfPid: itemOfPid)
+        let memory = MemoryInfo(freeBytes: Measured(scan.system.freeBytes), wiredBytes: Measured(scan.system.wiredBytes),
+                                compressorBytes: Measured(scan.system.compressorBytes),
+                                compressedStoredBytes: Measured(scan.system.compressedStoredBytes),
+                                swapUsedBytes: Measured(scan.system.swapUsedBytes), swapTotalBytes: Measured(scan.system.swapTotalBytes),
+                                pressure: Measured(SystemReader.pressure(scan.system.pressureLevel)),
+                                unreadableProcessCount: scan.processes.values.filter { $0.footprintBytes == nil }.count)
+        var snapshot = Snapshot(
+            lang: lang, takenAt: scan.takenAt,
+            hog: HogInfo(pid: scan.selfPid, ancestors: selfChain.chain, ancestorsComplete: selfChain.complete,
+                         selfFootprintBytes: Measured(scan.processes[scan.selfPid]?.footprintBytes)),
+            host: HostInfo(arch: Self.arch, ncpu: scan.system.ncpu, memTotalBytes: scan.system.memTotalBytes,
+                           uptimeS: Measured(scan.system.uptimeS)),
+            memory: memory,
+            cpu: CPUInfo(userPct: Measured(scan.cpu?.user), sysPct: Measured(scan.cpu?.sys), idlePct: Measured(scan.cpu?.idle),
+                         load: Measured(scan.system.load)),
+            headline: Headline(level: .ok, text: "", glossaryIds: []),
+            sensors: scan.sensors, owners: owners, processes: processes, items: items, findings: findings,
+            warnings: (catalog.warnings + rules.warnings + explain.warnings).map(\.description))
+        snapshot.headline = headline(snapshot)
+        return snapshot
+    }
+
+    static var arch: String {
+        #if arch(arm64)
+        "arm64"
+        #else
+        "x86_64"
+        #endif
+    }
+
+    // MARK: Catalog
+
+    /// Two passes so `parent_catalog` clauses can use the parent's match.
+    func matchCatalog(_ scan: Scan) -> [Int32: String] {
+        var result: [Int32: String] = [:]
+        for pass in 0..<2 {
+            for (pid, p) in scan.processes {
+                let subject = MatchSubject(exeName: p.exePath.map { ($0 as NSString).lastPathComponent },
+                                           exePath: p.exePath, args: p.args?.joined(separator: " "),
+                                           parentCatalog: pass == 0 ? nil : p.ppid.flatMap { result[$0] },
+                                           listenPorts: (scan.network?.listening[pid] ?? []).map(\.port),
+                                           vscodeRole: scan.vscode?.roles[pid])
+                if let id = catalog.match(subject) { result[pid] = id }
+            }
+        }
+        return result
+    }
+
+    // MARK: Facts
+
+    func facts(for item: Item, scan: Scan, own: [Int32: ProcessOwnership], catalogOf: [Int32: String],
+               selfSet: Set<Int32>, items: [Item]) -> [String: FactValue] {
+        var f: [String: FactValue] = [:]
+        let entry = item.catalogId.value.flatMap { catalog.entries[$0] }
+        f["catalog.id"] = item.catalogId.value.map(FactValue.string) ?? .null
+        f["catalog.family"] = entry.map { .string($0.family) } ?? .null
+        f["catalog.detached"] = .bool(entry?.detachedByDesign ?? false)
+
+        if item.kind == .container, let c = scan.containers?.first(where: { "ctr:\($0.id.prefix(12))" == item.id }) {
+            f["container.restart_count"] = c.restartCount.map { .int(Int64($0)) } ?? .null
+            f["container.restart_policy"] = c.restartPolicy.map(FactValue.string) ?? .null
+            f["container.state"] = .string(c.state)
+            f["container.uptime_s"] = (c.state == "running" ? c.startedAt : nil).map { .int(Int64(scan.takenAt.timeIntervalSince($0))) } ?? .null
+            if let net = scan.network, !c.publishedPorts.isEmpty {
+                f["container.connections"] = .int(Int64(net.connections.filter { c.publishedPorts.contains($0.localPort) }.count))
+            } else {
+                f["container.connections"] = .null
+            }
+            f["owner.kind"] = .string("none")
+            f["footprint_bytes"] = .null
+            return f
+        }
+
+        guard let pid = item.pids.first, let p = scan.processes[pid] else { return f }
+        let o = own[pid]
+        let age = p.startDate.map { Int64(scan.takenAt.timeIntervalSince($0)) }
+        f["age_s"] = age.map(FactValue.int) ?? .null
+        f["orphan"] = o?.orphan.map(FactValue.bool) ?? .null
+        f["footprint_bytes"] = p.footprintBytes.map(FactValue.int) ?? .null
+        f["resident_ratio"] = residentRatio(p).map(FactValue.double) ?? .null
+        f["cpu.now_pct"] = scan.cpuNowPct[pid].map(FactValue.double) ?? .null
+        if let ns = p.cpuTimeNs, let age, age > 0 {
+            f["cpu.avg_pct"] = .double(Double(ns) / 1e9 / Double(age) * 100)
+        } else {
+            f["cpu.avg_pct"] = .null
+        }
+        if let net = scan.network {
+            f["net.established"] = .int(Int64(net.connections.filter { $0.pid == pid }.count))
+            f["net.listen_count"] = .int(Int64(net.listening[pid]?.count ?? 0))
+        } else {
+            f["net.established"] = .null
+            f["net.listen_count"] = .null
+        }
+        f["self.ancestor"] = .bool(selfSet.contains(pid))
+        f["own"] = p.uid.map { .bool($0 == scan.selfUid) } ?? .null
+        f["exe.name"] = p.exePath.map { .string(($0 as NSString).lastPathComponent) } ?? .null
+        f["exe.system"] = Ownership.isSystemExecutable(p.exePath).map(FactValue.bool) ?? .null
+
+        // Owner facts: the session for session items and their descendants, else window / app / none.
+        let session = item.kind == .claudeSession ? pid : o?.session
+        if let s = session, let cs = scan.sessions?[s] {
+            f["owner.kind"] = .string(item.kind == .claudeSession ? "claude-session" : "claude-session")
+            let busy = cs.busy
+            let idle: Int64? = busy == true ? 0 : cs.statusUpdatedAt.map { Int64(scan.takenAt.timeIntervalSince($0)) }
+            f["session.busy"] = busy.map(FactValue.bool) ?? .null
+            f["session.idle_s"] = idle.map(FactValue.int) ?? .null
+            f["owner.busy"] = f["session.busy"]
+            f["owner.idle_s"] = f["session.idle_s"]
+        } else if o?.window != nil {
+            f["owner.kind"] = .string("vscode-window")
+            f["owner.busy"] = .null  // no busy/idle signal for a VS Code window
+            f["owner.idle_s"] = .null
+        } else if o?.app != nil {
+            f["owner.kind"] = .string("app")
+            f["owner.busy"] = .null
+            f["owner.idle_s"] = .null
+        } else {
+            f["owner.kind"] = .string("none")
+            f["owner.busy"] = .bool(false)
+            f["owner.idle_s"] = .null
+        }
+
+        // Siblings: same catalog entry in other VS Code windows.
+        if let cid = item.catalogId.value {
+            let otherWindows = Set(items.compactMap { other -> Int? in
+                guard other.id != item.id, other.catalogId.value == cid, let opid = other.pids.first else { return nil }
+                return own[opid]?.window
+            }).subtracting([o?.window].compactMap { $0 })
+            f["siblings.same_catalog_other_windows"] = .int(Int64(otherWindows.count))
+        } else {
+            f["siblings.same_catalog_other_windows"] = .null
+        }
+
+        f["watchman.subscriptions"] = item.catalogId.value == "watchman" ? (scan.watchman?.subscriptions.map { .int(Int64($0)) } ?? .null) : .null
+
+        if let label = scan.launchd?[pid] {
+            f["launchd.label"] = .string(label)
+            f["launchd.restarts_after_stop"] = launchdPrint(label).flatMap { LaunchctlParser.restartsAfterStop(printOutput: $0) }
+                .map(FactValue.bool) ?? .null
+        } else {
+            f["launchd.label"] = .null
+            f["launchd.restarts_after_stop"] = scan.launchd == nil ? .null : .bool(false)
+        }
+        return f
+    }
+
+    func residentRatio(_ p: RawProcess) -> Double? {
+        guard let fp = p.footprintBytes, let rs = p.residentBytes, fp > 0 else { return nil }
+        return min(1, Double(rs) / Double(fp))
+    }
+
+    // MARK: Findings
+
+    func finding(for item: Item, outcome: RuleEngine.Outcome, verdict: Verdict) -> Finding {
+        let reason = outcome.fired.compactMap { $0.reason.text(lang) }.map { Format.fill($0, facts: item.facts, lang: lang) }
+            .joined(separator: " ")
+        let used = Set(outcome.fired.flatMap(\.when.facts)).subtracting(FactNames.structural)
+        let evidence = item.facts.filter { used.contains($0.key) && !$0.value.isNull }
+        let entry = item.catalogId.value.flatMap { catalog.entries[$0] }
+        var strategy = entry?.stop.strategy ?? (item.kind == .claudeSession ? .manual : (item.kind == .container ? .dockerContainer : .signal))
+        var effect = entry?.stopEffect.text(lang) ?? (lang == .vi ? "Chưa có trong danh mục: chưa biết tắt thì ảnh hưởng gì."
+                                                                 : "Not in the catalog yet: the effect of stopping it is unknown.")
+        if item.facts["launchd.label"].map({ !$0.isNull }) == true, item.facts["launchd.restarts_after_stop"] != .bool(false) {
+            strategy = .manual
+            effect += lang == .vi ? " launchd sẽ bật lại nó nếu chỉ dừng." : " launchd would start it again if it were only stopped."
+        }
+        return Finding(itemId: item.id, verdict: verdict, confidence: outcome.confidence, rules: outcome.fired.map(\.id),
+                       reason: reason, evidence: evidence, unmeasured: outcome.unmeasured,
+                       stop: StopAdvice(strategy: strategy, respawns: entry?.respawns, effect: effect), blockedBy: outcome.blockedBy)
+    }
+
+    func rank(_ v: Verdict) -> Int { switch v { case .mayStop: 3; case .ask: 2; case .watch: 1; case .info: 0 } }
+
+    func footprint(of itemId: String, _ items: [Item]) -> Int64 {
+        items.first { $0.id == itemId }?.footprintBytes.value ?? 0
+    }
+
+    func label(pid: Int32, p: RawProcess, catalogId: String?, ownership: ProcessOwnership?, scan: Scan) -> String {
+        if let id = catalogId, let name = catalog.entries[id]?.name.text(lang) {
+            if id == "claude-code-session", let project = ownership?.project { return "\(name) — \(project)" }
+            return name
+        }
+        let exe = p.exePath.map { ($0 as NSString).lastPathComponent } ?? "pid \(pid)"
+        if let project = ownership?.project { return "\(exe) — \(project)" }
+        return exe
+    }
+
+    // MARK: Owners
+
+    func buildOwners(scan: Scan, own: [Int32: ProcessOwnership]) -> [Owner] {
+        struct Acc { var selfBytes: Int64 = 0; var totalBytes: Int64 = 0; var cpu: Double = 0; var cpuMeasured = false }
+        var acc: [String: Acc] = [:]
+        var meta: [String: Owner] = [:]
+        for (pid, p) in scan.processes {
+            guard let o = own[pid], let fp = p.footprintBytes else { continue }
+            let cpu = scan.cpuNowPct[pid]
+            var chain: [String] = []
+            if let app = o.app {
+                let id = "app:\(Ownership.slug(app))"
+                chain.append(id)
+                meta[id] = meta[id] ?? Owner(id: id, kind: .app, label: app)
+            }
+            if let w = o.window {
+                let id = "vscode:\(w)"
+                chain.append(id)
+                if meta[id] == nil {
+                    let title = scan.windows?[w]?.title
+                    meta[id] = Owner(id: id, kind: .vscodeWindow, label: title ?? "VS Code [\(w)]",
+                                     parent: o.app.map { "app:\(Ownership.slug($0))" })
+                }
+            }
+            if let s = o.session {
+                let id = "claude:\(s)"
+                chain.append(id)
+                if meta[id] == nil {
+                    let project = own[s]?.project
+                    meta[id] = Owner(id: id, kind: .claudeSession, label: "Claude" + (project.map { " — \($0)" } ?? ""),
+                                     parent: own[s].flatMap { $0.window.map { "vscode:\($0)" } ?? $0.app.map { "app:\(Ownership.slug($0))" } },
+                                     project: project)
+                }
+            }
+            for (i, id) in chain.enumerated() {
+                var a = acc[id] ?? Acc()
+                a.totalBytes += fp
+                if i == chain.count - 1 { a.selfBytes += fp }
+                if let cpu { a.cpu += cpu; a.cpuMeasured = true }
+                acc[id] = a
+            }
+        }
+        return meta.values.map { o in
+            var o = o
+            let a = acc[o.id] ?? Acc()
+            o.selfFootprintBytes = a.selfBytes
+            o.totalFootprintBytes = a.totalBytes
+            o.totalCpuPct = a.cpuMeasured ? Measured(a.cpu) : nil
+            return o
+        }.sorted { ($0.totalFootprintBytes, $0.id) > ($1.totalFootprintBytes, $1.id) }
+    }
+
+    // MARK: Processes
+
+    func buildProcesses(scan: Scan, own: [Int32: ProcessOwnership], catalogOf: [Int32: String], itemOfPid: [Int32: String]) -> [ProcessRecord] {
+        var out: [ProcessRecord] = []
+        for (pid, p) in scan.processes {
+            let listen = scan.network?.listening[pid] ?? []
+            let cpuNow = scan.cpuNowPct[pid]
+            let significant = full ? p.uid == scan.selfUid
+                : ((p.footprintBytes ?? 0) >= Self.significantFootprint || (cpuNow ?? 0) >= Self.significantCPU
+                   || !listen.isEmpty || itemOfPid[pid] != nil)
+            guard significant else { continue }
+            let o = own[pid]
+            let age = p.startDate.map { Int64(scan.takenAt.timeIntervalSince($0)) }
+            out.append(ProcessRecord(
+                pid: pid, ppid: Measured(p.ppid), own: Measured(p.uid.map { $0 == scan.selfUid }),
+                exe: Measured(p.exePath.map { ($0 as NSString).lastPathComponent }),
+                exePath: Measured(p.exePath.map { Privacy.scrubPath($0, home: scan.home) }),
+                args: Measured(p.args.map { Privacy.scrubArgs($0, home: scan.home) }),
+                startedAt: Measured(p.startDate.map { Date(timeIntervalSince1970: $0.timeIntervalSince1970.rounded(.down)) }),
+                ageS: Measured(age), footprintBytes: Measured(p.footprintBytes), residentBytes: Measured(p.residentBytes),
+                residentRatio: Measured(residentRatio(p)), compressedBytes: nil,
+                cpu: ProcessCPU(nowPct: Measured(cpuNow),
+                                avgPct: Measured(p.cpuTimeNs.flatMap { ns in age.flatMap { $0 > 0 ? Double(ns) / 1e9 / Double($0) * 100 : nil } })),
+                cwd: Measured(p.cwd.map { Privacy.scrubPath($0, home: scan.home) }), project: Measured(o?.project),
+                orphan: Measured(o?.orphan),
+                net: ProcessNet(listen: listen, established: Measured(scan.network.map { n in n.connections.filter { $0.pid == pid }.count })),
+                catalogId: Measured(catalogOf[pid]), ownerId: Measured(o?.ownerId), itemId: Measured(itemOfPid[pid])))
+        }
+        return out.sorted { ($0.footprintBytes.value ?? -1, $0.pid) > ($1.footprintBytes.value ?? -1, $1.pid) }
+    }
+
+    // MARK: Headline
+
+    func headline(_ s: Snapshot) -> Headline {
+        guard let t = explain.headlines else { return Headline(level: .ok, text: "", glossaryIds: []) }
+        let suggestions = s.findings.filter { $0.verdict == .mayStop }
+        let itemsById = Dictionary(uniqueKeysWithValues: s.items.map { ($0.id, $0) })
+        let list = suggestions.prefix(5).compactMap { f -> String? in
+            guard let i = itemsById[f.itemId] else { return nil }
+            return i.footprintBytes.value.map { "\(i.label) (\(Format.bytes($0, lang)))" } ?? i.label
+        }.joined(separator: ", ")
+        // Biggest: top-level owners (apps) and items without an app.
+        var groups: [(String, Int64)] = s.owners.filter { $0.parent.value == nil }.map { ($0.label, $0.totalFootprintBytes) }
+        for i in s.items where i.ownerId.value == nil {
+            if let b = i.footprintBytes.value { groups.append((i.label, b)) }
+        }
+        groups.sort { $0.1 > $1.1 }
+        func top(_ n: Int) -> String { groups.prefix(n).map { "\($0.0) (\(Format.bytes($0.1, lang)))" }.joined(separator: ", ") }
+        let mem = s.memory
+        let extra: [String: String] = [
+            "top1": top(1), "top3": top(3), "list": list, "n": String(suggestions.count),
+            "compressed_stored": mem.compressedStoredBytes.value.map { Format.bytes($0, lang) } ?? "?",
+            "compressor": mem.compressorBytes.value.map { Format.bytes($0, lang) } ?? "?",
+            "swap": mem.swapUsedBytes.value.map { Format.bytes($0, lang) } ?? "?",
+        ]
+        let (template, level): (HeadlineTemplates.Template, HeadlineLevel) = switch mem.pressure.value {
+        case .normal?: (suggestions.isEmpty ? t.okClean : t.okSuggest, .ok)
+        case .warn?: (t.warn, .warn)
+        case .critical?: (t.critical, .critical)
+        case nil: (t.unknown, .warn)
+        }
+        let text = Format.fill(template.text.text(lang) ?? "", facts: [:], extra: extra, lang: lang)
+        return Headline(level: level, text: text, glossaryIds: template.glossaryIds)
+    }
+}
