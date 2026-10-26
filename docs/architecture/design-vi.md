@@ -660,3 +660,6 @@ Ghi khi code giai đoạn 1 (task `hog/phase-1`), theo lời user *"sau khi tri�
 | 2026-10-26 | Cảm biến launchd, mục 3.1 | `launchctl print` chỉ gọi cho ứng viên `may-stop`/`ask`, song song | Gọi cho mọi job lớn tốn 0,3 s (mỗi lần là một tiến trình); không ảnh hưởng kết luận vì fact này chỉ quyết định cách dừng |
 | 2026-10-26 | Thời gian, mục 3.1 | Đo bản release trên máy: `hog` ~3 s, `--fast` 0,28–0,30 s | Đạt mục tiêu 4 s và 0,5 s |
 | 2026-10-26 | Dữ liệu đi kèm | 22 mục danh mục, 14 quy tắc, 16 mục thuật ngữ | Bảng ở mục 5.2, 6.2, 7 |
+| 2026-10-26 | `hog ports`, mục 10 | So với `lps` v0.1.0 trên máy thật: khớp 15/15 dòng (PID, cổng, lệnh, dự án); sau đó xoá `legacy/` (đúng kế hoạch mục 11), test đối chiếu trực tiếp thay bằng unit test các luật đặt tên dự án của `lps` | Bản bash không còn dùng; giữ lại chỉ để chạy test là thứ thừa |
+| 2026-10-26 | Câu kết luận, mục 5.1 | Mẫu "có đề xuất" chỉ đếm ("Có N thứ có thể tắt."), không liệt kê | App đã hiện đề xuất thành thẻ ngay dưới; liệt kê làm câu dài gấp đôi (đúng bản mẫu đã duyệt) |
+| 2026-10-26 | Snapshot, mục 4 | Thêm `memory.measured_footprint_bytes` | Nền của thanh RAM trong app; là tổng footprint (có thể vượt RAM), không bao giờ đem trừ |

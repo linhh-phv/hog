@@ -10,10 +10,10 @@ implementation has to differ from it, update the design in the same change.
 
 - `Sources/HogCore/` — everything: sensors, ownership, rules, catalog, explanations, stop planner + safety gates.
 - `Sources/hog/` — the CLI. Thin: parses arguments, calls `HogCore`, prints.
-- `Sources/HogBar/` — the menu bar app (phase 1, later step). Thin, like the CLI.
+- `Sources/HogBar/` — the menu bar app. Thin, like the CLI. UI tokens in `Theme.swift` mirror docs/design/design-system.md.
+- `scripts/` — `build-app.sh` (dist/Hog.app, ad-hoc signed) and `install.sh` (installs for the current user).
 - `Sources/HogCore/Resources/{catalog,rules,explain}/` — data, one JSON file per entry. Never code-like: no commands.
 - `Tests/HogCoreTests/` — Swift Testing. Fixtures in `Tests/HogCoreTests/Fixtures/` are **sanitized** real outputs.
-- `legacy/` — the bash `lps` 0.1.0, kept only until `hog ports` matches it; then delete.
 
 ## Commands
 
