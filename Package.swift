@@ -18,6 +18,10 @@ let package = Package(
             ]
         ),
         .executableTarget(name: "hog", dependencies: ["HogCore"]),
-        .testTarget(name: "HogCoreTests", dependencies: ["HogCore"]),
+        .testTarget(
+            name: "HogCoreTests",
+            dependencies: ["HogCore"],
+            resources: [.copy("Fixtures")]
+        ),
     ]
 )
