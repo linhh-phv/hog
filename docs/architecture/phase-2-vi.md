@@ -66,8 +66,11 @@ mục danh mục nào, hay chưa biết) và một khối JSON:
     chính là tên dự án: `pnpm --dir ~/work/acme dev` → `pnpm --dir … dev`);
   - UUID hoặc chuỗi ngẫu nhiên dài (≥ 20 ký tự, có cả chữ và số) → `…` (id trình duyệt, token phiên);
   - `TÊN=giá-trị` (biến môi trường: `-e DB_PASSWORD=x`, `--env=TOKEN=x`, trong `sh -c`) mà `TÊN` chứa từ bí mật → `TÊN=***`;
-  - header có tên chứa từ bí mật (`X-Api-Key:`, `--header=X-Auth:`) → giá trị theo sau là `***`;
-  - `-u`/`--user` theo sau là `user:mật-khẩu` (có `:`) → `***`, với mọi chương trình; `-u root` giữ nguyên.
+  - header có tên chứa từ bí mật (`X-Api-Key: v`, `x-api-key:v`, `--header=X-Auth: v`) → giá trị là `***`;
+  - `-u`/`--user` kèm `user:mật-khẩu` (tách rời, `-uuser:pw`, `--user=u:pw`) → `***`, với mọi chương trình; `-u root` giữ nguyên;
+  - trong một tham số nhiều lệnh (`sh -c "… && mysql -pX && redis-cli -a Y"`), mỗi lệnh sau `&&`, `||`, `;`, `|` được nhận tên để áp
+    luật `-p`/`-a` của client CSDL; từ tách theo mọi khoảng trắng (cả xuống dòng, tab);
+  - `TÊN=giá-trị` nhận cả tên có `.` và `-` (`--set db.password=x`); JSON `"password": "x"` bị che (cả trong `--json`).
 - **Lớp 2, theo tên riêng hog đã thấy** (`Redactor`, chỉ áp lên giá trị và tên chương trình, không áp lên tên cờ): mọi tên dự án
   (`package.json#name`, thư mục có `.git`…), mọi thành phần thư mục làm việc trong home của mọi tiến trình và phiên Claude (trừ
   `~/Library` — nơi app để dữ liệu, `Application Support/discord` là tên app chứ không phải tên riêng — và thư mục ẩn), các phần một từ của tiêu đề cửa sổ VS Code, tên người dùng, tên máy (`gethostname`,
@@ -128,3 +131,4 @@ Khi người dùng dán `hog.share/1` hay ảnh chụp:
 | 2026-10-26 | Giới hạn kích thước snapshot | Ứng viên "Chưa rõ là gì" luôn được giữ qua bước cắt (như item có đề xuất) | Item chưa rõ 100–149 MB bị cắt trước khi app kịp thấy |
 | 2026-10-26 | App | Kết quả dừng (xong, bị chặn, lỗi) đưa về trang chính để hiện; "‹ Quay lại" từ trang item về "Mọi đề xuất" nếu mở từ đó | Bấm Dừng ở trang mới thì không thấy kết quả |
 | 2026-10-26 | Làm sạch (qa chốt) | Thêm: biến môi trường bí mật, header bí mật, `-u user:pw`; đường dẫn có dấu cách là một khối; tên cờ không bị lớp 2 thay; lớp 2 bỏ `~/Library` và thư mục ẩn; câu mở đầu theo việc hog đã biết thứ này hay chưa; trang item nói rõ khi thứ đó đã thoát | qa tạo tiến trình thử: `-e DB_PASSWORD=…`, `X-Api-Key: …`, `-u admin:pw` lọt; chạy thật: bản đầu của lớp 2 cắt vụn `Visual Studio Code.app`, thay chữ `data` trong `--user-data-dir`, coi "Discord" là tên riêng |
+| 2026-10-26 | Che bí mật (qa lần 2) | Mỗi tham số chỉ đọc 1 024 ký tự đầu, tổng tối đa 8 192 (giữ lại 200) | Một tham số 150 KB làm regex URL chạy hàng phút: mọi lệnh `hog` và app treo (lỗi có từ giai đoạn 1) |

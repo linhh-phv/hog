@@ -4,6 +4,10 @@ import Foundation
 public enum Privacy {
     /// Maximum length of the argument string kept in a snapshot.
     public static let maxArgsLength = 200
+    /// Work bound: each argument is cut to this length, and arguments past `maxScannedLength` in total are not read
+    /// (only 200 characters are kept; QA 2026-10-26: a 150 KB argument made the URL regex run for minutes).
+    static let maxArgLength = 1024
+    static let maxScannedLength = 8192
 
     /// Flag names whose values are masked: anything containing one of these words.
     static let secretWords = ["token", "key", "secret", "password", "passwd", "pwd", "pass", "auth", "credential", "bearer", "cookie"]
@@ -37,7 +41,10 @@ public enum Privacy {
         let program = args.first.map { ($0 as NSString).lastPathComponent } ?? ""
         let pwFlags = passwordShortFlags[program] ?? []
         var maskAuth = false
-        for arg in args.map(scrubInline) {
+        var budget = maxScannedLength
+        let bounded = args.prefix { arg in defer { budget -= min(arg.count, maxArgLength) }; return budget > 0 }
+            .map { $0.count > maxArgLength ? String($0.prefix(maxArgLength)) + "…" : $0 }
+        for arg in bounded.map(scrubInline) {
             // "Authorization:" [Bearer|Basic|Token] <secret>, split over several arguments: keep the scheme word, mask the value.
             let lower = arg.lowercased()
             if maskAuth {
@@ -88,6 +95,10 @@ public enum Privacy {
         }
         if let re = try? NSRegularExpression(pattern: #"(?i)([?&](?:[a-z_]*token|[a-z_]*key|secret|password|pass|pwd|auth)=)[^&\s]+"#) {
             s = re.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "$1***")
+        }
+        // JSON: {"password": "x"}, {"api_key":"x"} (QA 2026-10-26).
+        if let re = try? NSRegularExpression(pattern: #"(?i)("[A-Za-z0-9_.-]*(?:token|key|secret|passw|pwd|pass|auth|credential|cookie)[A-Za-z0-9_.-]*"\s*:\s*)"[^"]*""#) {
+            s = re.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "$1\"***\"")
         }
         return s
     }

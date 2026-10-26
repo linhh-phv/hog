@@ -69,24 +69,47 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
     static func shareArgs(_ args: [String], home: String, redactor: Redactor = Redactor(names: [])) -> String {
         var maskNext = false
         var previous = ""
+        var program = ""
+        // One word: credentials by position (`-u user:pw`, a database client's `-p`/`-a`), secret headers, then `shareWord`.
+        func word(_ w: String, startsCommand: Bool) -> String {
+            defer { previous = w }
+            if startsCommand { program = lastComponent(w) }
+            if maskNext { maskNext = false; return "***" }
+            if ["&&", "||", ";", "|"].contains(w) { program = ""; return w }
+            // `-u user:password`, `-uuser:pw`, `--user=u:pw` (curl, wget, httpie… any program).
+            if ["-u", "--user"].contains(previous), w.contains(":"), !w.hasPrefix("-") { return "***" }
+            if w.hasPrefix("--user="), w.contains(":") { return "--user=***" }
+            if w.hasPrefix("-u"), !w.hasPrefix("--"), w.count > 2, w.contains(":") { return "-u***" }
+            if let flag = (Privacy.passwordShortFlags[program] ?? []).first(where: { w.hasPrefix($0) }) {
+                if w == flag { maskNext = true; return w }
+                return flag + "***"
+            }
+            // A header whose name is secret-looking: `X-Api-Key: v` (value next), `x-api-key:v`, `--header=X-Auth: v`.
+            let header = String(w.split(separator: "=").last ?? "")
+            if header.hasSuffix(":"), Privacy.isSecret(String(header.dropLast())) { maskNext = true; return w }
+            if !w.hasPrefix("-"), !w.contains("://"), let colon = w.firstIndex(of: ":"), colon != w.startIndex,
+               w.index(after: colon) != w.endIndex, Privacy.isSecret(String(w[..<colon])) {
+                return String(w[...colon]) + "***"
+            }
+            return shareWord(w, redactor)
+        }
         let words = Privacy.scrubArgList(args, home: home).enumerated().map { i, arg -> String in
-            defer { previous = arg }
-            if i == 0 { return redactor.names(Privacy.scrubUser(lastComponent(arg))) }  // the program name, like `exe`
-            // `-u user:password` (curl, wget, httpie… any program): the value is a credential.
-            if ["-u", "--user"].contains(previous), arg.contains(":"), !arg.hasPrefix("-") { return "***" }
+            if i == 0 { program = lastComponent(arg); previous = arg; return redactor.names(Privacy.scrubUser(lastComponent(arg))) }
             if arg.hasPrefix("/") || arg.hasPrefix("~/") {
+                defer { previous = arg }
                 if maskNext { maskNext = false; return "***" }
                 return shareValue(arg, redactor)
             }
             if arg.hasPrefix("-"), let eq = arg.firstIndex(of: "="), arg[arg.index(after: eq)...].hasPrefix("/") || arg[arg.index(after: eq)...].hasPrefix("~/") {
+                defer { previous = arg }
                 return shareWord(arg, redactor)  // `--dir=/a path/with spaces`: one piece
             }
-            return arg.split(separator: " ", omittingEmptySubsequences: false).map { sub -> String in
-                let w = String(sub)
-                if maskNext { maskNext = false; return "***" }
-                // A header whose name is secret-looking (`X-Api-Key:`, `--header=X-Auth:`): mask the value that follows.
-                if w.hasSuffix(":"), Privacy.isSecret(String(w.split(separator: "=").last ?? "")) { maskNext = true }
-                return shareWord(w, redactor)
+            // Words of one argument, split on any whitespace (`sh -c "…"`, newlines, tabs); after `&&`, `;`… a new command.
+            let parts = arg.split(omittingEmptySubsequences: false, whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" }).map(String.init)
+            var startsCommand = parts.count > 1
+            return parts.map { w -> String in
+                defer { startsCommand = ["&&", "||", ";", "|"].contains(w) }
+                return word(w, startsCommand: startsCommand)
             }.joined(separator: " ")
         }
         return Privacy.truncate(words.joined(separator: " "))
@@ -105,8 +128,8 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
 
     static func shareValue(_ v: String, _ redactor: Redactor = Redactor(names: [])) -> String {
         if v.isEmpty || v == "***" { return v }
-        // NAME=value (environment: `-e DB_PASSWORD=x`, `--env=TOKEN=x`, assignments inside `sh -c`).
-        if let eq = v.firstIndex(of: "="), eq != v.startIndex, v[..<eq].allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" }) {
+        // NAME=value (environment: `-e DB_PASSWORD=x`, `--env=TOKEN=x`, `--set db.password=x`, inside `sh -c`).
+        if let eq = v.firstIndex(of: "="), eq != v.startIndex, v[..<eq].allSatisfy({ $0.isLetter || $0.isNumber || "_.-".contains($0) }) {
             let name = String(v[..<eq])
             return name + "=" + (Privacy.isSecret(name) ? "***" : shareValue(String(v[v.index(after: eq)...]), redactor))
         }

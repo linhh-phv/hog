@@ -120,7 +120,7 @@ struct ItemPage: View {
                 }
                 if let e = entry {
                     Text(e.summary.text(model.lang) ?? "").font(Theme.small).foregroundStyle(Theme.text2).fixedSize(horizontal: false, vertical: true)
-                } else if item?.kind != .claudeSession {
+                } else if let item, item.kind != .claudeSession {
                     Text(model.t("hog chưa biết thứ này là gì (chưa có trong danh mục).", "hog does not know what this is yet (not in the catalog)."))
                         .font(Theme.small).foregroundStyle(Theme.text2)
                 }

@@ -99,6 +99,30 @@ import Testing
         #expect(share(["sh", "-c", "Content-Type: text/plain"]) == "sh -c Content-Type: …", "an ordinary header is not a secret")
     }
 
+    // QA 2 (2026-10-26): credentials inside `sh -c`, other whitespace, headers without a space, dotted names, JSON.
+    @Test func qa2SecretsAreMasked() {
+        func share(_ a: [String]) -> String { ShareInfo.shareArgs(a, home: "/Users/me") }
+        #expect(share(["sh", "-c", "curl -u admin:pw https://x && mysql -uroot -pSECRET && redis-cli -a PW ping"])
+                == "sh -c curl -u *** https://… && mysql -uroot -p*** && redis-cli -a *** ping")
+        #expect(share(["sh", "-c", "echo hi\nDB_PASSWORD=x"]) == "sh -c echo hi DB_PASSWORD=***")
+        #expect(share(["sh", "-c", "echo\thi\tDB_PASSWORD=x"]) == "sh -c echo hi DB_PASSWORD=***")
+        #expect(share(["curl", "-H", "x-api-key:value", "--header", "X-Auth-Token:value"]) == "curl -H x-api-key:*** --header X-Auth-Token:***")
+        #expect(share(["helm", "--set", "db.password=x", "--env", "my-token=x", "--define", "auth.secret=x"])
+                == "helm --set db.password=*** --env my-token=*** --define auth.secret=***")
+        #expect(share(["http", "-uadmin:pw", "--user=u:pw"]) == "http -u*** --user=***")
+        #expect(share(["curl", "--data", #"{"password":"x","user":"me2"}"#]) == #"curl --data {"password":***"#, "masked (more than needed)")
+        #expect(Privacy.scrubArgs(["curl", "--data", #"{"api_key": "x", "n": 1}"#], home: "/Users/me") == #"curl --data {"api_key": "***", "n": 1}"#)
+        #expect(share(["vite", "--host", "localhost:5173"]) == "vite --host localhost:5173", "host:port is not a header")
+    }
+
+    @Test func longArgumentsDoNotHang() {
+        let clock = ContinuousClock()
+        let took = clock.measure { _ = Privacy.scrubArgs(["x", String(repeating: "a", count: 150_000)], home: "/Users/me") }
+        #expect(took < .seconds(1), "took \(took)")
+        let many = clock.measure { _ = ShareInfo.shareArgs(["x"] + Array(repeating: String(repeating: "b", count: 5000), count: 3000), home: "/Users/me") }
+        #expect(many < .seconds(1), "took \(many)")
+    }
+
     @Test func leadSaysWhetherHogKnowsIt() {
         var known = ShareInfo.make(Item(id: "x", kind: .process, label: "x", catalogId: "tsserver", pids: []), scan: scan([]))
         #expect(known.text(.en).contains("identifies this as `tsserver`"))
