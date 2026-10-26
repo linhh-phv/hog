@@ -69,19 +69,19 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
     static func shareArgs(_ args: [String], home: String, redactor: Redactor = Redactor(names: [])) -> String {
         var maskNext = false
         var previous = ""
-        var program = ""
+        var flags: Set<String> = []  // credential flags of the programs named so far in this command
         // One word: credentials by position (`-u user:pw`, a database client's `-p`/`-a`), secret headers, then `shareWord`.
         func word(_ w: String, startsCommand: Bool) -> String {
             defer { previous = w }
-            if startsCommand { program = lastComponent(w) }
+            if startsCommand { flags = Privacy.credentialProgram(w) ?? flags }
             if maskNext { maskNext = false; return "***" }
-            if ["&&", "||", ";", "|"].contains(w) { program = ""; return w }
+            if ["&&", "||", ";", "|"].contains(w) { flags = []; return w }
             // `-u user:password`, `-uuser:pw`, `--user=u:pw` (curl, wget, httpie… any program).
             if ["-u", "--user"].contains(previous), w.contains(":"), !w.hasPrefix("-") { return "***" }
             if w.hasPrefix("--user="), w.contains(":") { return "--user=***" }
             if w.hasPrefix("-u"), !w.hasPrefix("--"), w.count > 2, w.contains(":") { return "-u***" }
-            if Privacy.credentialProgram(w) != nil { program = lastComponent(w) }
-            if let m = Privacy.credential(Privacy.passwordShortFlags[program] ?? [], w) {
+            if let more = Privacy.credentialProgram(w) { flags.formUnion(more) }  // union: `curl -o mysql -b x` keeps curl's
+            if let m = Privacy.credential(flags, w) {
                 switch m {
                 case .valueNext: maskNext = true; return w
                 case .attached(let masked): return masked
@@ -97,7 +97,7 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
             return shareWord(w, redactor)
         }
         let words = Privacy.scrubArgList(args, home: home).enumerated().map { i, arg -> String in
-            if i == 0 { program = lastComponent(arg); previous = arg; return redactor.names(Privacy.scrubUser(lastComponent(arg))) }
+            if i == 0 { flags = Privacy.credentialProgram(arg) ?? []; previous = arg; return redactor.names(Privacy.scrubUser(lastComponent(arg))) }
             if arg.hasPrefix("/") || arg.hasPrefix("~/") {
                 defer { previous = arg }
                 if maskNext { maskNext = false; return "***" }
@@ -110,6 +110,9 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
             // Words of one argument, split on any whitespace (`sh -c "…"`, newlines, tabs); after `&&`, `;`… a new command.
             let parts = arg.split(omittingEmptySubsequences: false, whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" }).map(String.init)
             var startsCommand = parts.count > 1
+            // A command inside one argument (`sh -c "…"`) has its own flags; the outer command's come back after it.
+            let outer = flags
+            defer { flags = outer }
             return parts.map { w -> String in
                 defer { startsCommand = ["&&", "||", ";", "|"].contains(w) }
                 return word(w, startsCommand: startsCommand)

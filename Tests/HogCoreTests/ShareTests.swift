@@ -168,6 +168,20 @@ import Testing
         #expect(scrub(["vite", "-p", "3000"]) == "vite -p 3000", "no credential program: -p is a port")
     }
 
+    // Reviewer 5 (2026-10-26): a program name as a value must not drop the real program's flags; glued combined flags; quotes.
+    @Test func reviewer5Cases() {
+        func scrub(_ a: [String]) -> String { Privacy.scrubArgs(a, home: "/Users/me") }
+        func share(_ a: [String]) -> String { ShareInfo.shareArgs(a, home: "/Users/me") }
+        #expect(scrub(["curl", "-o", "mysql", "--proxy-user", "a:hunter2", "https://x"]) == "curl -o mysql --proxy-user *** https://x")
+        #expect(scrub(["curl", "https://dl.example.com/mysql", "-b", "sid=abc123"]) == "curl https://dl.example.com/mysql -b ***")
+        #expect(scrub(["curl", "-o", "/usr/local/bin/redis-cli", "-E", "c.pem:pw"]) == "curl -o /usr/local/bin/redis-cli -E ***")
+        #expect(share(["curl", "https://x/redis-cli", "--cert", "c.pem:pw"]) == "curl https://… --cert ***")
+        #expect(scrub(["curl", "-suadmin:hunter2", "-sSuadmin:hunter2", "-sbsid=abc123"]) == "curl -su*** -sSu*** -sb***")
+        #expect(share(["sh", "-c", "docker exec db sh -c 'mysql -phunter2'"]) == "sh -c docker exec db sh -c 'mysql -p***")
+        #expect(share(["bash", "-c", "(mysql -uroot -phunter2 < dump.sql)"]) == "bash -c (mysql -uroot -p*** < dump.sql)")
+        #expect(share(["curl", "-H", "X-Trace: 1", "-b", "sid=x"]) == "curl -H X-Trace: 1 -b ***", "outer flags survive an argument with spaces")
+    }
+
     @Test func windowTitleWithoutAFileKeepsTheProject() {
         let w = CodeStatusParser.Window(index: 1, title: "web-app — Work")
         var s = scan([])

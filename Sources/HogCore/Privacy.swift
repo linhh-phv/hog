@@ -55,7 +55,8 @@ public enum Privacy {
             if lower.hasSuffix("authorization:") || lower.hasSuffix("cookie:") || ["bearer", "basic"].contains(lower) {
                 out.append(arg); maskAuth = true; continue
             }
-            if !maskNext, let flags = credentialProgram(arg) { pwFlags = flags }
+            // Union, never replace: `curl -o mysql --proxy-user a:pw` keeps curl's flags (reviewer 2026-10-26).
+            if !maskNext, let flags = credentialProgram(arg) { pwFlags.formUnion(flags) }
             if !maskNext, let m = credential(pwFlags, arg) {
                 switch m {
                 case .valueNext: out.append(arg); maskNext = true
@@ -111,23 +112,26 @@ public enum Privacy {
 
     /// The credential flags of a program named anywhere in the command (`docker exec db mysql -pX`, `sudo curl -b …`).
     static func credentialProgram(_ word: String) -> Set<String>? {
-        word.hasPrefix("-") ? nil : passwordShortFlags[(word as NSString).lastPathComponent]
+        let w = word.trimmingCharacters(in: CharacterSet(charactersIn: "'\"(`$)"))  // `'mysql`, `(mysql`, `$(curl`
+        return w.hasPrefix("-") ? nil : passwordShortFlags[(w as NSString).lastPathComponent]
     }
 
     enum CredentialMatch: Equatable { case valueNext, attached(String) }
 
     /// `-p` → the next word is the secret; `-psecret`, `--user=u:pw` → masked in place (a long flag only matches itself
-    /// or `flag=`: not `--user-agent`); combined short flags `-su`, `-skE` → the last one takes the next word.
+    /// or `flag=`: not `--user-agent`). Short flags may be combined: in `-su a:pw`, `-suadmin:pw`, `-skE c.pem:pw` the first
+    /// credential flag takes the rest of the word, or the next word when nothing follows it.
     static func credential(_ flags: Set<String>, _ w: String) -> CredentialMatch? {
         guard !flags.isEmpty, w.hasPrefix("-") else { return nil }
         if flags.contains(w) { return .valueNext }
-        for f in flags.sorted(by: { $0.count > $1.count }) {
-            if f.hasPrefix("--") { if w.hasPrefix(f + "=") { return .attached(f + "=***") } } else if w.hasPrefix(f) { return .attached(f + "***") }
+        if w.hasPrefix("--") {
+            for f in flags where f.hasPrefix("--") && w.hasPrefix(f + "=") { return .attached(f + "=***") }
+            return nil
         }
-        if w.count > 2, !w.hasPrefix("--"), w.dropFirst().allSatisfy(\.isLetter), let last = w.last, flags.contains("-" + String(last)) {
-            return .valueNext
-        }
-        return nil
+        let letters = Array(w.dropFirst())
+        guard let i = letters.firstIndex(where: { flags.contains("-" + String($0)) }) else { return nil }
+        guard letters[..<i].allSatisfy(\.isLetter) else { return nil }  // only flags before it (`-sSu`)
+        return i == letters.count - 1 ? .valueNext : .attached("-" + String(letters[...i]) + "***")
     }
 
     static func isSecret(_ flagName: String) -> Bool {

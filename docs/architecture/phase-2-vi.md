@@ -72,8 +72,9 @@ mục danh mục nào, hay chưa biết) và một khối JSON:
   - header có tên chứa từ bí mật (`X-Api-Key: v`, `x-api-key:v`, `--header=X-Auth:v`) → giá trị là `***`; tên header chỉ gồm chữ, số,
     `-`, `_` — `ghcr.io/acme/auth-service:1` là image, không phải header; `Cookie:`/`Authorization:` che tới hết tham số;
   - cờ mang mật khẩu theo vị trí: `curl -u/-U/--proxy-user/-E/--cert/-b/--cookie`, `sshpass -p`, client CSDL `-p`/`-a` — chương trình
-    được nhận ở **bất kỳ vị trí nào** (`docker exec db mysql -pX`, `sudo curl -b …`), cờ gộp cũng tính (`curl -su a:pw`); che dư chấp nhận
-    được (`sshpass -p x ssh -p 2222`: cổng cũng thành `***`);
+    được nhận ở **bất kỳ vị trí nào** (`docker exec db mysql -pX`, `sudo curl -b …`, kể cả sau nháy/ngoặc `'mysql`, `(mysql`) và cờ
+    của các chương trình đã gặp được **gộp** (`curl -o mysql -b x`: `-b` của curl vẫn tính); cờ gộp tính cả khi giá trị dính liền
+    (`curl -su a:pw`, `-suadmin:pw`); che dư chấp nhận được (`sshpass -p x ssh -p 2222`, `--name mysql -p 3000`: cổng thành `***`);
   - `-u`/`--user` kèm `user:mật-khẩu` (tách rời, `-uuser:pw`, `--user=u:pw`) → `***`, với mọi chương trình; `-u root` giữ nguyên;
   - trong một tham số nhiều lệnh (`sh -c "… && mysql -pX && redis-cli -a Y"`), mỗi lệnh sau `&&`, `||`, `;`, `|` được nhận tên để áp
     luật `-p`/`-a` của client CSDL; từ tách theo mọi khoảng trắng (cả xuống dòng, tab);
@@ -144,3 +145,4 @@ Khi người dùng dán `hog.share/1` hay ảnh chụp:
 | 2026-10-26 | Làm sạch (reviewer lần 2) | Tên header chỉ chữ/số/`-`/`_`; header dính cờ; cookie tới hết tham số; `--user-agent` không phải cờ mật khẩu; đuôi tên miền là thư mục; tiêu đề cửa sổ bỏ tên file; giữ `pkg@version`; regex URL có look-behind (tuyến tính); tối đa 6 ứng viên "Chưa rõ" giữ qua bước cắt | Bản sửa qa lần 2 làm lộ `ghcr.io/acme-corp/auth-service`; `--header=X-Api-Key:v`, cookie thứ hai, `clientsite.com` lọt; `--user-agent` bị che nhầm; tên script bị thay vì trùng tên file trong tiêu đề cửa sổ |
 | 2026-10-26 | Làm sạch (reviewer lần 3) | Phiên bản sau `@` chỉ `latest` hoặc semver ≤ 3 số; tên file theo danh sách đuôi cho phép (thay danh sách đen tên miền); thêm cờ mật khẩu theo vị trí của `curl`, `sshpass`; tiêu đề cửa sổ chỉ bỏ phần đầu khi đó là tên file | `ssh deploy@10.0.1.20` lọt (hồi quy của `packageSpec`); `acme.test`, `billing.git` lọt; `curl --proxy-user a:pw`, `sshpass -p` lọt; tiêu đề `web-app — Work` mất tên dự án |
 | 2026-10-26 | Làm sạch (reviewer lần 4) | Phiên bản sau `@` không còn phần `-…`/`+…`; cờ mật khẩu theo vị trí nhận chương trình ở mọi vị trí và cờ gộp | `deploy@10-0-1-20`, `web@1-prod.acme.com` lọt; `curl -su a:pw`, `docker exec … mysql -pX`, `sudo curl -b …` lọt |
+| 2026-10-26 | Làm sạch (reviewer lần 5) | Cờ mật khẩu của các chương trình đã gặp được gộp, không thay; tham số nhiều từ không làm mất cờ của lệnh ngoài; cờ gộp có giá trị dính liền; bỏ nháy/ngoặc trước tên chương trình | Hồi quy: `curl -o mysql --proxy-user a:pw`, `curl https://…/mysql -b sid=x` lọt vì cờ của curl bị thay bằng cờ của mysql |
