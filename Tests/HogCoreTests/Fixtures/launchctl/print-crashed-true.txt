@@ -1,0 +1,25 @@
+gui/501/com.github.facebook.watchman = {
+	active count = 1
+	path = /Users/me/Library/LaunchAgents/com.github.facebook.watchman.plist
+	type = LaunchAgent
+	state = running
+
+	program = /opt/homebrew/bin/watchman
+	arguments = {
+		/opt/homebrew/bin/watchman
+		--foreground
+	}
+
+	environment = {
+		PATH => /usr/bin:/bin:/usr/sbin:/sbin
+	}
+
+	pid = 4100
+	immediate reason = semaphore
+	semaphores = {
+		after crash => 1
+	}
+
+	spawn type = interactive (4)
+	properties = runatload | inferred program
+}

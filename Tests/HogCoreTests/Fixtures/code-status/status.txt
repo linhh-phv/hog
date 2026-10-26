@@ -1,0 +1,17 @@
+Version:          Code 1.141.2
+Memory (System):  16.00GB (0.09GB free)
+
+CPU %	Mem MB	   PID	Process
+    3	30962247438	  1000	code
+    6	16888498603	  1001	   gpu-process
+    0	70368744178	  1100	window [2] (index.ts — web-app (Workspace))
+    0	98516241849	  1101	   window
+    0	19703248370	  1200	extension-host [2]
+    0	36591746972	  1201	     /Users/me/.vscode/extensions/anthropic.claude-code/resources/native-binary/claude --output-format stream-json
+    0	 8444249301	  1202	file-watcher [2]
+    0	42221246507	  1300	window [7] (notes.md — api (Workspace))
+    0	19703248370	  1301	extension-host [7]
+    0	11258999068	  1302	file-watcher [7]
+
+Workspace Stats:
+|  Window (index.ts — web-app (Workspace))
