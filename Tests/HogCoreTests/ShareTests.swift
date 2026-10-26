@@ -69,7 +69,7 @@ import Testing
         #expect(share(["git", "clone", "git@github.com:acme-corp/private-repo.git"]) == "git clone …")
         #expect(share(["node", "--redis-url=redis://:hunter2@localhost:6379"]) == "node --redis-url=redis://…")
         #expect(share(["x", "--url", "https://ghp_abcdef123456@github.com"]) == "x --url https://…")
-        #expect(share(["sh", "-c", "AWS_SECRET_ACCESS_KEY=abc/def+ghi node x.js"]) == "sh -c AWS_SECRET_ACCESS_KEY=*** node x.js")
+        #expect(share(["sh", "-c", "AWS_SECRET_ACCESS_KEY=abc/def+ghi node x.js"]) == "sh -c …")
         #expect(share(["npm", "--registry=https://npm.corp-internal.example"]) == "npm --registry=https://…")
         #expect(share(["ssh", "deploy@prod.corp.example"]) == "ssh …")
         #expect(share(["node", "/Users/me/w/node_modules/@acme-corp/tool/bin/cli.js"]) == "node node_modules/@…/tool/…/cli.js")
@@ -102,10 +102,11 @@ import Testing
     // QA 2 (2026-10-26): credentials inside `sh -c`, other whitespace, headers without a space, dotted names, JSON.
     @Test func qa2SecretsAreMasked() {
         func share(_ a: [String]) -> String { ShareInfo.shareArgs(a, home: "/Users/me") }
-        #expect(share(["sh", "-c", "curl -u admin:pw https://x && mysql -uroot -pSECRET && redis-cli -a PW ping"])
-                == "sh -c curl -u *** https://… && mysql -uroot -p*** && redis-cli -a *** ping")
-        #expect(share(["sh", "-c", "echo hi\nDB_PASSWORD=x"]) == "sh -c echo hi DB_PASSWORD=***")
-        #expect(share(["sh", "-c", "echo\thi\tDB_PASSWORD=x"]) == "sh -c echo hi DB_PASSWORD=***")
+        // A script with a hint of a secret is dropped whole (QA 3); without one it is kept, cleaned word by word.
+        #expect(share(["sh", "-c", "curl -u admin:pw https://x && mysql -uroot -pSECRET && redis-cli -a PW ping"]) == "sh -c …")
+        #expect(share(["sh", "-c", "echo hi\nDB_PASSWORD=x"]) == "sh -c …")
+        #expect(share(["sh", "-c", "echo\thi\tDB_PASSWORD=x"]) == "sh -c …")
+        #expect(share(["sh", "-c", "cd /Users/me/work/acme && npm run dev"]) == "sh -c cd … && npm run dev")
         #expect(share(["curl", "-H", "x-api-key:value", "--header", "X-Auth-Token:value"]) == "curl -H x-api-key:*** --header X-Auth-Token:***")
         #expect(share(["helm", "--set", "db.password=x", "--env", "my-token=x", "--define", "auth.secret=x"])
                 == "helm --set db.password=*** --env my-token=*** --define auth.secret=***")
@@ -164,7 +165,7 @@ import Testing
         #expect(scrub(["sudo", "curl", "-b", "sid=x"]) == "sudo curl -b ***")
         #expect(scrub(["env", "X=1", "curl", "-U", "a:b"]) == "env X=1 curl -U ***")
         #expect(scrub(["sudo", "sshpass", "-p", "hunter2", "ssh", "h"]) == "sudo sshpass -p *** ssh h")
-        #expect(share(["sh", "-c", "ssh host mysql -phunter2 && nice redis-cli -a pw ping"]) == "sh -c ssh host mysql -p*** && nice redis-cli -a *** ping")
+        #expect(share(["sh", "-c", "ssh host mysql -phunter2 && nice redis-cli -a pw ping"]) == "sh -c …")
         #expect(scrub(["vite", "-p", "3000"]) == "vite -p 3000", "no credential program: -p is a port")
     }
 
@@ -177,8 +178,14 @@ import Testing
         #expect(scrub(["curl", "-o", "/usr/local/bin/redis-cli", "-E", "c.pem:pw"]) == "curl -o /usr/local/bin/redis-cli -E ***")
         #expect(share(["curl", "https://x/redis-cli", "--cert", "c.pem:pw"]) == "curl https://… --cert ***")
         #expect(scrub(["curl", "-suadmin:hunter2", "-sSuadmin:hunter2", "-sbsid=abc123"]) == "curl -su*** -sSu*** -sb***")
-        #expect(share(["sh", "-c", "docker exec db sh -c 'mysql -phunter2'"]) == "sh -c docker exec db sh -c 'mysql -p***")
-        #expect(share(["bash", "-c", "(mysql -uroot -phunter2 < dump.sql)"]) == "bash -c (mysql -uroot -p*** < dump.sql)")
+        #expect(share(["sh", "-c", "docker exec db sh -c 'mysql -phunter2'"]) == "sh -c …")
+        #expect(share(["bash", "-c", "(mysql -uroot -phunter2 < dump.sql)"]) == "bash -c …")
+        // QA 3: shell syntax that hid a secret from word-by-word masking.
+        for script in ["cat x|mysql -pSECRET", "cd x&&mysql -pSECRET", "(mysql -pSECRET)", "$(redis-cli -a SECRET get k)",
+                       "`mysql -pSECRET`", "cd /srv;mysql -pSECRET", "curl -H 'X-Api-Key:v' x", "export API_TOKEN='aa SECRET bb'",
+                       "python -c \"print({'api_key': 'v'})\""] {
+            #expect(share(["sh", "-c", script]) == "sh -c …", "\(script)")
+        }
         #expect(share(["curl", "-H", "X-Trace: 1", "-b", "sid=x"]) == "curl -H X-Trace: 1 -b ***", "outer flags survive an argument with spaces")
     }
 

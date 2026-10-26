@@ -79,6 +79,11 @@ mục danh mục nào, hay chưa biết) và một khối JSON:
   - trong một tham số nhiều lệnh (`sh -c "… && mysql -pX && redis-cli -a Y"`), mỗi lệnh sau `&&`, `||`, `;`, `|` được nhận tên để áp
     luật `-p`/`-a` của client CSDL; từ tách theo mọi khoảng trắng (cả xuống dòng, tab);
   - `TÊN=giá-trị` nhận cả tên có `.` và `-` (`--set db.password=x`); JSON `"password": "x"` bị che (cả trong `--json`).
+- **Script có dấu hiệu bí mật → bỏ cả đoạn.** Một tham số nhiều từ (một đoạn script: `sh -c "…"`, `python -c "…"`) mà chứa một từ
+  bí mật (`token`, `key`, `secret`, `password`, `auth`, `cookie`…) hoặc tên một chương trình mang mật khẩu (`mysql`, `redis-cli`, `curl`,
+  `sshpass`…, kể cả dính dấu `;`, `|`, `&&`, `$(`, nháy) thành `…`. Cú pháp shell có quá nhiều cách giấu bí mật (`x&&mysql -pX`,
+  `$(…)`, `export T='a b'`) để che từng từ — qa lần 3 vẫn tìm ra kẽ hở sau bốn vòng vá. Script không có dấu hiệu nào (`cd … && npm run
+  dev`) vẫn giữ, làm sạch từng từ như trên. Ngoại lệ: một header làm một tham số (`X-Api-Key: v`) đi theo luật header.
 - **Lớp 2, theo tên riêng hog đã thấy** (`Redactor`, chỉ áp lên giá trị và tên chương trình, không áp lên tên cờ; tiêu đề cửa sổ chỉ
   lấy phần dự án, bỏ tên file đang mở — thường chính là script đang được hỏi): mọi tên dự án
   (`package.json#name`, thư mục có `.git`…), mọi thành phần thư mục làm việc trong home của mọi tiến trình và phiên Claude (trừ
@@ -146,3 +151,4 @@ Khi người dùng dán `hog.share/1` hay ảnh chụp:
 | 2026-10-26 | Làm sạch (reviewer lần 3) | Phiên bản sau `@` chỉ `latest` hoặc semver ≤ 3 số; tên file theo danh sách đuôi cho phép (thay danh sách đen tên miền); thêm cờ mật khẩu theo vị trí của `curl`, `sshpass`; tiêu đề cửa sổ chỉ bỏ phần đầu khi đó là tên file | `ssh deploy@10.0.1.20` lọt (hồi quy của `packageSpec`); `acme.test`, `billing.git` lọt; `curl --proxy-user a:pw`, `sshpass -p` lọt; tiêu đề `web-app — Work` mất tên dự án |
 | 2026-10-26 | Làm sạch (reviewer lần 4) | Phiên bản sau `@` không còn phần `-…`/`+…`; cờ mật khẩu theo vị trí nhận chương trình ở mọi vị trí và cờ gộp | `deploy@10-0-1-20`, `web@1-prod.acme.com` lọt; `curl -su a:pw`, `docker exec … mysql -pX`, `sudo curl -b …` lọt |
 | 2026-10-26 | Làm sạch (reviewer lần 5) | Cờ mật khẩu của các chương trình đã gặp được gộp, không thay; tham số nhiều từ không làm mất cờ của lệnh ngoài; cờ gộp có giá trị dính liền; bỏ nháy/ngoặc trước tên chương trình | Hồi quy: `curl -o mysql --proxy-user a:pw`, `curl https://…/mysql -b sid=x` lọt vì cờ của curl bị thay bằng cờ của mysql |
+| 2026-10-26 | Làm sạch (qa lần 3) | Script có dấu hiệu bí mật bị bỏ cả đoạn thay vì che từng từ | `cd x&&mysql -pX`, `$(redis-cli -a X …)`, header trong nháy, `export TOKEN='a b'` vẫn lọt sau các vòng vá theo từng kiểu |

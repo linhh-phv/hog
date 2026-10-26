@@ -109,6 +109,13 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
             }
             // Words of one argument, split on any whitespace (`sh -c "…"`, newlines, tabs); after `&&`, `;`… a new command.
             let parts = arg.split(omittingEmptySubsequences: false, whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" }).map(String.init)
+            // A script (`sh -c "…"`, `python -c "…"`) with any hint of a secret is dropped whole: shell syntax has too many
+            // ways to hide one (`x&&mysql -pX`, `$(…)`, quotes) to mask it word by word (QA 2026-10-26).
+            if parts.count > 1, !Self.isHeaderShaped(parts[0]), Self.scriptHasSecretHint(arg) {
+                defer { previous = arg }
+                if maskNext { maskNext = false; return "***" }
+                return "…"
+            }
             var startsCommand = parts.count > 1
             // A command inside one argument (`sh -c "…"`) has its own flags; the outer command's come back after it.
             let outer = flags
@@ -119,6 +126,20 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
             }.joined(separator: " ")
         }
         return Privacy.truncate(words.joined(separator: " "))
+    }
+
+    /// `X-Trace: 1`, `Cookie: ***`: one header as one argument — handled by the header rule, not dropped as a script.
+    static func isHeaderShaped(_ first: String) -> Bool {
+        let name = first.hasPrefix("-") ? String(first.split(separator: "=", maxSplits: 1).last ?? "") : first  // `--header=X-Auth:`
+        return name.hasSuffix(":") && isHeaderName(name.dropLast())
+    }
+
+    /// A secret word anywhere (`token`, `key`, `password`…), or a program with credential flags (`mysql`, `curl`,
+    /// `redis-cli`, `sshpass`…) as any word, after splitting on shell punctuation too.
+    static func scriptHasSecretHint(_ script: String) -> Bool {
+        let lower = script.lowercased()
+        if Privacy.secretWords.contains(where: lower.contains) { return true }
+        return script.split(whereSeparator: { " \n\t;|&()$`'\"{}<>".contains($0) }).contains { Privacy.credentialProgram(String($0)) != nil }
     }
 
     /// `X-Api-Key`, `Authorization`: letters, digits, `-`, `_` only — not an image (`ghcr.io/acme/auth-service:1`) or host.
