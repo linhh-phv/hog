@@ -1,0 +1,25 @@
+{
+  "id": "ram-total",
+  "activity_monitor": "Physical Memory",
+  "name": {
+    "vi": "RAM của máy",
+    "en": "Machine RAM"
+  },
+  "plain": {
+    "vi": "Tổng bộ nhớ vật lý của máy.",
+    "en": "The machine's total physical memory."
+  },
+  "how_to_read": {
+    "vi": "Không phải số cần lo; xem áp lực bộ nhớ.",
+    "en": "Not a number to worry about; look at memory pressure."
+  },
+  "act": {
+    "vi": "Không cần làm gì.",
+    "en": "Nothing to do."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

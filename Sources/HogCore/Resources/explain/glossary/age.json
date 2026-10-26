@@ -1,0 +1,25 @@
+{
+  "id": "age",
+  "activity_monitor": null,
+  "name": {
+    "vi": "Đã chạy",
+    "en": "Running for"
+  },
+  "plain": {
+    "vi": "Thời gian từ lúc chương trình khởi động tới giờ.",
+    "en": "Time since the program started."
+  },
+  "how_to_read": {
+    "vi": "Chạy lâu mà gần như không dùng CPU và không ai kết nối thường là thứ bị bỏ quên.",
+    "en": "Running for long with almost no CPU and no connections usually means forgotten."
+  },
+  "act": {
+    "vi": "Một bằng chứng của \"không dùng\", không đủ một mình.",
+    "en": "One piece of evidence for \"unused\"; not enough on its own."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

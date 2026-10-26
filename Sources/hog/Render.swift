@@ -150,7 +150,9 @@ struct Render {
         out.append("")
         out.append(bold(t("Số đo", "Measurements")))
         for (k, v) in item.facts.sorted(by: { $0.key < $1.key }) {
-            out.append("  " + pad(k, 36) + (v.isNull ? dim(Format.fact(k, v, lang)) : Format.fact(k, v, lang)))
+            let value = v.isNull ? dim(Format.fact(k, v, lang)) : Format.fact(k, v, lang)
+            let help = MenuSummary.factGlossary[k].map { dim("   ? hog explain \($0)") } ?? ""
+            out.append("  " + pad(k, 36) + value + help)
         }
         if let plan {
             out.append("")

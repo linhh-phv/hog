@@ -61,27 +61,39 @@ public struct MenuSummary: Sendable, Equatable {
     public static let tileGlossaryIds = ["memory-pressure", "compressed-stored", "swap-used"]
 
     /// Every number the CLI status line prints, with its glossary entry (criterion 5).
-    public static let cliGlossaryIds = ["memory-pressure", "compressed-stored", "compressor-occupied", "swap-used", "cpu-pct", "load", "footprint"]
+    public static let cliGlossaryIds = ["memory-pressure", "compressed-stored", "compressor-occupied", "swap-used", "cpu-pct", "load", "footprint", "ram-total"]
+
+    /// Glossary entry for every measured fact (`hog explain <item>` prints it next to the number; criterion 5).
+    /// Structural facts (what something *is*) are excluded: they are names, not numbers.
+    public static let factGlossary: [String: String] = [
+        "orphan": "orphan", "age_s": "age", "cpu.now_pct": "cpu-pct", "cpu.avg_pct": "cpu-avg",
+        "footprint_bytes": "footprint", "resident_ratio": "resident-ratio", "net.established": "net-established",
+        "net.listen_count": "net-listen", "owner.busy": "idle-session", "owner.idle_s": "idle-session",
+        "siblings.same_catalog_other_windows": "siblings", "container.restart_count": "restart-count",
+        "container.restart_policy": "container-state", "container.state": "container-state", "container.uptime_s": "age",
+        "container.connections": "net-established", "watchman.subscriptions": "watchman-subscriptions",
+        "launchd.restarts_after_stop": "launchd-restarts", "session.busy": "idle-session", "session.idle_s": "idle-session",
+    ]
 
     public struct WhyFact: Sendable {
         public var fact: String
-        public var glossaryId: String?
+        public var glossaryId: String
         public var vi: String
         public var en: String
     }
 
     /// Facts the app shows on the "why" page, with the glossary entry that explains each.
     public static let whyFacts: [WhyFact] = [
-        WhyFact(fact: "age_s", glossaryId: nil, vi: "Đã chạy", en: "Running for"),
+        WhyFact(fact: "age_s", glossaryId: "age", vi: "Đã chạy", en: "Running for"),
         WhyFact(fact: "footprint_bytes", glossaryId: "footprint", vi: "RAM của chương trình", en: "Program memory"),
         WhyFact(fact: "resident_ratio", glossaryId: "resident-ratio", vi: "Phần còn nằm trong RAM", en: "Share still in RAM"),
         WhyFact(fact: "cpu.avg_pct", glossaryId: "cpu-avg", vi: "CPU trung bình", en: "Average CPU"),
         WhyFact(fact: "orphan", glossaryId: "orphan", vi: "Mồ côi", en: "Orphaned"),
-        WhyFact(fact: "net.established", glossaryId: nil, vi: "Kết nối đang mở", en: "Open connections"),
-        WhyFact(fact: "watchman.subscriptions", glossaryId: nil, vi: "Công cụ đăng ký", en: "Subscribed tools"),
+        WhyFact(fact: "net.established", glossaryId: "net-established", vi: "Kết nối đang mở", en: "Open connections"),
+        WhyFact(fact: "watchman.subscriptions", glossaryId: "watchman-subscriptions", vi: "Công cụ đăng ký", en: "Subscribed tools"),
         WhyFact(fact: "session.idle_s", glossaryId: "idle-session", vi: "Phiên rảnh", en: "Session idle"),
-        WhyFact(fact: "launchd.restarts_after_stop", glossaryId: nil, vi: "launchd bật lại khi tắt?", en: "launchd restarts it?"),
-        WhyFact(fact: "container.restart_count", glossaryId: nil, vi: "Số lần khởi động lại", en: "Restarts"),
+        WhyFact(fact: "launchd.restarts_after_stop", glossaryId: "launchd-restarts", vi: "launchd bật lại khi tắt?", en: "launchd restarts it?"),
+        WhyFact(fact: "container.restart_count", glossaryId: "restart-count", vi: "Số lần khởi động lại", en: "Restarts"),
     ]
     public static let maxCards = 3
 

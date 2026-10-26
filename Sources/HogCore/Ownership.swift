@@ -38,6 +38,8 @@ public enum Ownership {
             if let s = o.session, let cwd = scan.sessions?[s]?.cwd { o.project = projects.name(for: cwd, home: scan.home) }
             if o.project == nil, let cwd = p.cwd { o.project = projects.name(for: cwd, home: scan.home) }
             o.orphan = isOrphan(p, launchd: scan.launchd, home: scan.home)
+            // An orphan has no owner, even if its binary sits inside an .app (Python.app): QA 2026-10-26.
+            if o.orphan == true { o.app = nil }
             result[pid] = o
         }
         return result

@@ -1,0 +1,25 @@
+{
+  "id": "siblings",
+  "activity_monitor": null,
+  "name": {
+    "vi": "Bản giống ở cửa sổ khác",
+    "en": "Copies in other windows"
+  },
+  "plain": {
+    "vi": "Số bản cùng loại (vd cùng một language server) đang chạy cho các cửa sổ VS Code khác.",
+    "en": "How many programs of the same kind (e.g. the same language server) run for other VS Code windows."
+  },
+  "how_to_read": {
+    "vi": "Lớn hơn 0 = mỗi cửa sổ mở một bản riêng; đóng cửa sổ không dùng sẽ giải phóng cả bản của nó.",
+    "en": "Above 0 = each window runs its own copy; closing an unused window frees its copy too."
+  },
+  "act": {
+    "vi": "Đóng cửa sổ VS Code không dùng thay vì tắt lẻ từng tiến trình.",
+    "en": "Close unused VS Code windows rather than stopping single processes."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

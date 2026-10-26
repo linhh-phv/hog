@@ -116,7 +116,7 @@ struct WhyPage: View {
                             GridRow {
                                 HStack(spacing: 4) {
                                     Text(model.t(wf.vi, wf.en)).foregroundStyle(Theme.text2)
-                                    if let gid = wf.glossaryId { QuestionButton(glossaryId: gid) }
+                                    QuestionButton(glossaryId: wf.glossaryId)
                                 }
                                 Text(Format.fact(wf.fact, item.facts[wf.fact]!, model.lang)).monospacedDigit().gridColumnAlignment(.trailing)
                             }

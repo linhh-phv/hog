@@ -1,0 +1,25 @@
+{
+  "id": "net-established",
+  "activity_monitor": null,
+  "name": {
+    "vi": "Kết nối đang mở",
+    "en": "Open connections"
+  },
+  "plain": {
+    "vi": "Số kết nối mạng (TCP) chương trình đang giữ, kể cả tới chính máy này.",
+    "en": "How many network (TCP) connections the program holds, including to this machine."
+  },
+  "how_to_read": {
+    "vi": "0 = lúc này không ai nói chuyện với nó. Đo tại một thời điểm, không phải cả ngày.",
+    "en": "0 = nobody is talking to it right now. Measured at one moment, not over the day."
+  },
+  "act": {
+    "vi": "0 kết nối + chạy lâu + CPU thấp → có thể là thứ bị bỏ quên.",
+    "en": "0 connections + long running + low CPU → may be forgotten."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

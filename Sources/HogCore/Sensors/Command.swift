@@ -69,12 +69,13 @@ public enum Command {
         defer { runningLock.lock(); running.remove(pid); runningLock.unlock() }
 
         let group = DispatchGroup()
-        nonisolated(unsafe) var outData = Data(), errData = Data()
+        let out = Buffer(), err = Buffer()
         let outFD = outPipe[0], errFD = errPipe[0]
+        let childGroup = pid
         group.enter()
-        DispatchQueue.global().async { outData = readAll(outFD); group.leave() }
+        DispatchQueue.global().async { out.drain(outFD) { kill(-childGroup, SIGKILL) }; group.leave() }
         group.enter()
-        DispatchQueue.global().async { errData = readAll(errFD); group.leave() }
+        DispatchQueue.global().async { err.drain(errFD) { kill(-childGroup, SIGKILL) }; group.leave() }
 
         var timedOut = false
         var status: Int32 = 0
@@ -97,18 +98,38 @@ public enum Command {
         _ = group.wait(timeout: .now() + 1)
         close(outFD); close(errFD)
         let exit: Int32 = (status & 0x7f) == 0 ? (status >> 8) & 0xff : 128 + (status & 0x7f)
-        return Result(status: exit, stdout: String(decoding: outData, as: UTF8.self), stderr: String(decoding: errData, as: UTF8.self),
+        return Result(status: out.overflowed || err.overflowed ? 1 : exit, stdout: String(decoding: out.data, as: UTF8.self),
+                      stderr: String(decoding: err.data, as: UTF8.self) + (out.overflowed ? "\n(hog: output over \(maxOutput) bytes, stopped)" : ""),
                       timedOut: timedOut, tookMs: Int(Date().timeIntervalSince(started) * 1000), startedAt: started)
     }
 
-    static func readAll(_ fd: Int32) -> Data {
-        var data = Data()
-        var buf = [UInt8](repeating: 0, count: 64 * 1024)
-        while true {
-            let n = read(fd, &buf, buf.count)
-            if n > 0 { data.append(contentsOf: buf[0..<n]) } else { break }
+    /// Output kept per stream; a command that writes more is killed (hog must not eat memory: QA 2026-10-26).
+    public static let maxOutput = 16 * 1024 * 1024
+
+    /// Collects a stream incrementally, so what was read is kept even when a stray process keeps the pipe open.
+    final class Buffer: @unchecked Sendable {
+        private let lock = NSLock()
+        private var bytes = Data()
+        private(set) var overflowed = false
+
+        var data: Data { lock.lock(); defer { lock.unlock() }; return bytes }
+
+        func drain(_ fd: Int32, onOverflow: () -> Void) {
+            var buf = [UInt8](repeating: 0, count: 64 * 1024)
+            while true {
+                let n = read(fd, &buf, buf.count)
+                guard n > 0 else { break }
+                lock.lock()
+                if bytes.count + n > Command.maxOutput {
+                    overflowed = true
+                    lock.unlock()
+                    onOverflow()
+                    break
+                }
+                bytes.append(contentsOf: buf[0..<n])
+                lock.unlock()
+            }
         }
-        return data
     }
 }
 

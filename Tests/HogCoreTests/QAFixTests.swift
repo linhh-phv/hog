@@ -111,6 +111,7 @@ import Testing
         let s = analyzer.analyze(scan)
         let item = s.items.first { $0.pids == [3000] }
         #expect(item?.facts["owner.kind"] == .string("none"))
+        #expect(item?.ownerId.value == nil, "QA2 E: no 'owner: Python' in the stop plan")
         #expect(item?.facts["catalog.family"] == .string(""), "no catalog match is known, not null")
         #expect(s.findings.first { $0.itemId == item?.id }?.verdict == .mayStop)
         #expect(s.findings.first { $0.itemId == item?.id }?.unmeasured.isEmpty == true)
@@ -130,6 +131,51 @@ import Testing
         #expect(CommandLocator(home: dir.path).candidates("code").first == "/opt/vscode/bin/code")
         try Data("not json".utf8).write(to: cfg.appendingPathComponent("config.json"))
         #expect(CommandLocator(home: dir.path).overrides.isEmpty, "a broken config is ignored")
+    }
+
+    // QA2 A: every measured fact `hog explain` prints has a glossary entry (structural facts are names, not numbers).
+    @Test func everyMeasuredFactHasAGlossaryEntry() {
+        for fact in FactNames.all.subtracting(FactNames.structural) {
+            let id = MenuSummary.factGlossary[fact]
+            #expect(id != nil, "no glossary for \(fact)")
+            #expect(id.flatMap { analyzer.explain.glossary[$0] } != nil || id == nil, "missing glossary entry \(id ?? "")")
+        }
+        for wf in MenuSummary.whyFacts { #expect(MenuSummary.factGlossary[wf.fact] == wf.glossaryId, "\(wf.fact)") }
+    }
+
+    // QA2 B: a command that writes without end is cut off at the cap and killed, not read into memory.
+    @Test func outputIsCapped() throws {
+        let r = try #require(Command.run("/usr/bin/yes", [], timeout: 20))
+        #expect(r.stdout.utf8.count <= Command.maxOutput)
+        #expect(r.status != 0 && r.stderr.contains("output over"))
+        #expect(r.tookMs < 15_000, "killed at the cap, not at the timeout")
+    }
+
+    // QA2 D: output already written is kept when a grandchild in its own group keeps the pipe open.
+    @Test func outputKeptWhenAStrayHoldsThePipe() throws {
+        let r = try #require(Command.run("/bin/sh", ["-c", "echo hello; /usr/bin/perl -e 'setpgrp(0,0); sleep 3' &"], timeout: 2))
+        #expect(r.stdout.contains("hello"))
+    }
+
+    // QA2 C: --brief keeps every actionable finding but caps watch/info, so it fits a tool's output limit.
+    @Test func briefCapsQuietFindings() {
+        var s = SampleSnapshot.make()
+        let base = s.findings[0]
+        s.findings = (0..<20).map { i in var f = base; f.itemId = "w\(i)"; f.verdict = .watch; return f }
+            + (0..<20).map { i in var f = base; f.itemId = "i\(i)"; f.verdict = .info; return f }
+            + (0..<7).map { i in var f = base; f.itemId = "m\(i)"; f.verdict = .mayStop; return f }
+        let b = SnapshotJSON.brief(s)
+        #expect(b.findings.filter { $0.verdict == .watch }.count == 5)
+        #expect(b.findings.filter { $0.verdict == .info }.count == 3)
+        #expect(b.findings.filter { $0.verdict == .mayStop }.count == 7)
+    }
+
+    // QA2 F: more secret flag spellings.
+    @Test func moreSecretFlagsAreMasked() {
+        for flag in ["--passwd", "--pwd", "--pass", "--credential", "--bearer", "--cookie"] {
+            #expect(Privacy.scrubArgs(["tool", flag + "=hunter2"], home: "/Users/me") == "tool \(flag)=***")
+            #expect(Privacy.scrubArgs(["tool", flag, "hunter2"], home: "/Users/me") == "tool \(flag) ***")
+        }
     }
 
     let analyzer: Analyzer = {

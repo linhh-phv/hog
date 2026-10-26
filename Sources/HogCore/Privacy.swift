@@ -6,7 +6,7 @@ public enum Privacy {
     public static let maxArgsLength = 200
 
     /// Flag names whose values are masked: anything containing one of these words.
-    static let secretWords = ["token", "key", "secret", "password", "auth"]
+    static let secretWords = ["token", "key", "secret", "password", "passwd", "pwd", "pass", "auth", "credential", "bearer", "cookie"]
 
     /// Replaces the home directory prefix with `~`.
     public static func scrubPath(_ path: String, home: String = NSHomeDirectory()) -> String {

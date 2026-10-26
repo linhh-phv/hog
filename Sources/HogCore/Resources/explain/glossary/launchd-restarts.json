@@ -1,0 +1,25 @@
+{
+  "id": "launchd-restarts",
+  "activity_monitor": null,
+  "name": {
+    "vi": "launchd bật lại khi tắt?",
+    "en": "Restarted by launchd?"
+  },
+  "plain": {
+    "vi": "launchd (trình quản lý dịch vụ của macOS) có bật lại chương trình này khi nó bị dừng bình thường không.",
+    "en": "Whether launchd (macOS's service manager) starts this program again after a normal stop."
+  },
+  "how_to_read": {
+    "vi": "Có = dừng là vô ích, nó quay lại ngay. Không = dừng thì nằm yên tới khi có thứ cần nó.",
+    "en": "Yes = stopping is pointless, it comes back. No = it stays down until something needs it."
+  },
+  "act": {
+    "vi": "Có → hog chỉ hướng dẫn cách gỡ job, không tự dừng.",
+    "en": "Yes → hog only explains how to remove the job, it does not stop it."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "watchman-subscriptions",
+  "activity_monitor": null,
+  "name": {
+    "vi": "Công cụ đăng ký",
+    "en": "Subscribed tools"
+  },
+  "plain": {
+    "vi": "Số công cụ (Metro, Jest…) đang nhờ watchman báo khi file đổi.",
+    "en": "How many tools (Metro, Jest…) currently ask watchman to report file changes."
+  },
+  "how_to_read": {
+    "vi": "0 = không công cụ nào đang dùng watchman.",
+    "en": "0 = no tool is using watchman."
+  },
+  "act": {
+    "vi": "0 trong thời gian dài → tắt watchman an toàn; lần sau cần nó tự bật lại.",
+    "en": "0 for a long time → stopping watchman is safe; it starts again when needed."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

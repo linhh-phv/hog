@@ -1,0 +1,25 @@
+{
+  "id": "net-listen",
+  "activity_monitor": null,
+  "name": {
+    "vi": "Cổng đang mở",
+    "en": "Listening ports"
+  },
+  "plain": {
+    "vi": "Số cổng mạng chương trình đang mở chờ kết nối (vd dev server ở cổng 3000).",
+    "en": "How many network ports the program is listening on (e.g. a dev server on port 3000)."
+  },
+  "how_to_read": {
+    "vi": "Có cổng nghĩa là nó là một server; chưa nói gì về việc có ai đang dùng — xem \"Kết nối đang mở\".",
+    "en": "A port means it is a server; it says nothing about whether anyone uses it — see \"Open connections\"."
+  },
+  "act": {
+    "vi": "Xem cổng nào: hog ports.",
+    "en": "See which ports: hog ports."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

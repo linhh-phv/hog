@@ -40,7 +40,16 @@ public enum SnapshotJSON {
     /// no `processes`, only items that have a finding, owners limited to the largest top-level ones and their windows.
     public static func brief(_ s: Snapshot, owners maxOwners: Int = 12) -> Snapshot {
         var b = s
-        let withFinding = Set(s.findings.map(\.itemId))
+        // Every may-stop/ask finding; at most 5 watch and 3 info (QA 2026-10-26: 19+ findings passed 30 000 chars).
+        var watch = 0, info = 0
+        b.findings = s.findings.filter { f in
+            switch f.verdict {
+            case .mayStop, .ask: return true
+            case .watch: watch += 1; return watch <= 5
+            case .info: info += 1; return info <= 3
+            }
+        }
+        let withFinding = Set(b.findings.map(\.itemId))
         b.items = s.items.filter { withFinding.contains($0.id) }
         b.processes = []
         let top = s.owners.filter { $0.parent.value == nil }.sorted { $0.totalFootprintBytes > $1.totalFootprintBytes }.prefix(maxOwners)
