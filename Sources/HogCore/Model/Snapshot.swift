@@ -129,7 +129,7 @@ public struct CPUUser: Codable, Sendable, Equatable, Identifiable {
     public init(id: String, label: String, pct: Double, count: Int) { self.id = id; self.label = label; self.pct = pct; self.count = count }
 }
 
-/// `ProcessInfo.ThermalState`: nominal (normal), fair (warm), serious (hot, the system slows down), critical.
+/// `ProcessInfo.ThermalState`: nominal (normal), fair (warm), serious (hot, macOS may slow down), critical.
 public enum ThermalState: String, Codable, Sendable, Comparable {
     case nominal, fair, serious, critical
     private var rank: Int { switch self { case .nominal: 0; case .fair: 1; case .serious: 2; case .critical: 3 } }

@@ -239,18 +239,12 @@ public struct Analyzer: Sendable {
         let o = own[pid]
         let age = p.startDate.map { Int64(scan.takenAt.timeIntervalSince($0)) }
         f["age_s"] = age.map(FactValue.int) ?? .null
-        // CPU time is from the second sample: divide by the time up to that sample, not by the whole seconds at the scan
-        // start (QA 2026-10-27: a process 1 s old showed a 197 % average).
-        let cpuAge = p.startDate.map { (scan.cpuSampledAt ?? scan.takenAt).timeIntervalSince($0) }
+
         f["orphan"] = o?.orphan.map(FactValue.bool) ?? .null
         f["footprint_bytes"] = p.footprintBytes.map(FactValue.int) ?? .null
         f["resident_ratio"] = residentRatio(p).map(FactValue.double) ?? .null
         f["cpu.now_pct"] = scan.cpuNowPct[pid].map(FactValue.double) ?? .null
-        if let ns = p.cpuTimeNs, let cpuAge, cpuAge >= 1 {
-            f["cpu.avg_pct"] = .double(Double(ns) / 1e9 / cpuAge * 100)
-        } else {
-            f["cpu.avg_pct"] = .null
-        }
+        f["cpu.avg_pct"] = Self.averageCPU(p, scan).map(FactValue.double) ?? .null
         if let net = scan.network {
             f["net.established"] = .int(Int64(net.connections.filter { $0.pid == pid }.count))
             f["net.listen_count"] = .int(Int64(net.listening[pid]?.count ?? 0))
@@ -442,7 +436,7 @@ public struct Analyzer: Sendable {
                 ageS: Measured(age), footprintBytes: Measured(p.footprintBytes), residentBytes: Measured(p.residentBytes),
                 residentRatio: Measured(residentRatio(p)), compressedBytes: nil,
                 cpu: ProcessCPU(nowPct: Measured(cpuNow),
-                                avgPct: Measured(p.cpuTimeNs.flatMap { ns in age.flatMap { $0 > 0 ? Double(ns) / 1e9 / Double($0) * 100 : nil } })),
+                                avgPct: Measured(Self.averageCPU(p, scan))),
                 cwd: Measured(p.cwd.map { Privacy.scrubPath($0, home: scan.home) }), project: Measured(o?.project),
                 orphan: Measured(o?.orphan),
                 net: ProcessNet(listen: listen, established: Measured(scan.network.map { n in n.connections.filter { $0.pid == pid }.count })),
@@ -519,6 +513,14 @@ public struct Analyzer: Sendable {
 
     /// Whole-machine CPU use above which the headline says the CPU is busy.
     static let busyCPUPct: Double = 80
+    /// Average CPU since start (% of one core). CPU time is from the second sample, so divide by the time up to that
+    /// sample, not by the whole seconds at the scan start (QA 2026-10-27: a process 1 s old showed 197 %, then 252 %).
+    static func averageCPU(_ p: RawProcess, _ scan: Scan) -> Double? {
+        guard let ns = p.cpuTimeNs, let start = p.startDate else { return nil }
+        let age = (scan.cpuSampledAt ?? scan.takenAt).timeIntervalSince(start)
+        return age >= 1 ? Double(ns) / 1e9 / age * 100 : nil
+    }
+
     /// A process this busy (% of one core) becomes an item whatever its size.
     static let significantCPUPct: Double = 50
     static let maxCPUTop = 5
@@ -541,8 +543,10 @@ public struct Analyzer: Sendable {
             readable += pct
             let key: String, name: String
             if let o = own[pid]?.ownerId { key = root(o); name = label[key] ?? key } else {
+                // Same program in the same project: one line (`node — web-app (×3)`), not one per process.
                 let exe = scan.processes[pid]?.exePath.map { ($0 as NSString).lastPathComponent } ?? "pid \(pid)"
-                key = "exe:" + exe; name = exe
+                let project = own[pid]?.project
+                key = "exe:" + exe + "|" + (project ?? ""); name = exe + (project.map { " — \($0)" } ?? "")
             }
             var g = groups[key] ?? CPUUser(id: key, label: name, pct: 0, count: 0)
             g.pct += pct; g.count += 1
@@ -555,7 +559,8 @@ public struct Analyzer: Sendable {
         }
         if let idle = scan.cpu?.idle {
             let used = max(0, 100 - idle) / 100 * Double(scan.system.ncpu) * 100
-            let rest = used - readable - (scan.cpuNowPct[scan.selfPid] ?? 0)
+            // hog's own scan (and the commands it ran) is not "system" (reviewer + QA 2026-10-27: ~35 points too high).
+            let rest = used - readable - (scan.hogCpuPct ?? scan.cpuNowPct[scan.selfPid] ?? 0)
             if rest >= 1 {
                 rows.append(CPUUser(id: "system", label: lang == .vi ? "macOS và dịch vụ hệ thống" : "macOS and system services", pct: rest, count: 0))
             }

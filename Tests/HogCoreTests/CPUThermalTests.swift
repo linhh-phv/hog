@@ -114,9 +114,33 @@ import Testing
         #expect(s.findings.contains { $0.rules.contains("cpu-heavy") })
     }
 
+    // Reviewer 2: the branch the name says — CPU measured, nothing of the user's at 1 % or more.
     @Test func noReadableCPUIsNotFastMode() {
-        let s = analyzer.analyze(scan(thermal: .serious, idle: 99.9))
-        #expect(!s.headline.text.contains("--fast"))
+        var system = RawSystem(memTotalBytes: 16 << 30, ncpu: 8, pageSize: 16384)
+        system.pressureLevel = 1; system.thermal = .serious
+        let s = analyzer.analyze(Scan(system: system, cpu: CPUSplit(user: 0.1, sys: 0, idle: 99.9), processes: [:], cpuNowPct: [:], launchd: [:]))
+        #expect(s.cpu.top.value == [])
+        #expect(s.headline.text.contains("nothing at 1 % of a core or more") && !s.headline.text.contains("--fast"))
+    }
+
+    @Test func hogsOwnScanIsNotSystem() throws {
+        // 8 cores × 50 % = 400 core-%; the user's process 100; hog and its commands 80 (its own sample shows only 10).
+        var p = RawProcess(pid: 600); p.ppid = 1; p.uid = getuid(); p.footprintBytes = 200_000_000
+        p.exePath = "/usr/local/bin/work"; p.cwd = "/"
+        var scan = Scan(selfPid: 999, system: RawSystem(memTotalBytes: 16 << 30, ncpu: 8, pageSize: 16384),
+                        cpu: CPUSplit(user: 40, sys: 10, idle: 50), processes: [600: p], cpuNowPct: [600: 100, 999: 10], launchd: [:])
+        scan.hogCpuPct = 80
+        let top = try #require(analyzer.analyze(scan).cpu.top.value)
+        #expect(top.first { $0.id == "system" }.map { abs($0.pct - 220) < 0.01 } == true, "400 − 100 − 80")
+        #expect(!top.contains { $0.label.contains("pid 999") }, "hog itself is not listed")
+        scan.hogCpuPct = nil
+        let fallback = try #require(analyzer.analyze(scan).cpu.top.value)
+        #expect(fallback.first { $0.id == "system" }.map { abs($0.pct - 290) < 0.01 } == true, "without rusage: hog's own sample")
+    }
+
+    @Test func fairIsNotHot() {
+        let warm = analyzer.analyze(scan(thermal: .fair, idle: 70))
+        #expect(!warm.headline.text.contains("hot") && warm.headline.level == .ok, "warm is usual under load")
     }
 
     @Test func averageUsesTheSampleTime() {
@@ -128,5 +152,7 @@ import Testing
         scan.cpuSampledAt = scan.takenAt.addingTimeInterval(1)
         let item = analyzer.analyze(scan).items.first { $0.pids == [500] }
         if case .double(let avg)? = item?.facts["cpu.avg_pct"] { #expect(avg <= 100) } else { Issue.record("no average") }
+        let record = analyzer.analyze(scan).processes.first { $0.pid == 500 }
+        #expect(record?.cpu.avgPct.value.map { $0 <= 100 } == true, "processes[] uses the same average (reviewer 2)")
     }
 }

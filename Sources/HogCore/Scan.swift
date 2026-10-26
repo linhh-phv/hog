@@ -16,6 +16,9 @@ public struct Scan: Sendable {
     public var cpuNowPct: [Int32: Double]
     /// When the second CPU sample was read (`cpuTimeNs` is from then); `nil` in fast mode.
     public var cpuSampledAt: Date?
+    /// CPU hog itself used between the two machine samples, its finished commands (`lsof`, `launchctl`…) included,
+    /// in % of one core: not part of "macOS and system services". `nil` in fast mode.
+    public var hogCpuPct: Double?
     public var launchd: [Int32: String]?
     public var network: ExternalSensors.Network?
     public var vscode: CodeStatusParser.Status?
@@ -62,6 +65,7 @@ public struct Scanner: Sendable {
     public func scan() -> Scan {
         let started = Date()
         let ticks0 = fast ? nil : SystemReader.cpuTicks()
+        let usage0 = (Date(), Self.ownCPUSeconds())
         let first = Self.readAll()
 
         // External sensors in parallel with the CPU sampling interval.
@@ -94,6 +98,7 @@ public struct Scanner: Sendable {
         let second = fast ? first : Self.readAll(includeArgs: false)
         let sampledAt = Date()
         let ticks1 = fast ? nil : SystemReader.cpuTicks()
+        let usage1 = (Date(), Self.ownCPUSeconds())
         group.wait()
 
         var processes = first
@@ -126,7 +131,22 @@ public struct Scanner: Sendable {
                     processes: processes, cpuNowPct: cpuNow, launchd: launchd?.value, network: network?.value,
                     vscode: vscode?.value ?? (vscodeRunning ? CodeStatusParser.fallback(processes) : nil), sessions: sessions?.value, watchman: watchman?.value,
                     containers: docker?.value, sensors: sensors.sorted { $0.name < $1.name })
-            .with { if !fast { $0.cpuSampledAt = sampledAt } }
+            .with {
+                guard !fast else { return }
+                $0.cpuSampledAt = sampledAt
+                let window = usage1.0.timeIntervalSince(usage0.0)
+                if window > 0 { $0.hogCpuPct = max(0, usage1.1 - usage0.1) / window * 100 }
+            }
+    }
+
+    /// CPU seconds of this process and of its children that have been waited for (`Command.run` waits for each).
+    static func ownCPUSeconds() -> Double {
+        func seconds(_ who: Int32) -> Double {
+            var u = rusage()
+            guard getrusage(who, &u) == 0 else { return 0 }
+            return Double(u.ru_utime.tv_sec) + Double(u.ru_utime.tv_usec) / 1e6 + Double(u.ru_stime.tv_sec) + Double(u.ru_stime.tv_usec) / 1e6
+        }
+        return seconds(RUSAGE_SELF) + seconds(RUSAGE_CHILDREN)
     }
 
     static func readAll(includeArgs: Bool = true) -> [Int32: RawProcess] {
