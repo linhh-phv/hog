@@ -132,6 +132,32 @@ import Testing
         #expect(share(["ssh", "admin@localhost"]) == "ssh …", "a user at a host is not a package")
     }
 
+    // Reviewer 3 (2026-10-26): hosts after `@` are not versions; only known extensions make a file; positional credentials.
+    @Test func reviewer3Cases() {
+        func share(_ a: [String]) -> String { ShareInfo.shareArgs(a, home: "/Users/me") }
+        for host in ["deploy@10.0.1.20", "me@192.168.1.5", "root@1.example.com", "alice@3dprinter.local", "pi@alpha", "bob@next"] {
+            #expect(share(["ssh", host]) == "ssh …", "\(host)")
+        }
+        #expect(share(["ssh", "-N", "-L", "5432:db:5432", "ec2-user@54.12.3.4"]) == "ssh -N -L 5432:db:5432 …")
+        #expect(share(["npx", "vite@5.1.0", "x@latest", "y@^1.2"]) == "npx vite@5.1.0 x@latest y@^1.2")
+        // `.sh` stays a file name (deploy.sh): a site directory named `x.sh` is the accepted ambiguity (design, section 3).
+        for dir in ["acme.test", "acme.local", "acme-billing.git", "acme.io", "acme.in"] {
+            #expect(share(["hugo", "-s", "/Users/me/Sites/\(dir)"]) == "hugo -s …", "\(dir)")
+        }
+        #expect(share(["node", "/Users/me/w/app/main.mjs", "/Users/me/w/conf.yaml"]) == "node main.mjs conf.yaml")
+        #expect(Privacy.scrubArgs(["curl", "--proxy-user", "alice:pw", "-U", "a:b", "-E", "c.pem:hunter2", "-b", "sid=abc123",
+                                   "--cert", "c.pem:pw", "https://x"], home: "/Users/me")
+                == "curl --proxy-user *** -U *** -E *** -b *** --cert *** https://x")
+        #expect(Privacy.scrubArgs(["sshpass", "-p", "hunter2", "ssh", "h"], home: "/Users/me") == "sshpass -p *** ssh h")
+    }
+
+    @Test func windowTitleWithoutAFileKeepsTheProject() {
+        let w = CodeStatusParser.Window(index: 1, title: "web-app — Work")
+        var s = scan([])
+        s.vscode = CodeStatusParser.Status(windows: [1: w], roles: [:])
+        #expect(Redactor(scan: s, user: "me", host: "box").names.contains("web-app"))
+    }
+
     @Test func windowTitleFileIsNotPrivate() {
         let w = CodeStatusParser.Window(index: 1, title: "server.js — web-app (Workspace)", windowPid: nil, extensionHostPid: nil, fileWatcherPid: nil)
         var s = scan([])
@@ -237,6 +263,22 @@ import Testing
         let s = analyzer.analyze(Scan(system: RawSystem(memTotalBytes: 0, ncpu: 8, pageSize: 16384), processes: procs, launchd: [:]))
         #expect(s.items.contains { $0.pids == [3000] })
         #expect(MenuSummary.make(s).unknowns.contains { $0.label.contains("mystery") })
+    }
+
+    @Test func atMostSixCandidatesSurviveTheCap() {
+        var procs: [Int32: RawProcess] = [:]
+        for i in 0..<25 {
+            var p = RawProcess(pid: Int32(1000 + i)); p.ppid = 1; p.uid = getuid(); p.footprintBytes = 900_000_000 - Int64(i)
+            p.exePath = "/Applications/Big.app/Contents/MacOS/Big"; p.cwd = "/"; procs[p.pid] = p
+        }
+        for i in 0..<10 {
+            var u = RawProcess(pid: Int32(3000 + i)); u.ppid = 1; u.uid = getuid(); u.footprintBytes = 120_000_000 + Int64(i)
+            u.exePath = "/usr/local/bin/mystery\(i)"; u.cwd = "/"; procs[u.pid] = u
+        }
+        let s = analyzer.analyze(Scan(system: RawSystem(memTotalBytes: 0, ncpu: 8, pageSize: 16384), processes: procs, launchd: [:]))
+        let kept = s.items.filter(MenuSummary.isUnknownCandidate)
+        #expect(kept.count == MenuSummary.maxUnknowns + MenuSummary.maxCards)
+        #expect(MenuSummary.make(s).unknowns.map(\.bytes) == [120_000_009, 120_000_008, 120_000_007], "the largest three")
     }
 
     let analyzer: Analyzer = {

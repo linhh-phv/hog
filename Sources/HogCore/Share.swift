@@ -153,9 +153,10 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
     }
 
     /// `supabase@latest`, `vite@5.1.0` → kept; `@scope/pkg[@version]` → `@…/pkg[@version]` (the scope can be a company).
-    /// Only a version or dist-tag after `@` counts: `admin@localhost` is a user at a host.
+    /// Only `latest` or a semantic version (at most three numbers) after `@` counts: `admin@localhost`, `deploy@10.0.1.20`,
+    /// `root@1.example.com`, `bob@next` are users at hosts (reviewer 2026-10-26).
     static func packageSpec(_ v: String) -> String? {
-        let pattern = #"^(@[A-Za-z0-9._-]+/)?([A-Za-z0-9._-]+)(@(latest|next|beta|alpha|canary|rc|lts|[\^~]?[0-9][A-Za-z0-9._-]*))?$"#
+        let pattern = #"^(@[A-Za-z0-9._-]+/)?([A-Za-z0-9._-]+)(@(latest|[\^~]?[0-9]+(\.[0-9]+){0,2}([-+][0-9A-Za-z.-]+)?))?$"#
         guard let m = try? NSRegularExpression(pattern: pattern).firstMatch(in: v, range: NSRange(v.startIndex..., in: v)) else { return nil }
         let scoped = m.range(at: 1).location != NSNotFound
         let versioned = m.range(at: 3).location != NSNotFound
@@ -186,17 +187,20 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
         return isFileName(last) ? last : "…"
     }
 
-    /// `server.js`, `manage.py`, `config.yaml`: a name with a short extension. Not `~`, `.`, `..`, hidden directories.
+    /// `server.js`, `manage.py`, `config.yaml`: a name with a known file extension. A directory named like a domain or a
+    /// repository (`acme.io`, `site.test`, `billing.git`) is not one: only listed extensions count (reviewer 2026-10-26).
     static func isFileName(_ s: String) -> Bool {
         guard let dot = s.lastIndex(of: "."), dot != s.startIndex else { return false }
-        let ext = s[s.index(after: dot)...]
-        return (1...6).contains(ext.count) && ext.allSatisfy { $0.isLetter || $0.isNumber } && ext.contains(where: \.isLetter)
-            && !domainEndings.contains(ext.lowercased())
+        return fileExtensions.contains(s[s.index(after: dot)...].lowercased())
     }
 
-    /// `clientsite.com`, `acme.io`: a site directory named after a domain, not a file (reviewer 2026-10-26).
-    static let domainEndings: Set<String> = ["com", "net", "org", "io", "dev", "ai", "co", "app", "me", "vn", "xyz", "site", "cloud",
-                                             "tech", "info", "biz", "us", "uk", "de", "fr", "jp", "online", "store", "shop"]
+    static let fileExtensions: Set<String> = [
+        "js", "mjs", "cjs", "ts", "mts", "cts", "tsx", "jsx", "py", "pyc", "rb", "go", "rs", "java", "jar", "class", "kt", "kts", "swift",
+        "php", "pl", "lua", "r", "jl", "ex", "exs", "erl", "hs", "dart", "c", "h", "cc", "cpp", "hpp", "m", "mm", "zig", "wasm",
+        "sh", "bash", "zsh", "fish", "ps1", "bat", "cmd", "json", "jsonc", "yml", "yaml", "toml", "ini", "conf", "cfg", "env",
+        "xml", "plist", "properties", "gradle", "txt", "md", "log", "csv", "lock", "pem", "crt", "key", "html", "css", "scss",
+        "vue", "svelte", "sql", "db", "sqlite", "so", "dylib", "node", "bin", "sock", "pid",
+    ]
 
     /// UUIDs and long random-looking tokens (browser client ids, session tokens): stable identifiers of a person.
     static func looksLikeId(_ s: String) -> Bool {
@@ -288,7 +292,8 @@ struct Redactor {
             // "server.js — web-app (Workspace)": the open file comes first and is not private (it is often the very
             // script being asked about); the project part follows.
             var parts = (w.title ?? "").components(separatedBy: " — ")
-            if parts.count > 1 { parts.removeFirst() }
+            if parts.count > 1, let first = parts.first, ShareInfo.isFileName(first.trimmingCharacters(in: CharacterSet(charactersIn: "● ")))
+                || first.hasPrefix("●") { parts.removeFirst() }
             found += parts.flatMap { $0.components(separatedBy: CharacterSet(charactersIn: "()")) }.map { $0.trimmingCharacters(in: .whitespaces) }
                 .filter { !$0.isEmpty && $0 != "Workspace" && !$0.contains(" ") && !ShareInfo.isFileName($0) }
         }
