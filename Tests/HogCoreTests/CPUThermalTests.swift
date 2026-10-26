@@ -165,13 +165,37 @@ import Testing
     }
 
     @Test func ownCPUCountsFinishedChildren() throws {
-        let before = Scanner.ownCPUSeconds()
-        // A child that burns ~0.2 s of CPU and is waited for by Command.run.
+        // RUSAGE_CHILDREN alone: other tests run in parallel in this process and move RUSAGE_SELF (reviewer 4).
+        let before = Scanner.cpuSeconds(RUSAGE_CHILDREN)
         _ = try #require(Command.run("/bin/sh", ["-c", "i=0; while [ $i -lt 40000 ]; do i=$((i+1)); done"], timeout: 20))
-        #expect(Scanner.ownCPUSeconds() - before > 0.05, "RUSAGE_CHILDREN is part of hog's own CPU")
+        #expect(Scanner.cpuSeconds(RUSAGE_CHILDREN) - before > 0.05)
+        #expect(Scanner.ownCPUSeconds() >= Scanner.cpuSeconds(RUSAGE_CHILDREN), "own = self + children")
     }
 
-    @Test func busyBoundaryAndFastMode() {
+    /// Fake commands only (never the machine's `code`): a `launchctl` that takes 0.6 s, a `code` and `watchman` that print nothing.
+    @Test func sensorsFinishBeforeTheCPUWindow() throws {
+        let home = NSTemporaryDirectory() + "hog-scan-\(UUID().uuidString)"
+        try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        func fake(_ name: String, _ body: String) throws -> String {
+            let path = home + "/" + name
+            try ("#!/bin/sh\n" + body + "\n").write(toFile: path, atomically: true, encoding: .utf8)
+            chmod(path, 0o755)
+            return path
+        }
+        let locator = CommandLocator(home: home, overrides: ["launchctl": [try fake("launchctl", "sleep 0.6; echo 'PID\tStatus\tLabel'")],
+                                                            "code": [try fake("code", "exit 0")], "watchman": [try fake("watchman", "exit 1")]])
+        var ext = ExternalSensors(locator: locator, home: home)
+        ext.cleanUpCodeStatus = { _ in }
+        let scan = Scanner(external: ext, cpuInterval: 0.2).scan()
+        let window = try #require(scan.cpuSampledAt).timeIntervalSince(scan.takenAt)
+        #expect(window >= 0.75, "the 0.6 s sensor ran before the 0.2 s CPU window, not alongside it (\(window) s)")
+        #expect(scan.hogCpuPct != nil && scan.cpu != nil && !scan.cpuNowPct.isEmpty)
+        let fast = Scanner(external: ext, fast: true).scan()
+        #expect(fast.hogCpuPct == nil && fast.cpu == nil && fast.cpuSampledAt == nil && fast.cpuNowPct.isEmpty)
+    }
+
+    @Test func busyBoundaryAndNotMeasured() {
         #expect(!analyzer.analyze(scan(thermal: .nominal, idle: 20.5)).headline.text.contains("busy"), "79.5 %")
         #expect(analyzer.analyze(scan(thermal: .nominal, idle: 20)).headline.text.contains("The CPU is busy"), "80 %")
         #expect(!analyzer.analyze(scan(thermal: .nominal, idle: nil)).headline.text.contains("busy"), "not measured: not busy")

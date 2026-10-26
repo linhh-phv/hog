@@ -120,8 +120,10 @@ public struct Scanner: Sendable {
         if !fast {
             let elapsedNs = elapsed * 1_000_000_000
             for (pid, p) in second {
-                guard let a = before[pid]?.cpuTimeNs, let b = p.cpuTimeNs, b >= a, before[pid]?.startSec == p.startSec,
-                      first[pid]?.startSec == p.startSec else { continue }
+                // Identity from the two samples of the window: a process started during the sensors (after `first`) still
+                // counts as readable instead of falling into "system" (reviewer 2026-10-27).
+                guard let a = before[pid]?.cpuTimeNs, let b = p.cpuTimeNs, b >= a, before[pid]?.startSec == p.startSec else { continue }
+                if processes[pid]?.startSec != p.startSec { processes[pid] = p }
                 cpuNow[pid] = Double(b - a) / elapsedNs * 100
                 processes[pid]?.cpuTimeNs = b
                 processes[pid]?.footprintBytes = p.footprintBytes
@@ -160,13 +162,13 @@ public struct Scanner: Sendable {
     }
 
     /// CPU seconds of this process and of its children that have been waited for (`Command.run` waits for each).
-    static func ownCPUSeconds() -> Double {
-        func seconds(_ who: Int32) -> Double {
-            var u = rusage()
-            guard getrusage(who, &u) == 0 else { return 0 }
-            return Double(u.ru_utime.tv_sec) + Double(u.ru_utime.tv_usec) / 1e6 + Double(u.ru_stime.tv_sec) + Double(u.ru_stime.tv_usec) / 1e6
-        }
-        return seconds(RUSAGE_SELF) + seconds(RUSAGE_CHILDREN)
+    static func ownCPUSeconds() -> Double { cpuSeconds(RUSAGE_SELF) + cpuSeconds(RUSAGE_CHILDREN) }
+
+    /// User + system CPU seconds from `getrusage(who)`.
+    static func cpuSeconds(_ who: Int32) -> Double {
+        var u = rusage()
+        guard getrusage(who, &u) == 0 else { return 0 }
+        return Double(u.ru_utime.tv_sec) + Double(u.ru_utime.tv_usec) / 1e6 + Double(u.ru_stime.tv_sec) + Double(u.ru_stime.tv_usec) / 1e6
     }
 
     static func readAll(includeArgs: Bool = true) -> [Int32: RawProcess] {
