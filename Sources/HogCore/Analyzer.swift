@@ -58,9 +58,26 @@ public struct Analyzer: Sendable {
                               catalogId: catalog.match(MatchSubject(containerImage: c.image)), pids: []))
         }
 
-        // Facts
+        // Facts, first pass without launchd configs (each `launchctl print` is a process spawn).
         for i in items.indices {
             items[i].facts = facts(for: items[i], scan: scan, own: own, catalogOf: catalogOf, selfSet: selfSet, items: items)
+        }
+        // Second pass: read the launchd config only for launchd jobs that could be suggested for stopping,
+        // in parallel, then recompute their facts (design 3.1: `launchd.restarts_after_stop`).
+        let candidates: [(Int, String)] = items.indices.compactMap { i in
+            guard let pid = items[i].pids.first, let label = scan.launchd?[pid] else { return nil }
+            let v = RuleEngine.run(rules.rules, kind: items[i].kind, facts: items[i].facts).verdict
+            return v == .mayStop || v == .ask ? (i, label) : nil
+        }
+        if !candidates.isEmpty {
+            let print = launchdPrint
+            let prints = ExternalSensors.parallelMap(candidates.map(\.1)) { label in print(label) }
+            var restarts: [String: Bool?] = [:]
+            for (k, c) in candidates.enumerated() { restarts[c.1] = prints[k].flatMap { LaunchctlParser.restartsAfterStop(printOutput: $0) } }
+            for (i, _) in candidates {
+                items[i].facts = facts(for: items[i], scan: scan, own: own, catalogOf: catalogOf, selfSet: selfSet, items: items,
+                                       restarts: restarts)
+            }
         }
 
         // Rules → protection + findings
@@ -130,7 +147,7 @@ public struct Analyzer: Sendable {
     // MARK: Facts
 
     func facts(for item: Item, scan: Scan, own: [Int32: ProcessOwnership], catalogOf: [Int32: String],
-               selfSet: Set<Int32>, items: [Item]) -> [String: FactValue] {
+               selfSet: Set<Int32>, items: [Item], restarts: [String: Bool?] = [:]) -> [String: FactValue] {
         var f: [String: FactValue] = [:]
         let entry = item.catalogId.value.flatMap { catalog.entries[$0] }
         f["catalog.id"] = item.catalogId.value.map(FactValue.string) ?? .null
@@ -216,8 +233,8 @@ public struct Analyzer: Sendable {
 
         if let label = scan.launchd?[pid] {
             f["launchd.label"] = .string(label)
-            f["launchd.restarts_after_stop"] = launchdPrint(label).flatMap { LaunchctlParser.restartsAfterStop(printOutput: $0) }
-                .map(FactValue.bool) ?? .null
+            // Not looked up (small, uncatalogued) or unreadable → unknown.
+            f["launchd.restarts_after_stop"] = (restarts[label] ?? nil).map(FactValue.bool) ?? .null
         } else {
             f["launchd.label"] = .null
             f["launchd.restarts_after_stop"] = scan.launchd == nil ? .null : .bool(false)

@@ -14,6 +14,10 @@
       {
         "fact": "footprint_bytes",
         "gte": 104857600
+      },
+      {
+        "fact": "exe.system",
+        "eq": false
       }
     ]
   },
