@@ -61,17 +61,21 @@ mục danh mục nào, hay chưa biết) và một khối JSON:
     `…/extensions/markdown-language-features/dist/serverWorkerMain` → `extensions/markdown-language-features/…/serverWorkerMain`; scope npm
     bị che: `node_modules/@…/tool/…/cli.js`. Đây là manh mối chính (đo trên máy: một tiến trình extension của VS Code chỉ còn
     `serverWorkerMain` nếu cắt hết);
-  - có `@` → `…` (`user@host`, `token@host`, `git@host:org/repo`);
-  - có `/` hoặc bắt đầu bằng `~` → tên file cuối **nếu là tên file** (có đuôi ngắn: `server.js`), ngược lại `…` (một thư mục — thường
-    chính là tên dự án: `pnpm --dir ~/work/acme dev` → `pnpm --dir … dev`);
+  - gói npm: `supabase@latest`, `vite@5.1.0` giữ nguyên (chỉ khi sau `@` là phiên bản hoặc dist-tag); `@scope/pkg` → `@…/pkg`;
+  - còn lại có `@` → `…` (`user@host`, `token@host`, `git@host:org/repo`);
+  - có `/` hoặc bắt đầu bằng `~` → tên file cuối **nếu là tên file** (có đuôi ngắn: `server.js`; đuôi giống tên miền như `.com`, `.io`
+    thì không — `~/Sites/acme.io` là thư mục), ngược lại `…` (một thư mục — thường chính là tên dự án: `pnpm --dir ~/work/acme dev` →
+    `pnpm --dir … dev`);
   - UUID hoặc chuỗi ngẫu nhiên dài (≥ 20 ký tự, có cả chữ và số) → `…` (id trình duyệt, token phiên);
   - `TÊN=giá-trị` (biến môi trường: `-e DB_PASSWORD=x`, `--env=TOKEN=x`, trong `sh -c`) mà `TÊN` chứa từ bí mật → `TÊN=***`;
-  - header có tên chứa từ bí mật (`X-Api-Key: v`, `x-api-key:v`, `--header=X-Auth: v`) → giá trị là `***`;
+  - header có tên chứa từ bí mật (`X-Api-Key: v`, `x-api-key:v`, `--header=X-Auth:v`) → giá trị là `***`; tên header chỉ gồm chữ, số,
+    `-`, `_` — `ghcr.io/acme/auth-service:1` là image, không phải header; `Cookie:`/`Authorization:` che tới hết tham số;
   - `-u`/`--user` kèm `user:mật-khẩu` (tách rời, `-uuser:pw`, `--user=u:pw`) → `***`, với mọi chương trình; `-u root` giữ nguyên;
   - trong một tham số nhiều lệnh (`sh -c "… && mysql -pX && redis-cli -a Y"`), mỗi lệnh sau `&&`, `||`, `;`, `|` được nhận tên để áp
     luật `-p`/`-a` của client CSDL; từ tách theo mọi khoảng trắng (cả xuống dòng, tab);
   - `TÊN=giá-trị` nhận cả tên có `.` và `-` (`--set db.password=x`); JSON `"password": "x"` bị che (cả trong `--json`).
-- **Lớp 2, theo tên riêng hog đã thấy** (`Redactor`, chỉ áp lên giá trị và tên chương trình, không áp lên tên cờ): mọi tên dự án
+- **Lớp 2, theo tên riêng hog đã thấy** (`Redactor`, chỉ áp lên giá trị và tên chương trình, không áp lên tên cờ; tiêu đề cửa sổ chỉ
+  lấy phần dự án, bỏ tên file đang mở — thường chính là script đang được hỏi): mọi tên dự án
   (`package.json#name`, thư mục có `.git`…), mọi thành phần thư mục làm việc trong home của mọi tiến trình và phiên Claude (trừ
   `~/Library` — nơi app để dữ liệu, `Application Support/discord` là tên app chứ không phải tên riêng — và thư mục ẩn), các phần một từ của tiêu đề cửa sổ VS Code, tên người dùng, tên máy (`gethostname`,
   không tra DNS) → thay bằng `…` ở `exe`, `args`, `parents`, `image`, không phân biệt hoa thường, theo ranh giới từ. Tên < 3 ký tự và tên
@@ -132,3 +136,4 @@ Khi người dùng dán `hog.share/1` hay ảnh chụp:
 | 2026-10-26 | App | Kết quả dừng (xong, bị chặn, lỗi) đưa về trang chính để hiện; "‹ Quay lại" từ trang item về "Mọi đề xuất" nếu mở từ đó | Bấm Dừng ở trang mới thì không thấy kết quả |
 | 2026-10-26 | Làm sạch (qa chốt) | Thêm: biến môi trường bí mật, header bí mật, `-u user:pw`; đường dẫn có dấu cách là một khối; tên cờ không bị lớp 2 thay; lớp 2 bỏ `~/Library` và thư mục ẩn; câu mở đầu theo việc hog đã biết thứ này hay chưa; trang item nói rõ khi thứ đó đã thoát | qa tạo tiến trình thử: `-e DB_PASSWORD=…`, `X-Api-Key: …`, `-u admin:pw` lọt; chạy thật: bản đầu của lớp 2 cắt vụn `Visual Studio Code.app`, thay chữ `data` trong `--user-data-dir`, coi "Discord" là tên riêng |
 | 2026-10-26 | Che bí mật (qa lần 2) | Mỗi tham số chỉ đọc 1 024 ký tự đầu, tổng tối đa 8 192 (giữ lại 200) | Một tham số 150 KB làm regex URL chạy hàng phút: mọi lệnh `hog` và app treo (lỗi có từ giai đoạn 1) |
+| 2026-10-26 | Làm sạch (reviewer lần 2) | Tên header chỉ chữ/số/`-`/`_`; header dính cờ; cookie tới hết tham số; `--user-agent` không phải cờ mật khẩu; đuôi tên miền là thư mục; tiêu đề cửa sổ bỏ tên file; giữ `pkg@version`; regex URL có look-behind (tuyến tính); tối đa 6 ứng viên "Chưa rõ" giữ qua bước cắt | Bản sửa qa lần 2 làm lộ `ghcr.io/acme-corp/auth-service`; `--header=X-Api-Key:v`, cookie thứ hai, `clientsite.com` lọt; `--user-agent` bị che nhầm; tên script bị thay vì trùng tên file trong tiêu đề cửa sổ |

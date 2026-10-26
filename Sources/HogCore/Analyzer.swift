@@ -138,7 +138,9 @@ public struct Analyzer: Sendable {
             var kept = 0
             // Containers always stay: they have no footprint (sorted last) and no other way back as a stop target.
             // So do "not known yet" candidates (the app lists them; QA 2026-10-26: a 120 MB one fell below the cap).
-            items = items.filter { withFinding.contains($0.id) || $0.kind == .container || MenuSummary.isUnknownCandidate($0)
+            var unknowns = 0
+            items = items.filter { withFinding.contains($0.id) || $0.kind == .container
+                || (MenuSummary.isUnknownCandidate($0) && { unknowns += 1; return unknowns <= MenuSummary.maxUnknowns + MenuSummary.maxCards }())
                 || { kept += 1; return kept <= Self.maxExtraItems }() }
             let keptIds = Set(items.map(\.id))
             itemOfPid = itemOfPid.filter { keptIds.contains($0.value) }

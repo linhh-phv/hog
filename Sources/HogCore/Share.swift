@@ -80,16 +80,16 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
             if ["-u", "--user"].contains(previous), w.contains(":"), !w.hasPrefix("-") { return "***" }
             if w.hasPrefix("--user="), w.contains(":") { return "--user=***" }
             if w.hasPrefix("-u"), !w.hasPrefix("--"), w.count > 2, w.contains(":") { return "-u***" }
-            if let flag = (Privacy.passwordShortFlags[program] ?? []).first(where: { w.hasPrefix($0) }) {
+            if let flag = (Privacy.passwordShortFlags[program] ?? []).first(where: { Privacy.passwordFlag($0, matches: w) }) {
                 if w == flag { maskNext = true; return w }
-                return flag + "***"
+                return flag + (flag.hasPrefix("--") ? "=***" : "***")
             }
-            // A header whose name is secret-looking: `X-Api-Key: v` (value next), `x-api-key:v`, `--header=X-Auth: v`.
-            let header = String(w.split(separator: "=").last ?? "")
-            if header.hasSuffix(":"), Privacy.isSecret(String(header.dropLast())) { maskNext = true; return w }
-            if !w.hasPrefix("-"), !w.contains("://"), let colon = w.firstIndex(of: ":"), colon != w.startIndex,
-               w.index(after: colon) != w.endIndex, Privacy.isSecret(String(w[..<colon])) {
-                return String(w[...colon]) + "***"
+            // A header whose name is secret-looking: `X-Api-Key: v` (value next), `x-api-key:v`, `--header=X-Auth:v`.
+            let (prefix, value) = w.hasPrefix("-") && w.contains("=")
+                ? (String(w[...w.firstIndex(of: "=")!]), String(w[w.index(after: w.firstIndex(of: "=")!)...])) : ("", w)
+            if let colon = value.firstIndex(of: ":"), Self.isHeaderName(value[..<colon]), Privacy.isSecret(String(value[..<colon])) {
+                if value.index(after: colon) == value.endIndex { maskNext = true; return w }
+                return prefix + value[...colon] + "***"
             }
             return shareWord(w, redactor)
         }
@@ -113,6 +113,11 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
             }.joined(separator: " ")
         }
         return Privacy.truncate(words.joined(separator: " "))
+    }
+
+    /// `X-Api-Key`, `Authorization`: letters, digits, `-`, `_` only — not an image (`ghcr.io/acme/auth-service:1`) or host.
+    static func isHeaderName(_ s: Substring) -> Bool {
+        !s.isEmpty && s.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
     }
 
     /// Flag names are kept as they are (they say what the program does); only values are reduced.
@@ -140,10 +145,23 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
         if let r = v.range(of: "://") { return v[..<r.lowerBound] + "://…" }  // no host, user, path or query
         // A path through a package directory first: its npm scope (`@acme/…`) is hidden there, the package name kept.
         if v.split(separator: "/").contains(where: { packageDirs.contains(String($0)) }) { return sharePath(v) }
-        if v.contains("@") { return "…" }  // user@host, token@host, git@host:org/repo, @scope/pkg
+        if let pkg = packageSpec(v) { return pkg }
+        if v.contains("@") { return "…" }  // user@host, token@host, git@host:org/repo
         if v.contains("/") || v.hasPrefix("~") { return sharePath(v) }
         if looksLikeId(v) { return "…" }
         return v
+    }
+
+    /// `supabase@latest`, `vite@5.1.0` → kept; `@scope/pkg[@version]` → `@…/pkg[@version]` (the scope can be a company).
+    /// Only a version or dist-tag after `@` counts: `admin@localhost` is a user at a host.
+    static func packageSpec(_ v: String) -> String? {
+        let pattern = #"^(@[A-Za-z0-9._-]+/)?([A-Za-z0-9._-]+)(@(latest|next|beta|alpha|canary|rc|lts|[\^~]?[0-9][A-Za-z0-9._-]*))?$"#
+        guard let m = try? NSRegularExpression(pattern: pattern).firstMatch(in: v, range: NSRange(v.startIndex..., in: v)) else { return nil }
+        let scoped = m.range(at: 1).location != NSNotFound
+        let versioned = m.range(at: 3).location != NSNotFound
+        guard scoped || versioned, let name = Range(m.range(at: 2), in: v) else { return nil }
+        let version = Range(m.range(at: 3), in: v).map { String(v[$0]) } ?? ""
+        return (scoped ? "@…/" : "") + v[name] + version
     }
 
     /// Directories whose next component is a public package name (a VS Code extension, an npm or Python package): the
@@ -173,7 +191,12 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
         guard let dot = s.lastIndex(of: "."), dot != s.startIndex else { return false }
         let ext = s[s.index(after: dot)...]
         return (1...6).contains(ext.count) && ext.allSatisfy { $0.isLetter || $0.isNumber } && ext.contains(where: \.isLetter)
+            && !domainEndings.contains(ext.lowercased())
     }
+
+    /// `clientsite.com`, `acme.io`: a site directory named after a domain, not a file (reviewer 2026-10-26).
+    static let domainEndings: Set<String> = ["com", "net", "org", "io", "dev", "ai", "co", "app", "me", "vn", "xyz", "site", "cloud",
+                                             "tech", "info", "biz", "us", "uk", "de", "fr", "jp", "online", "store", "shop"]
 
     /// UUIDs and long random-looking tokens (browser client ids, session tokens): stable identifiers of a person.
     static func looksLikeId(_ s: String) -> Bool {
@@ -239,7 +262,10 @@ struct Redactor {
     /// Directory names too common to be private; replacing them would only destroy useful words.
     static let generic: Set<String> = ["src", "dist", "build", "app", "apps", "packages", "lib", "bin", "web", "server", "client",
                                        "api", "desktop", "documents", "downloads", "projects", "project", "work", "code", "dev",
-                                       "repos", "git", "tmp", "library", "applications", "node_modules", "extensions", "workspace"]
+                                       "repos", "git", "tmp", "library", "applications", "node_modules", "extensions", "workspace",
+                                       "backend", "frontend", "docker", "tools", "scripts", "services", "service", "node", "python",
+                                       "infra", "deploy", "config", "test", "tests", "docs", "data", "public", "assets", "mobile",
+                                       "worktrees", "main", "master"]
 
     init(names: [String]) {
         self.names = Array(Set(names.filter { $0.count >= 3 && !Self.generic.contains($0.lowercased()) }))
@@ -259,9 +285,12 @@ struct Redactor {
             }
         }
         for w in (scan.windows ?? [:]).values {
-            // "file.ts — project (Workspace)": every single-word part.
-            found += (w.title ?? "").components(separatedBy: CharacterSet(charactersIn: "—()")).map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty && $0 != "Workspace" && !$0.contains(" ") }
+            // "server.js — web-app (Workspace)": the open file comes first and is not private (it is often the very
+            // script being asked about); the project part follows.
+            var parts = (w.title ?? "").components(separatedBy: " — ")
+            if parts.count > 1 { parts.removeFirst() }
+            found += parts.flatMap { $0.components(separatedBy: CharacterSet(charactersIn: "()")) }.map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty && $0 != "Workspace" && !$0.contains(" ") && !ShareInfo.isFileName($0) }
         }
         self.init(names: found)
     }

@@ -54,8 +54,8 @@ public enum Privacy {
             if lower.hasSuffix("authorization:") || lower.hasSuffix("cookie:") || ["bearer", "basic"].contains(lower) {
                 out.append(arg); maskAuth = true; continue
             }
-            if let flag = pwFlags.first(where: { arg.hasPrefix($0) }) {
-                out.append(arg == flag ? arg : flag + "***")
+            if let flag = pwFlags.first(where: { passwordFlag($0, matches: arg) }) {
+                out.append(arg == flag ? arg : flag + (flag.hasPrefix("--") ? "=***" : "***"))
                 maskNext = arg == flag
                 continue
             }
@@ -87,10 +87,12 @@ public enum Privacy {
     /// `Authorization: ***`, and `token=`/`key=`/`secret=`/`password=` query values.
     static func scrubInline(_ arg: String) -> String {
         var s = arg
-        if let re = try? NSRegularExpression(pattern: #"([a-zA-Z][a-zA-Z0-9+.-]*://[^/:@\s]+):[^@/\s]+@"#) {
+        // The look-behind keeps this linear on long alphanumeric runs (a start inside a scheme is never retried).
+        if let re = try? NSRegularExpression(pattern: #"(?<![a-zA-Z0-9+.-])([a-zA-Z][a-zA-Z0-9+.-]*://[^/:@\s]+):[^@/\s]+@"#) {
             s = re.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "$1:***@")
         }
-        if let re = try? NSRegularExpression(pattern: #"(?i)((?:authorization|cookie|set-cookie):\s*)(bearer\s+|basic\s+|token\s+)?\S+"#) {
+        // To the end of the argument: `Cookie: a=1; b=2` has several values (reviewer 2026-10-26).
+        if let re = try? NSRegularExpression(pattern: #"(?i)((?:authorization|cookie|set-cookie):\s*)(bearer\s+|basic\s+|token\s+)?\S.*"#) {
             s = re.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "$1$2***")
         }
         if let re = try? NSRegularExpression(pattern: #"(?i)([?&](?:[a-z_]*token|[a-z_]*key|secret|password|pass|pwd|auth)=)[^&\s]+"#) {
@@ -101,6 +103,11 @@ public enum Privacy {
             s = re.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "$1\"***\"")
         }
         return s
+    }
+
+    /// `-p` matches `-p` and `-psecret`; a long flag only itself or `--user=…` (not `--user-agent`: reviewer 2026-10-26).
+    static func passwordFlag(_ flag: String, matches arg: String) -> Bool {
+        flag.hasPrefix("--") ? (arg == flag || arg.hasPrefix(flag + "=")) : arg.hasPrefix(flag)
     }
 
     static func isSecret(_ flagName: String) -> Bool {

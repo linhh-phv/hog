@@ -110,9 +110,35 @@ import Testing
         #expect(share(["helm", "--set", "db.password=x", "--env", "my-token=x", "--define", "auth.secret=x"])
                 == "helm --set db.password=*** --env my-token=*** --define auth.secret=***")
         #expect(share(["http", "-uadmin:pw", "--user=u:pw"]) == "http -u*** --user=***")
-        #expect(share(["curl", "--data", #"{"password":"x","user":"me2"}"#]) == #"curl --data {"password":***"#, "masked (more than needed)")
+        #expect(share(["curl", "--data", #"{"password":"x","user":"me2"}"#]) == #"curl --data {"password":"***","user":"me2"}"#)
         #expect(Privacy.scrubArgs(["curl", "--data", #"{"api_key": "x", "n": 1}"#], home: "/Users/me") == #"curl --data {"api_key": "***", "n": 1}"#)
         #expect(share(["vite", "--host", "localhost:5173"]) == "vite --host localhost:5173", "host:port is not a header")
+    }
+
+    // Reviewer 2 (2026-10-26): images are not headers, headers glued to flags, every cookie, --user-agent, domain dirs, packages.
+    @Test func reviewer2Cases() {
+        func share(_ a: [String]) -> String { ShareInfo.shareArgs(a, home: "/Users/me") }
+        #expect(share(["docker", "run", "ghcr.io/acme-corp/auth-service:latest"]) == "docker run …")
+        #expect(share(["x", "registry.corp.example/acme-billing/key-service:1.2", "svc/auth-service:8080"]) == "x … …")
+        #expect(share(["wget", "--header=X-Api-Key:abc123secretvalue", "https://x"]) == "wget --header=X-Api-Key:*** https://…")
+        #expect(share(["curl", "-H", "Cookie: sid=abc; csrf=xyz"]) == "curl -H Cookie: ***")
+        #expect(Privacy.scrubArgs(["curl", "-H", "Cookie: sid=abc; csrf=xyz"], home: "/Users/me") == "curl -H Cookie: ***")
+        #expect(share(["curl", "--user-agent", "Mozilla/5.0", "https://x"]) == "curl --user-agent … https://…", "not a credential flag")
+        #expect(Privacy.scrubArgs(["curl", "--user=u:pw", "--user-agent", "x"], home: "/Users/me") == "curl --user=*** --user-agent x")
+        #expect(share(["npm", "--prefix", "/Users/me/work/clientsite.com"]) == "npm --prefix …")
+        #expect(share(["hugo", "server", "-s", "/Users/me/Sites/acme.io"]) == "hugo server -s …")
+        #expect(share(["npx", "-y", "supabase@latest", "start"]) == "npx -y supabase@latest start")
+        #expect(share(["npx", "-y", "@modelcontextprotocol/server-filesystem", "/Users/me/docs"]) == "npx -y @…/server-filesystem …")
+        #expect(share(["ssh", "admin@localhost"]) == "ssh …", "a user at a host is not a package")
+    }
+
+    @Test func windowTitleFileIsNotPrivate() {
+        let w = CodeStatusParser.Window(index: 1, title: "server.js — web-app (Workspace)", windowPid: nil, extensionHostPid: nil, fileWatcherPid: nil)
+        var s = scan([])
+        s.vscode = CodeStatusParser.Status(windows: [1: w], roles: [:])
+        let r = Redactor(scan: s, user: "me", host: "box")
+        #expect(r.names.contains("web-app") && !r.names.contains("server.js"))
+        #expect(r.names("node server.js --port 3000") == "node server.js --port 3000")
     }
 
     @Test func longArgumentsDoNotHang() {
