@@ -1,6 +1,7 @@
 # hog — thiết kế giai đoạn 1
 
-> Trạng thái: **bản nháp 2 — 10 câu ở mục 12 đã chốt** (2026-10-26). Chưa có dòng code nào theo tài liệu này.
+> Trạng thái: **đã duyệt** (2026-10-26), cả 10 câu ở mục 12 đã chốt. Chưa có dòng code nào. Trong lúc triển khai, chỗ nào thực
+> tế khác thiết kế thì sửa tài liệu cùng code (user: *"sau khi triển khai xong thì có gì update sau"*).
 > Đổi so với bản 1 (2026-10-15): viết bằng **Swift** thay vì Go, có **app trên thanh menu macOS** ngay giai đoạn 1, và
 > thêm **tầng giải nghĩa số đo** (mục 5) — cả ba do chủ dự án chốt ngày 2026-10-26.
 > Ngôn ngữ: tiếng Việt, vì người duyệt là chủ dự án; README và code của repo vẫn là tiếng Anh.
@@ -68,7 +69,7 @@ Nguyên tắc xuyên suốt:
 | Đường dẫn thực thi | `proc_pidpath` | < 1 ms | ✔ | Tên đầy đủ, không bị cắt 16 ký tự như `top`. |
 | Tham số dòng lệnh | `sysctl KERN_PROCARGS2` | — | ○ | Cần để nhận diện (vd `--resume`, `typesMap.json`). Dự phòng: `ps -o command=` (0,06 s, đã kiểm). |
 | cwd | `proc_pidinfo(PROC_PIDVNODEPATHINFO)` | < 1 ms | ✔ | Thay cho gọi `lsof -d cwd` từng tiến trình như `lps` v0.1.0. |
-| CPU của tiến trình | `ri_user_time + ri_system_time`, hai mẫu cách nhau | — | ✔ | Đổi đơn vị bằng `mach_timebase_info`. CLI lấy hai mẫu cách 1 s; app dùng mẫu trước đó nó đã giữ. CPU trung bình cả đời = tổng thời gian CPU / tuổi. |
+| CPU của tiến trình | `ri_user_time + ri_system_time`, hai mẫu cách nhau | — | ✔ | Đổi đơn vị bằng `mach_timebase_info`. CLI lấy hai mẫu cách 1 s. App lấy mẫu thứ nhất lúc mở menu và mẫu thứ hai lúc quét đầy đủ xong (~2 s) — **không** dùng mẫu của lần mở menu trước (có thể cách hàng giờ, ra trung bình nhiều giờ). CPU trung bình cả đời = tổng thời gian CPU / tuổi. |
 | Áp lực bộ nhớ | `sysctlbyname("kern.memorystatus_vm_pressure_level")` | < 1 ms | ✔ | 1 = bình thường, 2 = cảnh báo, 4 = nghiêm trọng (theo tài liệu XNU; trên máy mới thấy giá trị 1). Đây là chỉ báo chính thức; **không** dùng "free %" của `memory_pressure`. |
 | Swap | `sysctlbyname("vm.swapusage")` | < 1 ms | ✔ | `total` thay đổi theo thời điểm (5120M ngày 15, 4096M ngày 26). |
 | RAM toàn máy, RAM nén | `host_statistics64(HOST_VM_INFO64)` | — | ✗ | **Phép thử trả toàn số 0**, chưa rõ vì sao (có thể do sandbox của phiên thử). Dự phòng: `vm_stat` (< 0,1 s, đã kiểm). "Pages occupied by compressor" (RAM vật lý bộ nén chiếm, khớp `top`) và "Pages stored in compressor" (dữ liệu logic đã nén) là **hai con số khác nhau**, gấp nhau ~2 lần (ngày 26: 5,4 GB và 10,6 GB) — hog xuất cả hai, tên khác nhau. |
@@ -76,10 +77,18 @@ Nguyên tắc xuyên suốt:
 | Cửa sổ VS Code | `code --status` | 1,73 s | ✔ | Cho `window [N] (tiêu đề)`, `extension-host [N]`, `file-watcher [N]` cùng số `N` và PID. **Cột `Mem MB` của lệnh này in số rác** (hàng chục tỷ MB) → không dùng. Cây cha–con đã đủ quy một tiến trình về `extension-host [N]`; `code --status` chỉ cần để biết `N` ↔ tiêu đề cửa sổ. |
 | Phiên Claude | `~/.claude/sessions/<pid>.json` | < 0,01 s | ✔ | Có `pid`, `sessionId`, `cwd`, `startedAt`, `kind`, `entrypoint`, `status` (`idle`/`busy`), `statusUpdatedAt`. Ngày 15: 7 phiên `idle` từ 178 đến 331 phút, 1 phiên `busy` cách 3 phút. Là định dạng nội bộ của Claude Code, **không có cam kết ổn định** → đọc dung sai (mục 3.3). Không đọc `*.key` cùng thư mục. |
 | Lần hoạt động cuối (dự phòng) | mtime của `~/.claude/projects/<thư-mục>/<sessionId>.jsonl` | < 0,01 s | ✔ | Chỉ dùng khi thiếu `sessions/<pid>.json`. **Không giải mã tên thư mục** (`/` và `-` đều thành `-`, mơ hồ). |
-| watchman | `watchman --no-spawn --no-local watch-list`, `… debug-get-subscriptions <root>` | 0,19 s | ✔ | Theo `watchman --help`, mặc định nó **thử khởi động service nếu chưa có** → luôn có `--no-spawn --no-local` (chưa thử khi server tắt). `subscriptions: []` = không ai đăng ký. Ngày 26: server mồ côi chạy từ ngày 15, footprint 1316M, resident 6M. |
+| watchman | `watchman --no-spawn --no-local watch-list`, `… debug-get-subscriptions <root>` | 0,19 s | ✔ | Theo `watchman --help`, mặc định nó **thử khởi động service nếu chưa có** → luôn có `--no-spawn --no-local` (chưa thử khi server tắt). `subscriptions: []` = không ai đăng ký. Ngày 26: server chạy từ ngày 15 (cha là PID 1, cwd `/` — là daemon nên **không** khớp định nghĩa "mồ côi" ở mục 3.4), footprint 1316M, resident 6M. |
 | Docker / OrbStack | Docker Engine API qua unix socket (không gọi CLI `docker`) | — | ○ | OrbStack đang chạy nhưng engine tắt thì `~/.orbstack/run/docker.sock` **không tồn tại** (đã kiểm) → `unavailable`, không phải lỗi, không bao giờ đánh thức engine. Lấy `State.Status`, `State.StartedAt`, `RestartCount`, `HostConfig.RestartPolicy`, cổng publish. `RestartCount` **cộng dồn từ lúc tạo** → phải xét cùng trạng thái/thời gian chạy. Docker API **không cho số kết nối**: `container.connections` = kết nối ESTABLISHED tới cổng publish (từ `lsof`); không publish cổng → `null`, không phải 0. |
 
 Lần quét đầy đủ ≈ **2 s** (chủ yếu `code --status`); lần quét nhẹ (chỉ API native + `vm_stat`) **< 0,1 s**.
+
+### 3.1b Tìm lệnh ngoài khi chạy dưới dạng app
+
+App mở từ Finder hay khi đăng nhập **không thừa hưởng `PATH` của shell** (trên máy: `launchctl getenv PATH` rỗng), mà `code` nằm
+ở `~/.local/bin` và `watchman` ở `/opt/homebrew/bin`. Nên `HogCore` **không gọi lệnh theo tên trần**: mỗi lệnh ngoài có danh sách
+đường dẫn tuyệt đối để dò (`/opt/homebrew/bin`, `/usr/local/bin`, `~/.local/bin`, shim `code` bên trong
+`Visual Studio Code.app/Contents/Resources/app/bin/`), ghi đè được trong `~/.config/hog/config.json`; không tìm thấy → cảm biến
+`unavailable` với ghi chú "không tìm thấy lệnh X", không phải "không có X". **Chưa kiểm bằng app thật** — kiểm ngay ở bản chạy đầu tiên.
 
 ### 3.2 Bẫy "tự khởi động" — quy tắc cứng cho mọi cảm biến
 
@@ -106,7 +115,8 @@ Một tiến trình có thể có nhiều thuộc tính sở hữu: `app`, `wind
 3. **Cửa sổ VS Code**: tổ tiên là `extension-host [N]` (hoặc `window [N]`) → `window = vscode:N`, nhãn là tiêu đề cửa sổ.
 4. **App**: đường dẫn thực thi nằm trong `<tên>.app` → `app = <tên>`.
 5. **Dự án**: từ cwd đi lên tìm `.git`, `package.json#name`, `go.mod`, `Package.swift`…, hoặc từ tiêu đề cửa sổ.
-6. Cha là PID 1 và cwd trong thư mục người dùng → `orphan: true` (định nghĩa của `lps`, giữ nguyên).
+6. Cha là PID 1 và cwd trong thư mục người dùng → `orphan: true` (định nghĩa của `lps`, giữ nguyên). Daemon tự tách khỏi
+   terminal (watchman, cwd `/`) có cha là PID 1 nhưng **không** là mồ côi; quy tắc cho chúng không dựa vào `orphan` (mục 6.2).
 
 Không quy được thì `null`, không đoán. Mỗi owner cộng dồn RAM/CPU cả cây con (`total_*`) và riêng nó (`self_*`).
 
@@ -114,8 +124,11 @@ Không quy được thì `null`, không đoán. Mỗi owner cộng dồn RAM/CPU
 
 Không có quyền đọc RAM của tiến trình root (đã kiểm: EPERM), mà hog không bao giờ dùng `sudo`. Đã chốt (2026-10-26):
 
-- Lần quét thường gộp chúng thành một dòng **"macOS và dịch vụ hệ thống"**, giá trị = RAM đang dùng toàn máy trừ tổng đã
-  đo được, ghi rõ là **ước tính** (bộ nhớ dùng chung làm phép trừ không chính xác).
+- Lần quét thường gộp chúng thành một dòng **"macOS và dịch vụ hệ thống — {n} tiến trình chưa đo"**, **không có con số**.
+  Lý do bỏ phép trừ "RAM toàn máy − tổng đã đo": `footprint` tính cả phần đã nén và đã swap theo kích thước gốc, nên tổng
+  footprint có thể **vượt** RAM vật lý — đo ngày 2026-10-26: tổng MEM của `top` cho 361 tiến trình của user là 19,05 GiB, trong
+  khi RAM vật lý đang dùng (theo `vm_stat`) là 15,33 GiB, phép trừ ra số âm. Thay vào đó, phần tổng quan hiện trực tiếp các số đo
+  được của hệ thống: `wired` và RAM bộ nén chiếm.
 - Mở chi tiết dòng đó (nút "Đo chi tiết" trong app, `hog explain system` trong CLI) → gọi
   `top -l 2 -s 1 -stats pid,command,mem,cmprs,cpu` **một lần** (≈ 1,85 s; `top` đọc được cả tiến trình root, đã kiểm) để hiện
   từng tiến trình hệ thống, ghép tên đầy đủ qua `proc_pidpath`. Có giải nghĩa từng tiến trình hệ thống thường gặp (WindowServer,
@@ -131,16 +144,21 @@ Không có quyền đọc RAM của tiến trình root (đã kiểm: EPERM), mà
 - Dung lượng là số nguyên **byte** (`_bytes`), phần trăm là số thực (`_pct`), tỉ lệ 0..1 (`_ratio`), thời gian RFC 3339
   UTC (`_at`), khoảng thời gian là giây (`_s`). Chưa đo được là `null`.
 - **Riêng tư:** thư mục home thay bằng `~`; **không có biến môi trường**; `args` cắt 200 ký tự và che giá trị của cờ có
-  tên chứa `token|key|secret|password|auth`. Snapshot **chỉ nằm trên máy**; hog không gửi nó đi đâu.
+  tên chứa `token|key|secret|password|auth`. hog không tự gửi snapshot ra mạng (xem dòng "Riêng tư, nói rõ" bên dưới).
 - ≤ 100 KB: `processes` chỉ gồm tiến trình đáng kể (RAM ≥ 50 MB, CPU ≥ 5 %, đang nghe cổng, hoặc thuộc một item / tổ
   tiên của chúng); phần còn lại gộp vào `other`. `--full` để lấy hết.
 - Có sẵn **lời giải nghĩa** (`headline`, `glossary_ids`) để Claude và app nói cùng một giọng (mục 5).
+- **Một ngôn ngữ mỗi snapshot**: trường `lang` (`vi`/`en`, theo `--lang` hoặc ngôn ngữ máy); mọi chuỗi lời (`headline.text`,
+  `reason`, `effect`, `label` lấy từ danh mục) đã ở ngôn ngữ đó. Khoá máy đọc (`verdict`, `id`…) không dịch.
+- **Riêng tư, nói rõ:** hog không tự gửi snapshot đi đâu. Nhưng khi **bạn** hỏi Claude (skill trong hub; nút "Hỏi Claude" ở giai
+  đoạn 2), chính snapshot — gồm tiêu đề cửa sổ, tên dự án, cwd — được đưa cho Claude.
 
 Ví dụ rút gọn (dữ liệu giả):
 
 ```json
 {
   "schema": "hog.snapshot/1",
+  "lang": "vi",
   "taken_at": "2026-10-26T03:44:55Z",
   "hog": { "version": "0.2.0", "pid": 4242, "ancestors": [4100, 3990, 3801], "self_footprint_bytes": 31000000 },
   "host": { "os": "darwin", "arch": "arm64", "ncpu": 8, "mem_total_bytes": 17179869184, "uptime_s": 1255000 },
@@ -151,14 +169,15 @@ Ví dụ rút gọn (dữ liệu giả):
     "swap_used_bytes": 3292000000,
     "swap_total_bytes": 4294967296,
     "pressure": "normal",
-    "unmeasured_system_bytes_estimate": 2900000000,
+    "wired_bytes": 2731000000,
+    "unreadable_process_count": 200,
     "system_detail": null
   },
   "cpu": { "user_pct": 8.5, "sys_pct": 13.1, "idle_pct": 78.4, "load": [1.6, 2.2, 2.7] },
   "headline": {
     "level": "ok",
-    "text": "Máy chưa thiếu RAM (áp lực: bình thường), nhưng đã nén 10,4 GB và đẩy 3,1 GB ra ổ đĩa. Có 1 thứ có thể tắt: watchman (1,2 GB, mồ côi 11 ngày).",
-    "glossary_ids": ["memory-pressure", "compressed", "swap-used"]
+    "text": "Máy chưa thiếu RAM (áp lực: bình thường), nhưng đã nén 10,4 GB dữ liệu (chiếm 5,3 GB RAM) và đẩy 3,1 GB ra ổ đĩa. Có 1 thứ có thể tắt: watchman (giữ 1,3 GB, 11 ngày không ai dùng).",
+    "glossary_ids": ["memory-pressure", "compressed-stored", "compressor-occupied", "swap-used"]
   },
   "sensors": [
     { "name": "native-proc", "status": "ok", "took_ms": 2 },
@@ -175,7 +194,7 @@ Ví dụ rút gọn (dữ liệu giả):
       "started_at": "2026-10-15T08:08:52Z", "age_s": 931000,
       "footprint_bytes": 1380000000, "resident_bytes": 6300000, "resident_ratio": 0.005, "compressed_bytes": null,
       "cpu": { "now_pct": 0.0, "avg_pct": 0.0 },
-      "cwd": "/", "project": null, "orphan": true,
+      "cwd": "/", "project": null, "orphan": false,
       "net": { "listen": [], "established": 0 },
       "catalog_id": "watchman", "owner_id": null, "item_id": "proc:74939:1792051732" }
   ],
@@ -184,14 +203,14 @@ Ví dụ rút gọn (dữ liệu giả):
       "pids": [74939], "owner_id": null,
       "footprint_bytes": 1380000000, "resident_ratio": 0.005,
       "protection": null,
-      "facts": { "orphan": true, "age_s": 931000, "cpu.avg_pct": 0.0, "resident_ratio": 0.005,
+      "facts": { "orphan": false, "age_s": 931000, "cpu.avg_pct": 0.0, "footprint_bytes": 1380000000, "resident_ratio": 0.005,
                  "net.established": 0, "owner.kind": "none", "owner.busy": false, "watchman.subscriptions": 0 } }
   ],
   "findings": [
     { "item_id": "proc:74939:1792051732", "verdict": "may-stop", "confidence": "high",
-      "rules": ["watchman-no-subscribers", "orphan-quiet", "dormant-large"],
-      "reason": "Watchman mồ côi (cha đã thoát) 11 ngày, không công cụ nào đăng ký theo dõi, 1,3 GB nhưng chỉ 6 MB còn nằm trong RAM — tức là lâu rồi không ai đụng tới.",
-      "evidence": { "orphan": true, "watchman.subscriptions": 0, "resident_ratio": 0.005, "age_s": 931000 },
+      "rules": ["watchman-no-subscribers", "dormant-large"],
+      "reason": "Watchman chạy 11 ngày, không công cụ nào đăng ký theo dõi, giữ 1,3 GB nhưng chỉ 6 MB còn nằm trong RAM — tức là lâu rồi không ai đụng tới.",
+      "evidence": { "watchman.subscriptions": 0, "resident_ratio": 0.005, "age_s": 931000, "footprint_bytes": 1380000000 },
       "unmeasured": [],
       "stop": { "strategy": "watchman-shutdown", "respawns": "on-demand",
                 "effect": "Tắt an toàn: lần sau Metro/Jest cần thì nó tự bật lại, quét lại thư mục một lần." },
@@ -235,8 +254,8 @@ Dòng đầu tiên của CLI và của app luôn là **một câu bằng lời**
 | Tình huống | Câu (mẫu) |
 | --- | --- |
 | áp lực bình thường, không có đề xuất | "Máy đang đủ RAM. Nặng nhất: {owner} ({size})." |
-| áp lực bình thường, có đề xuất | "Máy chưa thiếu RAM, nhưng có {n} thứ có thể tắt để rảnh {size}: {list}." |
-| áp lực cảnh báo | "Máy đang thiếu RAM: đã nén {compressed} và đẩy {swap} ra ổ đĩa, nên chậm. Ăn nhiều nhất: {top3}." |
+| áp lực bình thường, có đề xuất | "Máy chưa thiếu RAM, nhưng có {n} thứ có thể tắt: {list}." (không hứa "rảnh X GB": thứ ngủ đông như watchman giữ 1,3 GB nhưng chỉ 6 MB còn trong RAM, tắt đi trả lại RAM thật ít hơn nhiều) |
+| áp lực cảnh báo | "Máy đang thiếu RAM: đã nén {compressed_stored} dữ liệu và đẩy {swap} ra ổ đĩa, nên chậm. Ăn nhiều nhất: {top3}." |
 | áp lực nghiêm trọng | "Máy đang thiếu RAM nặng. Nên đóng bớt: {list theo mức an toàn}." |
 
 Quy tắc viết: tiếng Việt thường, số làm tròn kiểu người đọc (`1,3 GB`, `11 ngày`), **không thuật ngữ nếu không kèm giải
@@ -277,7 +296,8 @@ của Apple và hiểu biết chung, **chưa đối chiếu bằng mắt trên m
 | `memory-used` | RAM đang dùng | Memory Used | macOS cố ý dùng gần hết RAM để chạy nhanh; con số này cao **không** có nghĩa là thiếu. |
 | `footprint` | RAM của chương trình | cột Memory | RAM một chương trình thật sự chiếm, **tính cả phần đã bị nén**. Đây là số để so ai ăn nhiều. |
 | `resident-ratio` | Phần còn nằm trong RAM | (không có) | Xem ví dụ trên. |
-| `compressed` | RAM nén | Compressed | Thay vì ghi ra ổ đĩa, macOS nén RAM của thứ lâu không dùng. Nhiều = máy đang chật, đang phải xoay xở. |
+| `compressed-stored` | Dữ liệu đã nén | (chưa rõ — xem dưới) | Lượng dữ liệu của các chương trình mà macOS đã nén lại thay vì ghi ra ổ đĩa ("Pages stored in compressor"). Nhiều = máy đang chật, đang phải xoay xở. |
+| `compressor-occupied` | RAM bộ nén chiếm | (chưa rõ — xem dưới) | RAM thật mà phần dữ liệu đã nén đang chiếm ("Pages occupied by compressor", khớp `top`), thường bằng khoảng một nửa số trên. |
 | `swap-used` | Đẩy ra ổ đĩa | Swap Used | Phần RAM bị chuyển ra SSD. Cao + áp lực vàng/đỏ = nguyên nhân máy ì. |
 | `cached-files` | Bộ đệm file | Cached Files | RAM tạm giữ nội dung file để mở lại nhanh; macOS **tự trả lại ngay** khi cần. Không phải vấn đề. |
 | `wired` | Bộ nhớ hệ thống cố định | Wired Memory | Của nhân macOS, không nén được, không tắt được. Không cần quan tâm. |
@@ -287,6 +307,10 @@ của Apple và hiểu biết chung, **chưa đối chiếu bằng mắt trên m
 | `orphan` | Mồ côi | (không có) | Chương trình mà thứ đã mở nó (terminal, editor) đã tắt, nhưng nó vẫn chạy — hay là dev server bị bỏ quên. |
 | `idle-session` | Phiên Claude rảnh | (không có) | Phiên không làm gì từ {time}. Phiên rảnh lâu vẫn giữ RAM. |
 | `real-private-shared` | — | Real Mem, Private Mem, Shared Mem, Purgeable | Các cột chi tiết của Activity Monitor; hog **không dùng** để quyết định và giải thích vì sao dùng `footprint` thay vào. |
+
+Cột **Compressed** của Activity Monitor ứng với số nào trong hai số nén ở trên thì **chưa biết**; đối chiếu bằng mắt ở bản chạy
+đầu tiên rồi ghi vào cột "Activity Monitor". Tới lúc đó hog luôn hiện **cả hai số cạnh nhau** (`10,4 → 5,3 GB`) để không bao giờ
+có một con số lệch Activity Monitor mà không giải thích được.
 
 ### 5.3 Mô tả theo danh mục và quy tắc
 
@@ -309,7 +333,10 @@ Quy tắc là **dữ liệu** (`rules/<id>.json`). Ngôn ngữ cố ý nhỏ: kh
     { "fact": "age_s",            "gte": 3600 },
     { "fact": "cpu.avg_pct",      "lt": 1.0 }
   ] },
-  "reason": "Tiến trình mồ côi (cha đã thoát), không ai đang kết nối, gần như không dùng CPU suốt {age_s}."
+  "reason": {
+    "vi": "Tiến trình mồ côi (cha đã thoát), không ai đang kết nối, gần như không dùng CPU suốt {age_s}.",
+    "en": "Orphaned process (its parent exited), no open connections, almost no CPU for {age_s}."
+  }
 }
 ```
 
@@ -317,7 +344,9 @@ Quy tắc là **dữ liệu** (`rules/<id>.json`). Ngôn ngữ cố ý nhỏ: kh
 - `fact`: một khoá trong `items[].facts`. Fact giai đoạn 1: `orphan`, `age_s`, `cpu.now_pct`, `cpu.avg_pct`, `footprint_bytes`,
   `resident_ratio`, `net.established`, `net.listen_count`, `owner.busy`, `owner.idle_s`, `owner.kind`, `catalog.family`,
   `siblings.same_catalog_other_windows`, `container.restart_count`, `container.restart_policy`, `container.state`,
-  `container.uptime_s`, `container.connections`, `watchman.subscriptions`, `self.ancestor`, `own`.
+  `container.uptime_s`, `container.connections`, `watchman.subscriptions`, `self.ancestor`, `own` (uid của tiến trình = uid của
+  người chạy hog), `exe.name` (tên file thực thi), `exe.system` (đường dẫn thực thi dưới `/System`, `/usr`, `/bin`, `/sbin`,
+  `/Library/Apple`).
   Thêm fact = thêm code cảm biến; thêm quy tắc = thêm file.
 - `reason` là mẫu có `{fact}`; câu giải thích **phải dẫn ra con số đã đo**, viết theo luật của mục 5.1.
 
@@ -336,6 +365,10 @@ Mức bảo vệ (`level`):
 - `soft` — dừng được nhưng **phải có người xác nhận, thấy tên chủ sở hữu** (G2). `may-stop` hiển thị thành `ask`:
   "có dấu hiệu không dùng nhưng thuộc phiên/cửa sổ khác — hỏi chủ trước". Đây là nhãn "đừng đụng".
 
+Kết hợp theo logic ba giá trị Kleene: `all` = false nếu có một false, ngược lại unknown nếu có một unknown; `any` đối xứng;
+`not unknown` = unknown. Quyết định `unknown` → kích hoạt hay không chỉ áp dụng **ở kết quả cuối** của `when`, không ở từng lá —
+nên `not` không thể lật một số đo thiếu thành bằng chứng.
+
 Thứ tự hiển thị: `may-stop` / `ask` > `watch` > `info`. **Mọi** quy tắc đã kích hoạt đều được liệt kê. `confidence` = số
 **phép đo độc lập** ủng hộ kết luận (1 → `low`, 2 → `medium`, ≥ 3 → `high`).
 
@@ -344,7 +377,7 @@ Thứ tự hiển thị: `may-stop` / `ask` > `watch` > `info`. **Mọi** quy t�
 | Quy tắc | Lớp / verdict | Điều kiện (rút gọn) |
 | --- | --- | --- |
 | `protect-self` | protect, `hard` | item là hog, hoặc tổ tiên của hog (shell, phiên Claude đang gọi hog, cửa sổ chứa nó) |
-| `protect-foreign` | protect, `hard` | không thuộc user hiện tại, đường dẫn thực thi dưới `/System`, `/usr`, hoặc là `launchd`/`WindowServer`/`kernel_task` |
+| `protect-foreign` | protect, `hard` | `own` = false **hoặc** `exe.system` = true **hoặc** `exe.name` ∈ {`launchd`, `WindowServer`, `kernel_task`}. Tiến trình hệ thống chạy bằng uid của user (Dock, cfprefsd… dưới `/System`) cũng được bảo vệ nhờ `exe.system` |
 | `protect-busy-owner` | protect, `soft` | có owner (`owner.kind` ≠ `none`) và (`owner.busy` là true **hoặc unknown**, hoặc `owner.idle_s` < 600). Mồ côi không owner → `owner.busy` = false. Cửa sổ VS Code chưa có số đo bận/rảnh → `unknown` → tiến trình con được bảo vệ mức `soft` |
 | `orphan-quiet` | advice, `may-stop` | mồ côi + 0 kết nối + tuổi ≥ 1 giờ + CPU trung bình < 1 % |
 | `dormant-large` | advice, `watch` | `footprint_bytes` ≥ 500 MB và `resident_ratio` < 0,1 — "chiếm nhiều mà gần như không ai đụng tới" (bằng chứng độc lập, cộng thêm vào `confidence` của các đề xuất khác) |
@@ -352,7 +385,7 @@ Thứ tự hiển thị: `may-stop` / `ask` > `watch` > `info`. **Mọi** quy t�
 | `container-crash-loop` | advice, `may-stop` | `restart_count` ≥ 10 **và** (`state` = `restarting` **hoặc** `uptime_s` < 600) **và** `connections` = 0 |
 | `container-restart-high` | advice, `watch` | `restart_count` ≥ 10 — luôn hiện để người xem log, kể cả khi `connections` là `null` |
 | `container-no-clients` | advice, `watch` | đang chạy, `connections` = 0 (chưa đủ để kết luận khi chưa có lịch sử) |
-| `watchman-no-subscribers` | advice, `may-stop` | catalog `watchman`, `watchman.subscriptions` = 0, mồ côi |
+| `watchman-no-subscribers` | advice, `may-stop` | catalog `watchman`, `watchman.subscriptions` = 0, tuổi ≥ 1 giờ. **Không** đòi `orphan`: watchman là daemon, cha luôn là PID 1 và cwd `/` |
 | `duplicate-language-server` | advice, `info` | `catalog.family` = `language-server` và `siblings.same_catalog_other_windows` ≥ 1 |
 | `memory-heavy` | advice, `watch` | `footprint_bytes` ≥ 1 GiB |
 
@@ -378,8 +411,14 @@ Một mục = một file `catalog/<id>.json`: "đây là cái gì, tắt thì sa
   "id": "watchman",
   "name": "Watchman",
   "family": "file-watcher",
-  "summary": "Dịch vụ theo dõi thay đổi file của Meta; Metro/Jest dùng nó để biết file nào vừa sửa. Giao tiếp qua unix socket nên không có cổng TCP.",
-  "stop_effect": "Tắt an toàn: lần sau có công cụ cần, nó tự bật lại và quét lại thư mục một lần.",
+  "summary": {
+    "vi": "Dịch vụ theo dõi thay đổi file của Meta; Metro/Jest dùng nó để biết file nào vừa sửa. Giao tiếp qua unix socket nên không có cổng TCP.",
+    "en": "Meta's file-watching service; Metro/Jest use it to learn which files changed. Talks over a unix socket, so it has no TCP port."
+  },
+  "stop_effect": {
+    "vi": "Tắt an toàn: lần sau có công cụ cần, nó tự bật lại và quét lại thư mục một lần.",
+    "en": "Safe to stop: the next tool that needs it starts it again and re-crawls the folders once."
+  },
   "respawns": "on-demand",
   "stop": { "strategy": "watchman-shutdown" },
   "match": [ { "exe": "watchman" } ],
@@ -447,7 +486,12 @@ App: bấm "Dừng…" ─┐                 CLI: hog stop <pid | cổng | item
                         → thực thi → G4/G5 → đọc lại để xác nhận kết quả → G8
 ```
 
-`plan_id` = băm của (danh tính, kế hoạch, số đo đã hiển thị): sự đồng ý gắn với **đúng thứ người đã thấy**.
+`plan_id` = băm của **(danh tính đích, hành động)** — không gồm số đo, vì tuổi, CPU, RAM đổi từng giây. Kế hoạch đầy đủ (kèm số đo
+lúc hiển thị) được **lưu** ở `~/.local/state/hog/plans/<plan_id>.json`, **hết hạn sau 10 phút**. `--yes --plan` chỉ chạy khi kế hoạch
+còn hạn, danh tính vẫn khớp (G3) và các cổng chạy lại vẫn cho qua; nhờ vậy sự đồng ý gắn với **đúng thứ người đã thấy**.
+
+**Leo thang SIGKILL (G4) luôn là một kế hoạch mới**: SIGTERM không đủ → hog dừng lại, trả `exit 3` với `plan_id` **mới** cho hành động
+SIGKILL. `--yes` của kế hoạch SIGTERM **không bao giờ** bao luôn SIGKILL — người phải đồng ý lần nữa, đúng câu chốt 3.
 Mã thoát CLI: `0` xong · `1` lỗi · `2` dùng sai · `3` cần người xác nhận · `4` bị cổng an toàn chặn.
 
 ## 9. Giao diện
@@ -470,13 +514,13 @@ Mã thoát CLI: `0` xong · `1` lỗi · `2` dùng sai · `3` cần người xá
  [icon heo — màu theo áp lực: thường / vàng / đỏ]
  ┌────────────────────────────────────────────────────────────┐
  │ Máy chưa thiếu RAM, nhưng có 1 thứ có thể tắt: watchman…   │  ← câu trả lời một dòng
- │ Áp lực ●bình thường ?   RAM nén 10,4 GB ?   Ổ đĩa 3,1 GB ? │  ← mỗi số có "?" → giải nghĩa
+ │ Áp lực ●bình thường ?  Nén 10,4→5,3 GB ?  Ổ đĩa 3,1 GB ?  │  ← mỗi số có "?" → giải nghĩa
  │ ─ Đang ăn nhiều nhất ───────────────────────────────────── │
  │ ▸ Visual Studio Code            5,2 GB                     │  ← mở ra: từng cửa sổ, language server, phiên Claude
  │ ▸ Google Chrome                 1,9 GB                     │
- │ ▸ macOS và dịch vụ hệ thống  ~2,9 GB (ước tính) [Đo chi tiết] │
+ │ ▸ macOS và dịch vụ hệ thống · 200 chưa đo  [Đo chi tiết]   │
  │ ─ Đề xuất ──────────────────────────────────────────────── │
- │ ● watchman · 1,3 GB · mồ côi 11 ngày     [Vì sao?] [Dừng…] │
+ │ ● watchman · 1,3 GB · 11 ngày không ai dùng [Vì sao?] [Dừng…] │
  │ ◐ 5 phiên Claude rảnh > 2 giờ · 1,0 GB   [Vì sao?] [Cách đóng] │
  │ ─────────────────────────────────────────────────────────── │
  │ Cập nhật 10:31 · hog đang dùng 31 MB     [Làm mới] [Thoát] │
@@ -562,5 +606,5 @@ docs/architecture/design-vi.md  tài liệu này
 | 6 | Nền tảng | macOS 14+, Apple Silicon |
 | 7 | Ngôn ngữ giao diện, câu kết luận, giải nghĩa | **Việt + Anh** (mục 5), theo ngôn ngữ máy, đổi được |
 | 8 | Cài đặt giai đoạn 1 | Build từ nguồn; gỡ `lps.rb` khỏi tap khi hog có bản đầu |
-| 9 | Tiến trình hệ thống không đọc được | **Gộp một dòng ước tính + nút "Đo chi tiết" chạy `top` một lần** (mục 3.5) |
+| 9 | Tiến trình hệ thống không đọc được | **Gộp một dòng + nút "Đo chi tiết" chạy `top` một lần** (mục 3.5). Dòng gộp không ghi số ước tính: phép trừ ra số âm — reviewer phát hiện ở mốc chốt 2026-10-26 |
 | 10 | App lấy mẫu | Icon mỗi 10 s chỉ đọc mức áp lực; quét đầy khi mở menu |
