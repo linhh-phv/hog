@@ -1,6 +1,6 @@
 # hog — thiết kế giai đoạn 1
 
-> Trạng thái: **bản nháp 2, chờ duyệt** (2026-10-26). Chưa có dòng code nào theo tài liệu này.
+> Trạng thái: **bản nháp 2 — 10 câu ở mục 12 đã chốt** (2026-10-26). Chưa có dòng code nào theo tài liệu này.
 > Đổi so với bản 1 (2026-10-15): viết bằng **Swift** thay vì Go, có **app trên thanh menu macOS** ngay giai đoạn 1, và
 > thêm **tầng giải nghĩa số đo** (mục 5) — cả ba do chủ dự án chốt ngày 2026-10-26.
 > Ngôn ngữ: tiếng Việt, vì người duyệt là chủ dự án; README và code của repo vẫn là tiếng Anh.
@@ -112,10 +112,15 @@ Không quy được thì `null`, không đoán. Mỗi owner cộng dồn RAM/CPU
 
 ### 3.5 Tiến trình không đọc được (của hệ thống)
 
-Không có quyền đọc RAM của tiến trình root (đã kiểm: EPERM), mà hog không bao giờ dùng `sudo`. Đề xuất: gộp thành một
-dòng **"macOS và dịch vụ hệ thống — không đo riêng được"**, giá trị = RAM đang dùng toàn máy trừ tổng đã đo được, ghi
-rõ là **ước tính** (bộ nhớ dùng chung làm phép trừ không chính xác). Hog không có hành động nào trên dòng này
-(cổng G6). Xem câu hỏi ở mục 12.
+Không có quyền đọc RAM của tiến trình root (đã kiểm: EPERM), mà hog không bao giờ dùng `sudo`. Đã chốt (2026-10-26):
+
+- Lần quét thường gộp chúng thành một dòng **"macOS và dịch vụ hệ thống"**, giá trị = RAM đang dùng toàn máy trừ tổng đã
+  đo được, ghi rõ là **ước tính** (bộ nhớ dùng chung làm phép trừ không chính xác).
+- Mở chi tiết dòng đó (nút "Đo chi tiết" trong app, `hog explain system` trong CLI) → gọi
+  `top -l 2 -s 1 -stats pid,command,mem,cmprs,cpu` **một lần** (≈ 1,85 s; `top` đọc được cả tiến trình root, đã kiểm) để hiện
+  từng tiến trình hệ thống, ghép tên đầy đủ qua `proc_pidpath`. Có giải nghĩa từng tiến trình hệ thống thường gặp (WindowServer,
+  kernel_task, mds…) trong danh mục.
+- Không có nút dừng nào cho các tiến trình này (cổng G6).
 
 ## 4. Định dạng snapshot JSON (`hog --json`)
 
@@ -146,7 +151,8 @@ Ví dụ rút gọn (dữ liệu giả):
     "swap_used_bytes": 3292000000,
     "swap_total_bytes": 4294967296,
     "pressure": "normal",
-    "unmeasured_system_bytes_estimate": 2900000000
+    "unmeasured_system_bytes_estimate": 2900000000,
+    "system_detail": null
   },
   "cpu": { "user_pct": 8.5, "sys_pct": 13.1, "idle_pct": 78.4, "load": [1.6, 2.2, 2.7] },
   "headline": {
@@ -214,7 +220,12 @@ Ghi chú:
 
 ## 5. Tầng giải nghĩa — trả lời "số này nghĩa là gì?"
 
-Đây là phần thay Activity Monitor cho người không đọc được số. Ba thành phần, đều là **dữ liệu**:
+Đây là phần thay Activity Monitor cho người không đọc được số. Ba thành phần, đều là **dữ liệu**.
+
+**Song ngữ Việt + Anh** (đã chốt 2026-10-26): mọi chuỗi người đọc thấy — câu một dòng, bảng thuật ngữ, `summary`/`stop_effect` của
+danh mục, `reason` của quy tắc, nhãn giao diện — có cả `vi` và `en`. Ngôn ngữ theo ngôn ngữ của máy, đổi được bằng tuỳ chọn
+(`hog --lang vi|en`, cài đặt trong app). Thiếu bản dịch của một mục → dùng ngôn ngữ còn lại và báo trong `warnings`;
+`hog catalog check` báo mục thiếu bản dịch. JSON giữ khoá máy đọc (`verdict`, `id`…) không dịch; chỉ phần lời được dịch.
 
 ### 5.1 Câu trả lời một dòng (`headline`)
 
@@ -239,11 +250,20 @@ Test bắt buộc: mọi số hiển thị đều có mục trong bảng (mục 
 ```json
 {
   "id": "resident-ratio",
-  "name": "Phần còn nằm trong RAM",
   "activity_monitor": null,
-  "plain": "Trong số RAM một chương trình đang giữ, bao nhiêu phần thật sự còn nằm trong RAM. Phần còn lại đã bị macOS nén hoặc đẩy ra ổ đĩa vì lâu không ai đụng tới.",
-  "how_to_read": "Gần 100%: chương trình đang được dùng. Dưới 10%: lâu rồi không ai đụng tới — dấu hiệu mạnh rằng tắt đi cũng không ai để ý.",
-  "act": "Thấp + chiếm nhiều + mồ côi → ứng viên tắt. Thấp mà thuộc app bạn đang mở thì chỉ là app đó đang nghỉ.",
+  "name": { "vi": "Phần còn nằm trong RAM", "en": "Share still in RAM" },
+  "plain": {
+    "vi": "Trong số RAM một chương trình đang giữ, bao nhiêu phần thật sự còn nằm trong RAM. Phần còn lại đã bị macOS nén hoặc đẩy ra ổ đĩa vì lâu không ai đụng tới.",
+    "en": "Of the memory a program holds, how much is actually still in RAM. The rest has been compressed or swapped out by macOS because nobody touched it for a while."
+  },
+  "how_to_read": {
+    "vi": "Gần 100%: chương trình đang được dùng. Dưới 10%: lâu rồi không ai đụng tới — dấu hiệu mạnh rằng tắt đi cũng không ai để ý.",
+    "en": "Near 100%: in use. Below 10%: untouched for a long time — a strong sign nobody would notice if it stopped."
+  },
+  "act": {
+    "vi": "Thấp + chiếm nhiều + mồ côi → ứng viên tắt. Thấp mà thuộc app bạn đang mở thì chỉ là app đó đang nghỉ.",
+    "en": "Low + large + orphaned → candidate to stop. Low but part of an app you have open just means that app is idle."
+  },
   "provenance": { "source": "measured", "verified": true }
 }
 ```
@@ -454,7 +474,7 @@ Mã thoát CLI: `0` xong · `1` lỗi · `2` dùng sai · `3` cần người xá
  │ ─ Đang ăn nhiều nhất ───────────────────────────────────── │
  │ ▸ Visual Studio Code            5,2 GB                     │  ← mở ra: từng cửa sổ, language server, phiên Claude
  │ ▸ Google Chrome                 1,9 GB                     │
- │ ▸ macOS và dịch vụ hệ thống     ~2,9 GB (ước tính) ?       │
+ │ ▸ macOS và dịch vụ hệ thống  ~2,9 GB (ước tính) [Đo chi tiết] │
  │ ─ Đề xuất ──────────────────────────────────────────────── │
  │ ● watchman · 1,3 GB · mồ côi 11 ngày     [Vì sao?] [Dừng…] │
  │ ◐ 5 phiên Claude rảnh > 2 giờ · 1,0 GB   [Vì sao?] [Cách đóng] │
@@ -530,17 +550,17 @@ docs/design-vi.md             tài liệu này
 3. **Lịch sử**: app đã thường trú nên ghi mẫu RAM theo thời gian (`~/.local/state/hog/`), bắt thứ phình dần, thông báo trước khi máy nặng;
    khi đó "im lâu" đo được thật thay vì thế thay.
 
-**Cần bạn chốt trước khi code:**
+**Đã chốt ngày 2026-10-26** (user trả lời từng câu):
 
-| # | Câu hỏi | Đề xuất |
+| # | Câu hỏi | Chốt |
 | --- | --- | --- |
-| 1 | Danh mục / quy tắc / giải nghĩa dạng JSON, một file mỗi mục, ghi đè ở `~/.config/hog/`, **cấm nhúng lệnh** | Đồng ý |
-| 2 | Đọc `~/.claude/sessions/<pid>.json` (nội bộ Claude Code, có thể đổi) | Có, đọc dung sai |
+| 1 | Danh mục / quy tắc / giải nghĩa dạng JSON, một file mỗi mục, ghi đè ở `~/.config/hog/`, cấm nhúng lệnh | Đồng ý |
+| 2 | Đọc `~/.claude/sessions/<pid>.json` | Có, đọc dung sai |
 | 3 | Không bao giờ tự SIGKILL | Đồng ý — G4 |
-| 4 | Claude chỉ dừng qua `--yes --plan <plan_id>` sau khi bạn đồng ý trong chat | Đồng ý — vẫn qua G1/G3/G5 |
-| 5 | Ngưỡng "phiên Claude bị bỏ quên": rảnh 2 giờ · ngưỡng "lâu không đụng tới": `resident_ratio` < 0,1 | Bắt đầu như vậy, chỉnh theo thực tế |
-| 6 | Chỉ macOS 14+, Apple Silicon | Đồng ý |
-| 7 | Ngôn ngữ giao diện (app, câu trả lời, giải nghĩa): tiếng Việt | Tiếng Việt; README + code tiếng Anh |
-| 8 | Giai đoạn 1 cài bằng build từ nguồn, chưa phát hành qua tap/Release; gỡ `lps.rb` khi hog có bản đầu | Đồng ý |
-| 9 | Tiến trình hệ thống không đọc được: gộp thành một dòng "ước tính" (mục 3.5) | Đồng ý |
-| 10 | App lấy mẫu: icon mỗi 10 s chỉ đọc mức áp lực; quét đầy khi mở menu | Đồng ý |
+| 4 | Claude chỉ dừng qua `--yes --plan <plan_id>` sau khi user đồng ý trong chat | Đồng ý |
+| 5 | Ngưỡng: phiên Claude rảnh ≥ 2 giờ · `resident_ratio` < 0,1 | Đồng ý, chỉnh sau theo thực tế |
+| 6 | Nền tảng | macOS 14+, Apple Silicon |
+| 7 | Ngôn ngữ giao diện, câu kết luận, giải nghĩa | **Việt + Anh** (mục 5), theo ngôn ngữ máy, đổi được |
+| 8 | Cài đặt giai đoạn 1 | Build từ nguồn; gỡ `lps.rb` khỏi tap khi hog có bản đầu |
+| 9 | Tiến trình hệ thống không đọc được | **Gộp một dòng ước tính + nút "Đo chi tiết" chạy `top` một lần** (mục 3.5) |
+| 10 | App lấy mẫu | Icon mỗi 10 s chỉ đọc mức áp lực; quét đầy khi mở menu |
