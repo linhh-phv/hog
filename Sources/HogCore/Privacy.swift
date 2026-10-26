@@ -19,6 +19,7 @@ public enum Privacy {
     /// Database clients whose `-p<pw>` / `-a <pw>` short flags carry a password.
     static let passwordShortFlags: [String: Set<String>] = [
         "mysql": ["-p"], "mysqldump": ["-p"], "mysqladmin": ["-p"], "mariadb": ["-p"], "redis-cli": ["-a"],
+        "curl": ["-u", "--user"],  // user:password (QA 2026-10-26)
     ]
 
     /// Masks values of secret-looking flags, credentials in URLs, `Authorization:`/`Bearer` values and database

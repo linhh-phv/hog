@@ -110,7 +110,14 @@ struct ItemPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.s2) {
                 BackButton()
-                Text(item?.label ?? itemId).font(Theme.title).fixedSize(horizontal: false, vertical: true)
+                if item == nil {
+                    // Gone between two scans (it exited, or became too small to track).
+                    Text(model.t("Không còn thấy thứ này ở lần quét mới nhất — có thể nó đã thoát.",
+                                 "Not seen in the latest scan — it may have exited."))
+                        .font(Theme.small).foregroundStyle(Theme.text2).fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text(item?.label ?? itemId).font(Theme.title).fixedSize(horizontal: false, vertical: true)
+                }
                 if let e = entry {
                     Text(e.summary.text(model.lang) ?? "").font(Theme.small).foregroundStyle(Theme.text2).fixedSize(horizontal: false, vertical: true)
                 } else if item?.kind != .claudeSession {

@@ -8,9 +8,9 @@
 Kế hoạch gốc (giai đoạn 1, mục 12): nút **"Hỏi Claude"** trong app (`claude -p` kèm ảnh chụp) và **"Lưu vào danh mục"**.
 
 Chủ dự án đổi hướng ngày 2026-10-26, nguyên văn: *"thay vì để bạn tự chạy claude thì mỗi lần thấy gì mới mình sẽ tự chụp rồi hỏi bạn
-ở hub này rồi chúng ta update lại hog"* — và *"mình không muốn lộ hay mất thêm gì cả"*. Lý do: máy có thể đang đăng nhập Claude bằng
-tài khoản của tổ chức, còn hog là dự án cá nhân; app tự gọi Claude thì tốn hạn mức (có thể cả tiền, nếu tổ chức bật trả thêm) và đưa
-dữ liệu máy đi qua tài khoản đó mà người dùng không kiểm soát từng lần.
+ở hub này rồi chúng ta update lại hog"* — và *"mình không muốn lộ hay mất thêm gì cả"*. Lý do: app tự gọi Claude thì tốn hạn mức của
+tài khoản đang đăng nhập (có thể cả tiền, tuỳ gói) và đưa dữ liệu máy đi qua tài khoản đó mà người dùng không kiểm soát từng lần;
+tài khoản đó có thể không phải của riêng người dùng.
 
 Hệ quả:
 
@@ -36,7 +36,8 @@ trả lời trong ~3–6 s, ~8 000 token đầu vào (phần lớn là phần kh
 
 ## 3. Thông tin chép ra (`hog.share/1`)
 
-Chỉ **một** item, dựng từ lần quét gần nhất. Văn bản gồm một câu hỏi mở đầu (theo ngôn ngữ của app) và một khối JSON:
+Chỉ **một** item, dựng từ lần quét gần nhất. Văn bản gồm một câu hỏi mở đầu (theo ngôn ngữ của app; nói hog đã nhận ra thứ này là
+mục danh mục nào, hay chưa biết) và một khối JSON:
 
 ```json
 {
@@ -50,14 +51,33 @@ Chỉ **một** item, dựng từ lần quét gần nhất. Văn bản gồm m�
 }
 ```
 
-- **Không chép:** nhãn item (có thể chứa tên dự án, tiêu đề cửa sổ), `cwd`, `project`, nhãn chủ sở hữu, tên người dùng, thư mục, biến
-  môi trường. Tham số qua `Privacy.scrubArgs` (che mật khẩu, token…), rồi mọi tham số chứa `/` chỉ giữ phần sau dấu `/` cuối cùng
-  (`~/work/acme/server.js` → `server.js`, `--dir=/x/y` → `--dir=y`). Ngoại lệ: tên gói ngay sau một thư mục gói
-  công khai (`extensions`, `node_modules`, `site-packages`, `dist-packages`, `gems`) được giữ — `…/extensions/markdown-language-features/dist/serverWorkerMain`
-  → `extensions/markdown-language-features/…/serverWorkerMain` — vì đó là manh mối chính (đo trên máy: một tiến trình extension của VS Code
-  chỉ còn `serverWorkerMain` nếu cắt hết). Rủi ro chấp nhận: một thư mục *của người dùng* tên `extensions/<x>` thì `<x>` lộ ra; người dùng
-  thấy nội dung trước khi dán.
-- `exe`, `parents`: chỉ tên file thực thi, không đường dẫn. `parents`: tối đa 4 tổ tiên, từ gần tới xa, dừng ở `launchd`.
+- **Không chép:** nhãn item (có thể chứa tên dự án, tiêu đề cửa sổ), `cwd`, `project`, nhãn chủ sở hữu, biến môi trường.
+- **Tham số — lớp 1, theo cấu trúc** (`ShareInfo.shareArgs`), sau khi `Privacy.scrubArgList` che mật khẩu/token theo tên cờ (và
+  `curl -u`). Tham số đầu là tên chương trình (chỉ tên file, như `exe`). Đường dẫn tuyệt đối — kể cả `--cờ=/đường dẫn` — là **một khối** dù
+  có dấu cách (`/Applications/Visual Studio Code.app/…`); tham số khác có khoảng trắng (`sh -c "cd … && npm run dev"`, `-H "X-Api-Key: v"`)
+  được xử lý từng từ. **Tên cờ giữ nguyên** (chúng nói chương trình làm gì); chỉ giá trị bị rút gọn. Với mỗi giá trị:
+  - có `://` → chỉ giữ scheme: `postgres://…` (không host, user, mật khẩu, đường dẫn, query);
+  - đi qua thư mục gói công khai (`extensions`, `node_modules`, `site-packages`, `dist-packages`, `gems`) → giữ tên gói và tên file cuối:
+    `…/extensions/markdown-language-features/dist/serverWorkerMain` → `extensions/markdown-language-features/…/serverWorkerMain`; scope npm
+    bị che: `node_modules/@…/tool/…/cli.js`. Đây là manh mối chính (đo trên máy: một tiến trình extension của VS Code chỉ còn
+    `serverWorkerMain` nếu cắt hết);
+  - có `@` → `…` (`user@host`, `token@host`, `git@host:org/repo`);
+  - có `/` hoặc bắt đầu bằng `~` → tên file cuối **nếu là tên file** (có đuôi ngắn: `server.js`), ngược lại `…` (một thư mục — thường
+    chính là tên dự án: `pnpm --dir ~/work/acme dev` → `pnpm --dir … dev`);
+  - UUID hoặc chuỗi ngẫu nhiên dài (≥ 20 ký tự, có cả chữ và số) → `…` (id trình duyệt, token phiên);
+  - `TÊN=giá-trị` (biến môi trường: `-e DB_PASSWORD=x`, `--env=TOKEN=x`, trong `sh -c`) mà `TÊN` chứa từ bí mật → `TÊN=***`;
+  - header có tên chứa từ bí mật (`X-Api-Key:`, `--header=X-Auth:`) → giá trị theo sau là `***`;
+  - `-u`/`--user` theo sau là `user:mật-khẩu` (có `:`) → `***`, với mọi chương trình; `-u root` giữ nguyên.
+- **Lớp 2, theo tên riêng hog đã thấy** (`Redactor`, chỉ áp lên giá trị và tên chương trình, không áp lên tên cờ): mọi tên dự án
+  (`package.json#name`, thư mục có `.git`…), mọi thành phần thư mục làm việc trong home của mọi tiến trình và phiên Claude (trừ
+  `~/Library` — nơi app để dữ liệu, `Application Support/discord` là tên app chứ không phải tên riêng — và thư mục ẩn), các phần một từ của tiêu đề cửa sổ VS Code, tên người dùng, tên máy (`gethostname`,
+  không tra DNS) → thay bằng `…` ở `exe`, `args`, `parents`, `image`, không phân biệt hoa thường, theo ranh giới từ. Tên < 3 ký tự và tên
+  thư mục chung (`src`, `dist`, `app`, `work`…) không tính. Bắt được chỗ lớp 1 để lọt: tham số tương đối `code acme-billing`, binary đặt
+  theo tên dự án.
+- Container: chỉ tên image, bỏ registry/namespace; tên dạng `<dự-án>-<service>` (Compose tự đặt) chỉ còn `…-<service>`.
+- Còn lại có thể lộ (chấp nhận, người dùng thấy nội dung trước khi dán): một từ đơn lẻ không phải đường dẫn mà hog chưa từng thấy là tên
+  riêng (vd `--filter acme` khi không có tiến trình nào chạy trong thư mục `acme`); tên host không kèm `://` hay `@`.
+- `exe`, `parents`: chỉ tên file thực thi, không đường dẫn (qua lớp 2). `parents`: tối đa 4 tổ tiên, từ gần tới xa, dừng ở `launchd`.
 - `facts`: chỉ số và bool đo được (bỏ `null`), cộng `owner.kind`, `catalog.family`. Container: `item.image` thay cho `exe`/`args`.
 - Người dùng thấy đúng nội dung này trong clipboard / terminal trước khi dán: không có gì gửi đi ngầm.
 
@@ -104,3 +124,7 @@ Khi người dùng dán `hog.share/1` hay ảnh chụp:
 | 2026-10-26 | `hog explain` | Luôn phân tích đầy đủ (không giới hạn kích thước như `--json`) | id lấy từ `hog --json --full` không tra được — lỗi có từ giai đoạn 1 |
 | 2026-10-26 | Trang item | "Độ tin" dịch sang tiếng Việt (cao/vừa/thấp), cả ở CLI | trước đó in nguyên `high` |
 | 2026-10-26 | Ghi chú "Chưa đo được" | VS Code bị bộ ngắt `code --status` → câu riêng ("không trả lời lần trước; hog chờ VS Code khởi động lại") | trước đó báo nhầm "không tìm thấy lệnh `code`" |
+| 2026-10-26 | Làm sạch (reviewer chốt) | Từ "giữ phần sau `/` cuối" sang hai lớp (mục 3): thư mục → `…`, URL chỉ còn scheme, `@` → `…`, id ngẫu nhiên → `…`, rồi thay mọi tên riêng hog đã thấy | Reviewer chạy được các đường lọt: `--dir ~/work/acme` → `acme`, `redis://:pw@host`, `token@github.com`, `AWS_SECRET…=` trong `sh -c`, host registry nội bộ, `--metrics-client-id` |
+| 2026-10-26 | Giới hạn kích thước snapshot | Ứng viên "Chưa rõ là gì" luôn được giữ qua bước cắt (như item có đề xuất) | Item chưa rõ 100–149 MB bị cắt trước khi app kịp thấy |
+| 2026-10-26 | App | Kết quả dừng (xong, bị chặn, lỗi) đưa về trang chính để hiện; "‹ Quay lại" từ trang item về "Mọi đề xuất" nếu mở từ đó | Bấm Dừng ở trang mới thì không thấy kết quả |
+| 2026-10-26 | Làm sạch (qa chốt) | Thêm: biến môi trường bí mật, header bí mật, `-u user:pw`; đường dẫn có dấu cách là một khối; tên cờ không bị lớp 2 thay; lớp 2 bỏ `~/Library` và thư mục ẩn; câu mở đầu theo việc hog đã biết thứ này hay chưa; trang item nói rõ khi thứ đó đã thoát | qa tạo tiến trình thử: `-e DB_PASSWORD=…`, `X-Api-Key: …`, `-u admin:pw` lọt; chạy thật: bản đầu của lớp 2 cắt vụn `Visual Studio Code.app`, thay chữ `data` trong `--user-data-dir`, coi "Discord" là tên riêng |

@@ -258,7 +258,7 @@ struct Footer: View {
 struct BackButton: View {
     @EnvironmentObject var model: HogModel
     var body: some View {
-        Button("‹ " + model.t("Quay lại", "Back")) { model.page = .main }
+        Button("‹ " + model.t("Quay lại", "Back")) { model.page = model.back }
             .buttonStyle(.plain).foregroundStyle(Theme.accent).font(Theme.small)
     }
 }

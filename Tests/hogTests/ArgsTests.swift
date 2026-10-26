@@ -28,4 +28,13 @@ import HogCore
         #expect(throws: UsageError.self) { try Args(["--share"], environment: [:]) }
         #expect(throws: UsageError.self) { try Args(["stop", "1", "--share"], environment: [:]) }
     }
+
+    @Test func shareWithATermIsAUsageError() throws {
+        var cli = CLI(try Args(["explain", "age", "--share"], environment: [:]))
+        nonisolated(unsafe) var errors: [String] = []
+        cli.err = { errors.append($0) }
+        cli.out = { _ in }
+        #expect(cli.run() == .usage)
+        #expect(errors.first?.contains("--share") == true)
+    }
 }

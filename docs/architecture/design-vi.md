@@ -174,8 +174,9 @@ Không có quyền đọc RAM của tiến trình root (đã kiểm: EPERM), mà
 - Có sẵn **lời giải nghĩa** (`headline`, `glossary_ids`) để Claude và app nói cùng một giọng (mục 5).
 - **Một ngôn ngữ mỗi snapshot**: trường `lang` (`vi`/`en`, theo `--lang` hoặc ngôn ngữ máy); mọi chuỗi lời (`headline.text`,
   `reason`, `effect`, `label` lấy từ danh mục) đã ở ngôn ngữ đó. Khoá máy đọc (`verdict`, `id`…) không dịch.
-- **Riêng tư, nói rõ:** hog không tự gửi snapshot đi đâu. Nhưng khi **bạn** hỏi Claude (skill trong hub; nút "Hỏi Claude" ở giai
-  đoạn 2), chính snapshot — gồm tiêu đề cửa sổ, tên dự án, cwd — được đưa cho Claude.
+- **Riêng tư, nói rõ:** hog không tự gửi snapshot đi đâu. Nhưng khi **bạn** hỏi Claude bằng skill trong hub, chính snapshot — gồm tiêu
+  đề cửa sổ, tên dự án, cwd — được đưa cho Claude. Giai đoạn 2 không có nút "Hỏi Claude"; "Chép thông tin" chép một item đã làm sạch
+  ([thiết kế giai đoạn 2](phase-2-vi.md) mục 3).
 
 Ví dụ rút gọn (dữ liệu giả):
 
@@ -626,7 +627,8 @@ docs/architecture/design-vi.md      tài liệu này · docs/design/ giao diện
 - **Skill trong hub** (`.claude/skills/`, sửa thẳng trên `main` của hub): khi user hỏi "máy nặng vì gì", Claude chạy `hog --json`, đọc
   `headline` + `findings`, trả lời theo thứ tự câu kết luận → ai đang ăn → đề xuất kèm bằng chứng → thứ **đừng đụng** và vì sao, dùng
   đúng lời giải nghĩa trong bảng thuật ngữ. Skill không dừng gì; muốn dừng thì đưa kế hoạch `hog stop` cho user, và chỉ chạy
-  `--yes --plan` khi user đồng ý rõ. Giải thích tốt thì ghi vào `~/.config/hog/catalog.d/<id>.json` (+ `hog catalog check`).
+  `--yes --plan` khi user đồng ý rõ. Giải thích tốt và user đồng ý thì thêm mục vào `Sources/HogCore/Resources/catalog/` qua một task của
+  hub (giai đoạn 2, [thiết kế giai đoạn 2](phase-2-vi.md) mục 4); `~/.config/hog/catalog.d/` chỉ để thử nhanh.
 
 ## 12. Giai đoạn và điều cần chốt
 

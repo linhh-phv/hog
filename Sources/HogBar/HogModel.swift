@@ -13,7 +13,13 @@ final class HogModel: ObservableObject {
     @Published var summary: MenuSummary?
     @Published var scanning = false
     @Published var pressure: Pressure? = SystemReader.pressureNow()
-    @Published var page: Page = .main
+    @Published var page: Page = .main {
+        didSet {
+            if case .item = page { back = oldValue == .suggestions ? .suggestions : .main } else { back = .main }
+        }
+    }
+    /// Where "‹ Back" goes: the suggestions list when an item was opened from it.
+    var back: Page = .main
     @Published var expandedGroup: String?
     @Published var stopPlan: StopPlan?
     @Published var stopRunning = false
@@ -113,11 +119,12 @@ final class HogModel: ObservableObject {
             await MainActor.run {
                 self.stopRunning = false
                 switch outcome {
-                case .done(let m): self.stopPlan = nil; self.toast = m; self.refresh()
+                case .done(let m): self.stopPlan = nil; self.toast = m; self.page = .main; self.refresh()
                 case .needsNewPlan(let k): self.stopPlan = k  // G4: a new plan, a new "yes"
                 case .manual: self.stopPlan = nil
-                case .blocked(let g): self.toast = "\(g.gate): \(g.reason)"; self.stopPlan = nil
-                case .failed(let m): self.toast = m; self.stopPlan = nil
+                // The result shows on the main page, wherever "Stop…" was pressed (the item page, all suggestions).
+                case .blocked(let g): self.toast = "\(g.gate): \(g.reason)"; self.stopPlan = nil; self.page = .main
+                case .failed(let m): self.toast = m; self.stopPlan = nil; self.page = .main
                 }
             }
         }
