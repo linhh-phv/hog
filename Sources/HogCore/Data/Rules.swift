@@ -50,12 +50,13 @@ public enum FactNames {
         "net.listen_count", "owner.busy", "owner.idle_s", "owner.kind", "catalog.id", "catalog.family", "catalog.detached",
         "siblings.same_catalog_other_windows", "container.restart_count", "container.restart_policy", "container.state",
         "container.uptime_s", "container.connections", "watchman.subscriptions", "launchd.label",
-        "launchd.restarts_after_stop", "session.busy", "session.idle_s", "self.ancestor", "own", "exe.name", "exe.system", "exe.macos",
+        "launchd.restarts_after_stop", "session.busy", "session.idle_s", "self.ancestor", "self.window", "own", "exe.name", "exe.system", "exe.macos",
+        "launchd.job",
     ]
 
     /// Facts that describe what something *is*, not a measurement of use; they do not add to confidence.
     static let structural: Set<String> = ["catalog.id", "catalog.family", "catalog.detached", "owner.kind", "exe.name",
-                                          "exe.system", "exe.macos", "own", "launchd.label", "self.ancestor"]
+                                          "exe.system", "exe.macos", "own", "launchd.label", "launchd.job", "self.ancestor", "self.window"]
 }
 
 public struct RuleSet: Sendable {

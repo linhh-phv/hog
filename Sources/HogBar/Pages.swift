@@ -94,20 +94,6 @@ struct WhyPage: View {
     @EnvironmentObject var model: HogModel
     let itemId: String
 
-    /// Facts worth showing, with the glossary entry that explains each.
-    static let shownFacts: [(String, String?, String, String)] = [
-        ("age_s", nil, "Đã chạy", "Running for"),
-        ("footprint_bytes", "footprint", "RAM của chương trình", "Program memory"),
-        ("resident_ratio", "resident-ratio", "Phần còn nằm trong RAM", "Share still in RAM"),
-        ("cpu.avg_pct", "cpu-avg", "CPU trung bình", "Average CPU"),
-        ("orphan", "orphan", "Mồ côi", "Orphaned"),
-        ("net.established", nil, "Kết nối đang mở", "Open connections"),
-        ("watchman.subscriptions", nil, "Công cụ đăng ký", "Subscribed tools"),
-        ("session.idle_s", "idle-session", "Phiên rảnh", "Session idle"),
-        ("launchd.restarts_after_stop", nil, "launchd bật lại khi tắt?", "launchd restarts it?"),
-        ("container.restart_count", nil, "Số lần khởi động lại", "Restarts"),
-    ]
-
     var body: some View {
         let item = model.snapshot?.items.first { $0.id == itemId }
         let finding = model.snapshot?.findings.first { $0.itemId == itemId }
@@ -126,10 +112,13 @@ struct WhyPage: View {
                 }
                 if let item {
                     Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 4) {
-                        ForEach(Self.shownFacts.filter { item.facts[$0.0].map { !$0.isNull } ?? false }, id: \.0) { fact, gid, vi, en in
+                        ForEach(MenuSummary.whyFacts.filter { item.facts[$0.fact].map { !$0.isNull } ?? false }, id: \.fact) { wf in
                             GridRow {
-                                HStack(spacing: 4) { Text(model.t(vi, en)).foregroundStyle(Theme.text2); if let gid { QuestionButton(glossaryId: gid) } }
-                                Text(Format.fact(fact, item.facts[fact]!, model.lang)).monospacedDigit().gridColumnAlignment(.trailing)
+                                HStack(spacing: 4) {
+                                    Text(model.t(wf.vi, wf.en)).foregroundStyle(Theme.text2)
+                                    if let gid = wf.glossaryId { QuestionButton(glossaryId: gid) }
+                                }
+                                Text(Format.fact(wf.fact, item.facts[wf.fact]!, model.lang)).monospacedDigit().gridColumnAlignment(.trailing)
                             }
                         }
                     }

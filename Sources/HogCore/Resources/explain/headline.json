@@ -50,5 +50,16 @@
     "glossary_ids": [
       "footprint"
     ]
+  },
+  "critical_no_suggest": {
+    "text": {
+      "vi": "Máy đang thiếu RAM nặng: đã nén {compressed_stored} dữ liệu và đẩy {swap} ra ổ đĩa. hog chưa thấy thứ gì chắc chắn tắt được; ăn nhiều nhất: {top3}.",
+      "en": "The machine is critically short of memory: {compressed_stored} compressed and {swap} swapped. hog found nothing it is sure can be stopped; biggest: {top3}."
+    },
+    "glossary_ids": [
+      "memory-pressure",
+      "compressed-stored",
+      "swap-used"
+    ]
   }
 }

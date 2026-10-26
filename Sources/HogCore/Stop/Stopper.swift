@@ -34,8 +34,11 @@ public struct Stopper: Sendable {
         }
     }
 
-    /// Resolves `<pid | port | item-id | container name>` to one item of the snapshot.
-    public func resolve(_ target: String, in snapshot: Snapshot, scan: Scan) throws -> (identity: StopIdentity, item: Item?) {
+    /// Resolves `<pid | port | item-id | container name>` to an item. `itemFor` builds an item (facts + protection) for
+    /// a PID that is not among the snapshot's items, e.g. `Analyzer.item(forPid:in:)`; without it such targets have no
+    /// item and gate G6 blocks them.
+    public func resolve(_ target: String, in snapshot: Snapshot, scan: Scan,
+                        itemFor: ((Int32) -> Item?)? = nil) throws -> (identity: StopIdentity, item: Item?) {
         if let item = snapshot.items.first(where: { $0.id == target }) { return (identity(of: item, scan: scan), item) }
         if let c = scan.containers?.first(where: { $0.name == target || $0.id.hasPrefix(target) && target.count >= 6 }) {
             return (.container(c.id), snapshot.items.first { $0.id == "ctr:\(c.id.prefix(12))" })
@@ -46,7 +49,7 @@ public struct Stopper: Sendable {
             if listeners.count > 1 { throw TargetError.ambiguous(target, listeners.sorted().map(String.init)) }
             let pid = listeners.first ?? n
             guard let p = scan.processes[pid] else { throw TargetError.notFound(target) }
-            let item = snapshot.items.first { $0.pids.first == pid }
+            let item = snapshot.items.first { $0.pids.first == pid } ?? itemFor?(pid)
             return (.process(pid, startSec: p.startSec, startUsec: p.startUsec), item)
         }
         throw TargetError.notFound(target)
@@ -75,8 +78,9 @@ public struct Stopper: Sendable {
         // G1 — never self-harm.
         if identity.kind == .process, let pid = identity.pid {
             let ancestors = Set([snapshot.hog.pid] + snapshot.hog.ancestors.filter { $0 != 1 })
-            if ancestors.contains(pid) || pid == 1 {
-                gates.append(GateCheck(gate: "G1", result: .block, reason: t("Đây là hog hoặc thứ đang chạy hog.", "This is hog or something running hog.")))
+            if ancestors.contains(pid) || pid == 1 || item?.facts["self.window"] == .bool(true) {
+                gates.append(GateCheck(gate: "G1", result: .block, reason: t("Đây là hog, thứ đang chạy hog, hoặc thuộc cửa sổ chứa nó.",
+                                                                            "This is hog, something running hog, or part of the window containing it.")))
             } else if !snapshot.hog.ancestorsComplete {
                 gates.append(GateCheck(gate: "G1", result: .block, reason: t(
                     "Không đọc được hết chuỗi tiến trình đang chạy hog, nên không chắc đích không phải tổ tiên của hog.",
@@ -89,7 +93,10 @@ public struct Stopper: Sendable {
         // G6 — only our own things; hard protections.
         if identity.kind == .process, let pid = identity.pid {
             let p = scan.processes[pid]
-            if p?.uid != scan.selfUid {
+            if item == nil {
+                gates.append(GateCheck(gate: "G6", result: .block, reason: t("hog không đọc được đủ về thứ này (không có số đo, không biết bảo vệ gì) nên không dừng.",
+                                                                            "hog could not read enough about this (no measurements, unknown protections), so it does not stop it.")))
+            } else if p?.uid != scan.selfUid {
                 gates.append(GateCheck(gate: "G6", result: .block, reason: t("Không thuộc người dùng hiện tại (hog không dùng sudo).",
                                                                             "Not owned by the current user (hog never uses sudo).")))
             } else if let prot = item?.protection.value, prot.level == .hard {
@@ -155,8 +162,13 @@ public struct Stopper: Sendable {
                                    "Restore: `docker update --restart=\(pol) \(c.name) && docker start \(c.name)`."))
                 }
             }
-            gates.append(GateCheck(gate: "G5", result: .pass, reason: t("Restart policy sẽ được tắt và kiểm lại trước khi dừng.",
-                                                                       "The restart policy is turned off and verified before stopping.")))
+            if previousPolicy == nil {
+                gates.append(GateCheck(gate: "G5", result: .block, reason: t("Không đọc được restart policy của container; dừng có thể bị Docker bật lại ngay.",
+                                                                            "Could not read the container's restart policy; Docker might restart it at once.")))
+            } else {
+                gates.append(GateCheck(gate: "G5", result: .pass, reason: t("Restart policy sẽ được tắt và kiểm lại trước khi dừng.",
+                                                                           "The restart policy is turned off and verified before stopping.")))
+            }
         case .manual:
             steps = manualSteps(identity: identity, item: item)
         }
@@ -192,6 +204,32 @@ public struct Stopper: Sendable {
         }
         return [t("hog không tự dừng thứ này. Xem \"tắt thì sao\" ở trên để biết cách làm đúng.",
                   "hog does not stop this itself. See the effect above for the right way to do it.")]
+    }
+
+    // MARK: - Agreed plans (`hog stop --yes --plan <id>`)
+
+    public enum ReconfirmError: Error, Equatable {
+        case expired, notFound, changed
+        case blocked(GateCheck)
+    }
+
+    /// A plan a person agreed to: it must still be stored and valid, and planning again on the *current* state must give
+    /// the same plan (identity unchanged) with no gate blocking. Returns the fresh plan to execute.
+    public func reconfirm(planId: String, snapshot: Snapshot, scan: Scan, itemFor: ((Int32) -> Item?)? = nil,
+                          now: Date = Date()) -> Result<StopPlan, ReconfirmError> {
+        let stored: StopPlan
+        do { stored = try plans.load(planId, now: now) } catch PlanStore.LoadError.expired { return .failure(.expired) } catch {
+            return .failure(.notFound)
+        }
+        let item: Item? = stored.itemId.flatMap { id in snapshot.items.first { $0.id == id } }
+            ?? stored.identity.pid.flatMap { pid in snapshot.items.first { $0.pids.first == pid } ?? itemFor?(pid) }
+        var fresh = plan(stored.identity, item: item, snapshot: snapshot, scan: scan, action: stored.action, now: now)
+        if stored.action == .sigkill { fresh.gates += stored.gates.filter { $0.gate == "G4" } }
+        guard fresh.planId == stored.planId else { return .failure(.changed) }
+        if let b = fresh.blocked { return .failure(.blocked(b)) }
+        // G3 at plan level: the stored identity must still be the live process.
+        if stored.identity.kind == .process, !isAlive(stored.identity) { return .failure(.changed) }
+        return .success(fresh)
     }
 
     // MARK: - Execution

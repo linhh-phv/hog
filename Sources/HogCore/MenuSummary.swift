@@ -56,6 +56,30 @@ public struct MenuSummary: Sendable, Equatable {
     public var takenAt: Date
 
     public static let maxGroups = 3
+
+    /// Glossary entries the app links to (metric tiles + "why" page). Tested to exist in both languages.
+    public static let tileGlossaryIds = ["memory-pressure", "compressed-stored", "swap-used"]
+
+    public struct WhyFact: Sendable {
+        public var fact: String
+        public var glossaryId: String?
+        public var vi: String
+        public var en: String
+    }
+
+    /// Facts the app shows on the "why" page, with the glossary entry that explains each.
+    public static let whyFacts: [WhyFact] = [
+        WhyFact(fact: "age_s", glossaryId: nil, vi: "Đã chạy", en: "Running for"),
+        WhyFact(fact: "footprint_bytes", glossaryId: "footprint", vi: "RAM của chương trình", en: "Program memory"),
+        WhyFact(fact: "resident_ratio", glossaryId: "resident-ratio", vi: "Phần còn nằm trong RAM", en: "Share still in RAM"),
+        WhyFact(fact: "cpu.avg_pct", glossaryId: "cpu-avg", vi: "CPU trung bình", en: "Average CPU"),
+        WhyFact(fact: "orphan", glossaryId: "orphan", vi: "Mồ côi", en: "Orphaned"),
+        WhyFact(fact: "net.established", glossaryId: nil, vi: "Kết nối đang mở", en: "Open connections"),
+        WhyFact(fact: "watchman.subscriptions", glossaryId: nil, vi: "Công cụ đăng ký", en: "Subscribed tools"),
+        WhyFact(fact: "session.idle_s", glossaryId: "idle-session", vi: "Phiên rảnh", en: "Session idle"),
+        WhyFact(fact: "launchd.restarts_after_stop", glossaryId: nil, vi: "launchd bật lại khi tắt?", en: "launchd restarts it?"),
+        WhyFact(fact: "container.restart_count", glossaryId: nil, vi: "Số lần khởi động lại", en: "Restarts"),
+    ]
     public static let maxCards = 3
 
     public static func make(_ s: Snapshot) -> MenuSummary {

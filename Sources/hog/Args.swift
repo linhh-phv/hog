@@ -13,6 +13,7 @@ struct Args {
     var command = "status"
     var positional: [String] = []
     var json = false
+    var pretty = false
     var fast = false
     var full = false
     var lang: Lang
@@ -27,6 +28,7 @@ struct Args {
         while let a = rest.popFirst() {
             switch a {
             case "--json": json = true
+            case "--pretty": pretty = true
             case "--fast": fast = true
             case "--full": full = true
             case "--yes", "-y": yes = true

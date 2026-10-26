@@ -16,13 +16,36 @@ public enum Privacy {
         return path
     }
 
-    /// Masks values of secret-looking flags, replaces the home prefix, and truncates.
+    /// Database clients whose `-p<pw>` / `-a <pw>` short flags carry a password.
+    static let passwordShortFlags: [String: Set<String>] = [
+        "mysql": ["-p"], "mysqldump": ["-p"], "mysqladmin": ["-p"], "mariadb": ["-p"], "redis-cli": ["-a"],
+    ]
+
+    /// Masks values of secret-looking flags, credentials in URLs, `Authorization:`/`Bearer` values and database
+    /// client passwords; replaces the home directory; truncates.
     ///
     /// Handles `--flag=value`, `--flag value` and `-flag value`. The argument list is joined with spaces.
     public static func scrubArgs(_ args: [String], home: String = NSHomeDirectory()) -> String {
         var out: [String] = []
         var maskNext = false
-        for arg in args {
+        let program = args.first.map { ($0 as NSString).lastPathComponent } ?? ""
+        let pwFlags = passwordShortFlags[program] ?? []
+        var maskAuth = false
+        for arg in args.map(scrubInline) {
+            // "Authorization:" [Bearer|Basic|Token] <secret>, split over several arguments: keep the scheme word, mask the value.
+            let lower = arg.lowercased()
+            if maskAuth {
+                if ["bearer", "basic", "token"].contains(lower) { out.append(arg); continue }
+                out.append("***"); maskAuth = false; continue
+            }
+            if lower.hasSuffix("authorization:") || ["bearer", "basic"].contains(lower) {
+                out.append(arg); maskAuth = true; continue
+            }
+            if let flag = pwFlags.first(where: { arg.hasPrefix($0) }) {
+                out.append(arg == flag ? arg : flag + "***")
+                maskNext = arg == flag
+                continue
+            }
             if maskNext {
                 out.append("***")
                 maskNext = false
@@ -47,15 +70,33 @@ public enum Privacy {
         return truncate(out.joined(separator: " "))
     }
 
+    /// Inside one argument: `scheme://user:pass@host` → `scheme://user:***@host`, `Authorization: Bearer x` →
+    /// `Authorization: ***`, and `token=`/`key=`/`secret=`/`password=` query values.
+    static func scrubInline(_ arg: String) -> String {
+        var s = arg
+        if let re = try? NSRegularExpression(pattern: #"([a-zA-Z][a-zA-Z0-9+.-]*://[^/:@\s]+):[^@/\s]+@"#) {
+            s = re.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "$1:***@")
+        }
+        if let re = try? NSRegularExpression(pattern: #"(?i)(authorization:\s*)(bearer\s+|basic\s+|token\s+)?\S+"#) {
+            s = re.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "$1$2***")
+        }
+        if let re = try? NSRegularExpression(pattern: #"(?i)([?&](?:[a-z_]*token|[a-z_]*key|secret|password|pass|pwd|auth)=)[^&\s]+"#) {
+            s = re.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "$1***")
+        }
+        return s
+    }
+
     static func isSecret(_ flagName: String) -> Bool {
         let lower = flagName.lowercased()
         return secretWords.contains { lower.contains($0) }
     }
 
-    /// Replaces every occurrence of the home directory inside an argument (e.g. `--dir=/Users/x/p`).
+    /// Replaces the home directory inside an argument (e.g. `--dir=<home>/p`), only at a path boundary: a sibling
+    /// home such as `<home>2` is left alone.
     static func scrubEmbeddedHome(_ text: String, home: String) -> String {
-        guard !home.isEmpty, home != "/" else { return text }
-        return text.replacingOccurrences(of: home, with: "~")
+        guard !home.isEmpty, home != "/",
+              let re = try? NSRegularExpression(pattern: NSRegularExpression.escapedPattern(for: home) + #"(?=/|$|[\s"',;:])"#) else { return text }
+        return re.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "~")
     }
 
     static func truncate(_ text: String) -> String {

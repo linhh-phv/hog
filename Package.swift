@@ -25,5 +25,6 @@ let package = Package(
             dependencies: ["HogCore"],
             resources: [.copy("Fixtures")]
         ),
+        .testTarget(name: "hogTests", dependencies: ["hog"]),
     ]
 )

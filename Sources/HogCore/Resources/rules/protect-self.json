@@ -7,11 +7,19 @@
   "class": "protect",
   "level": "hard",
   "when": {
-    "fact": "self.ancestor",
-    "eq": true
+    "any": [
+      {
+        "fact": "self.ancestor",
+        "eq": true
+      },
+      {
+        "fact": "self.window",
+        "eq": true
+      }
+    ]
   },
   "reason": {
-    "vi": "Đây là hog hoặc thứ đang chạy hog (shell, phiên Claude, cửa sổ chứa nó) — không bao giờ dừng.",
-    "en": "This is hog or something running hog (shell, Claude session, its window) — never stopped."
+    "vi": "Đây là hog, thứ đang chạy hog (shell, phiên Claude) hoặc thuộc cửa sổ VS Code chứa nó — không bao giờ dừng.",
+    "en": "This is hog, something running hog (shell, Claude session) or part of the VS Code window containing it — never stopped."
   }
 }

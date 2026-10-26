@@ -73,7 +73,8 @@ import Testing
 
     func level(_ facts: [String: FactValue]) -> ProtectionLevel? {
         var f: [String: FactValue] = ["own": .bool(true), "exe.macos": .bool(false), "exe.system": .bool(false),
-                                      "exe.name": .string("x"), "launchd.label": .null, "self.ancestor": .bool(false),
+                                      "exe.name": .string("x"), "launchd.label": .null, "launchd.job": .bool(false),
+                                      "self.ancestor": .bool(false), "self.window": .bool(false),
                                       "owner.kind": .string("none"), "owner.busy": .bool(false)]
         for (k, v) in facts { f[k] = v }
         return RuleEngine.run(rules, kind: .process, facts: f).protection?.level
@@ -86,7 +87,9 @@ import Testing
 
     @Test func macOSItselfAndLaunchdManagedSystemToolsAreProtected() {
         #expect(level(["exe.macos": .bool(true), "exe.name": .string("Dock")]) == .hard)
-        #expect(level(["exe.system": .bool(true), "launchd.label": .string("com.apple.cfprefsd.xpc.agent")]) == .hard)
+        #expect(level(["exe.system": .bool(true), "launchd.job": .bool(true), "launchd.label": .string("com.apple.cfprefsd.xpc.agent")]) == .hard)
+        #expect(level(["exe.system": .bool(true), "launchd.job": .null]) == .hard, "launchd sensor failed → unknown → protect")
+        #expect(level(["self.window": .bool(true)]) == .hard, "the VS Code window running hog")
         #expect(level(["own": .bool(false)]) == .hard)
         #expect(level(["own": .null]) == .hard, "unknown owner → protect")
     }

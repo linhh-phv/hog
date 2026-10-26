@@ -26,6 +26,8 @@ public struct HeadlineTemplates: Codable, Sendable, Equatable {
     public var okSuggest: Template
     public var warn: Template
     public var critical: Template
+    /// pressure critical, nothing to suggest (`{list}` would be empty)
+    public var criticalNoSuggest: Template
     /// pressure could not be read
     public var unknown: Template
 }

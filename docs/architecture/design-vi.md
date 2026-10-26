@@ -1,6 +1,6 @@
 # hog — thiết kế giai đoạn 1
 
-> Trạng thái: **đã duyệt** (2026-10-26), cả 10 câu ở mục 12 đã chốt. **Đang triển khai** (lõi + CLI xong; app thanh menu chưa).
+> Trạng thái: **đã duyệt** (2026-10-26), cả 10 câu ở mục 12 đã chốt. **Giai đoạn 1 đã triển khai** (lõi, CLI, app thanh menu, skill trong hub).
 > Chỗ thực tế khác thiết kế được sửa thẳng vào tài liệu và ghi ở mục 13 (user: *"sau khi triển khai xong thì có gì update sau"*).
 > Đổi so với bản 1 (2026-10-15): viết bằng **Swift** thay vì Go, có **app trên thanh menu macOS** ngay giai đoạn 1, và
 > thêm **tầng giải nghĩa số đo** (mục 5) — cả ba do chủ dự án chốt ngày 2026-10-26.
@@ -588,8 +588,8 @@ Mã thoát CLI: `0` xong · `1` lỗi · `2` dùng sai · `3` cần người xá
    `orphan-quiet`; `procStart` đọc như UTC — test này **chạy với `TZ` khác UTC** (runner CI thường là UTC, sẽ không bắt được lỗi
    đọc nhầm giờ địa phương); đường dẫn `KERN_PROCARGS2` tương đối → `null`.
 8. **Hợp đồng JSON** — golden file; kiểm số nguyên byte, thời gian UTC, không có đường dẫn home tuyệt đối, không có biến môi trường.
-9. **`hog ports`** — PID, cổng, lệnh, dự án khớp `lps` v0.1.0: test tích hợp chạy chính `legacy/lps` trên máy rồi so (chỉ so PID cả hai
-   cùng thấy, vì cổng có thể mở/đóng giữa hai lần chạy); cột CWD (`~`) và nhãn `[orphan]` (mục 3.4) cố ý khác.
+9. **`hog ports`** — PID, cổng, lệnh, dự án khớp `lps` v0.1.0: đã so trực tiếp trên máy thật (15/15 dòng, 2026-10-26) trước khi xoá
+   `legacy/`; nay unit test giữ các luật đặt tên dự án của `lps` (`PortsReportTests`). Cột CWD (`~`) và `[orphan]` (mục 3.4) cố ý khác.
 10. **Trên máy thật** (bạn chạy, chụp màn hình gửi lại): CLI < 4 s; app mở menu < 0,5 s với bản quét gần nhất; app ≤ 50 MB; nhận
    ra cửa sổ VS Code sở hữu tsserver; `idle_s` cho từng phiên Claude; watchman không ai đăng ký được đề xuất; docker `unavailable` khi engine
    tắt; cột "Activity Monitor" của bảng thuật ngữ được đối chiếu bằng mắt.
@@ -599,15 +599,15 @@ Mã thoát CLI: `0` xong · `1` lỗi · `2` dùng sai · `3` cần người xá
 ## 11. Cấu trúc repo, cài đặt, skill trong hub
 
 ```text
-Package.swift                 Swift package, không phụ thuộc ngoài
-Sources/HogCore/              Sensors/ · Model/ · Ownership/ · Rules/ · Catalog/ · Explain/ · Stop/
-Sources/hog/                  CLI (tự phân tích tham số)
-Sources/HogBar/               app thanh menu (SwiftUI MenuBarExtra)
-Resources/                    catalog/ · rules/ · explain/ (glossary, headline) — đóng gói cùng HogCore
-Tests/HogCoreTests/           Swift Testing
-testdata/                     fixture đã làm sạch
-scripts/                      build-app.sh (đóng gói Hog.app, Info.plist LSUIElement, ký ad-hoc) · install.sh
-docs/architecture/design-vi.md  tài liệu này
+Package.swift                       Swift package, không phụ thuộc ngoài
+Sources/HogCore/                    Sensors/ · Model/ · Data/ (catalog, rules, glossary) · Stop/ · Analyzer · Ownership · Reports · MenuSummary
+Sources/HogCore/Resources/          catalog/ · rules/ · explain/ (glossary/, headline.json) — đóng gói cùng HogCore
+Sources/hog/                        CLI (tự phân tích tham số)
+Sources/HogBar/                     app thanh menu (SwiftUI MenuBarExtra), Theme theo design system
+Tests/HogCoreTests/                 Swift Testing; Fixtures/ = đầu ra định dạng thật, dữ liệu giả; golden/
+Tests/hogTests/                     phân tích tham số của CLI
+scripts/                            build-app.sh (dist/Hog.app, LSUIElement, ký ad-hoc) · install.sh
+docs/architecture/design-vi.md      tài liệu này · docs/design/ giao diện
 ```
 
 - Swift 6 (máy có Swift 6.4), macOS 14 trở lên (`MenuBarExtra` cần 13), arm64. **Không phụ thuộc thư viện ngoài.**
@@ -663,3 +663,9 @@ Ghi khi code giai đoạn 1 (task `hog/phase-1`), theo lời user *"sau khi tri�
 | 2026-10-26 | `hog ports`, mục 10 | So với `lps` v0.1.0 trên máy thật: khớp 15/15 dòng (PID, cổng, lệnh, dự án); sau đó xoá `legacy/` (đúng kế hoạch mục 11), test đối chiếu trực tiếp thay bằng unit test các luật đặt tên dự án của `lps` | Bản bash không còn dùng; giữ lại chỉ để chạy test là thứ thừa |
 | 2026-10-26 | Câu kết luận, mục 5.1 | Mẫu "có đề xuất" chỉ đếm ("Có N thứ có thể tắt."), không liệt kê | App đã hiện đề xuất thành thẻ ngay dưới; liệt kê làm câu dài gấp đôi (đúng bản mẫu đã duyệt) |
 | 2026-10-26 | Snapshot, mục 4 | Thêm `memory.measured_footprint_bytes` | Nền của thanh RAM trong app; là tổng footprint (có thể vượt RAM), không bao giờ đem trừ |
+| 2026-10-26 | Cổng dừng, mục 8 (reviewer chốt) | Đích không phải item (tiến trình nhỏ) vẫn được dựng fact + bảo vệ (`Analyzer.item(forPid:)`); không dựng được → G6 chặn | Trước đó tiến trình nhỏ của macOS (vd `cfprefsd`) chỉ cần xác nhận là dừng được |
+| 2026-10-26 | Fact, mục 6 | Thêm `launchd.job` (`null` khi cảm biến launchd hỏng) và `self.window` (cùng cửa sổ VS Code với hog) | `exists` biến thiếu số đo thành "không" — trái 6.1; G1 phải gồm "cửa sổ chứa nó" |
+| 2026-10-26 | G5 | Không đọc được restart policy → chặn | Dừng mà không hạ policy thì Docker bật lại ngay |
+| 2026-10-26 | Snapshot, mục 4 | `--json` gọn mặc định (`--pretty` để đọc); không `--full` thì giữ item có đề xuất + 20 item lớn nhất, process của item có đề xuất + 15 lớn nhất, owner ≥ 50 MB hoặc được tham chiếu | Đo trên máy: 219 KB → 58 KB (mục tiêu ≤ 100 KB) |
+| 2026-10-26 | Riêng tư, mục 4 | Che thêm mật khẩu trong URL, `Authorization`/`Bearer`, `-p`/`-a` của client CSDL, tham số query bí mật; thay home chỉ ở ranh giới thư mục | reviewer tìm ra các chuỗi lọt qua cách che theo tên cờ |
+| 2026-10-26 | Câu kết luận, mục 5.1 | Thêm mẫu "nghiêm trọng, chưa có gì chắc chắn tắt được" | Trước đó ra câu có danh sách rỗng |

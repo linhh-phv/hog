@@ -30,8 +30,8 @@
             "eq": true
           },
           {
-            "fact": "launchd.label",
-            "exists": true
+            "fact": "launchd.job",
+            "eq": true
           }
         ]
       }

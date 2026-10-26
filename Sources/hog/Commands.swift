@@ -49,7 +49,8 @@ struct CLI {
     func status() -> Exit {
         let (_, snapshot) = world()
         if args.json {
-            guard let data = try? SnapshotJSON.encode(snapshot) else { return .error }
+            // Compact by default: this goes into Claude's context (design 4: ≤ 100 KB). --pretty for people.
+            guard let data = try? SnapshotJSON.encode(snapshot, pretty: args.pretty) else { return .error }
             out(String(decoding: data, as: UTF8.self))
         } else {
             out(r.status(snapshot))
@@ -73,7 +74,9 @@ struct CLI {
         }
         let (scan, snapshot) = world()
         let stopper = Stopper(lang: args.lang)
-        guard let resolved = try? stopper.resolve(target, in: snapshot, scan: scan), let item = resolved.item else {
+        let analyzer = Analyzer.standard(lang: args.lang)
+        guard let resolved = try? stopper.resolve(target, in: snapshot, scan: scan, itemFor: { analyzer.item(forPid: $0, in: scan) }),
+              let item = resolved.item else {
             err(t("Không tìm thấy \(target) trong các thứ hog theo dõi. Thuật ngữ: `hog explain terms`.",
                   "\(target) is not among the things hog tracks. Terms: `hog explain terms`."))
             return .error
@@ -125,7 +128,8 @@ struct CLI {
         }
         let (scan, snapshot) = world(fast: false)
         let resolved: (identity: StopIdentity, item: Item?)
-        do { resolved = try stopper.resolve(target, in: snapshot, scan: scan) } catch {
+        let analyzer = Analyzer.standard(lang: args.lang)
+        do { resolved = try stopper.resolve(target, in: snapshot, scan: scan, itemFor: { analyzer.item(forPid: $0, in: scan) }) } catch {
             err("\(error)")
             return .error
         }
@@ -164,29 +168,25 @@ struct CLI {
     /// `--yes --plan <id>`: the stored plan must still be valid *and* re-planning on the current state must give the
     /// same plan with no block (identity unchanged, gates still pass).
     func stopAgreed(_ planId: String, stopper: Stopper) -> Exit {
-        let stored: StopPlan
-        do { stored = try stopper.plans.load(planId) } catch PlanStore.LoadError.expired {
+        let (scan, snapshot) = world(fast: false)
+        let analyzer = Analyzer.standard(lang: args.lang)
+        switch stopper.reconfirm(planId: planId, snapshot: snapshot, scan: scan, itemFor: { analyzer.item(forPid: $0, in: scan) }) {
+        case .failure(.expired):
             err(t("Kế hoạch \(planId) đã hết hạn (10 phút). Tạo lại bằng `hog stop <đích>`.", "Plan \(planId) expired (10 minutes). Make a new one with `hog stop <target>`."))
             return .blocked
-        } catch {
+        case .failure(.notFound):
             err(t("Không có kế hoạch \(planId).", "No plan \(planId)."))
             return .error
-        }
-        let (scan, snapshot) = world(fast: false)
-        let item: Item? = stored.itemId.flatMap { id in snapshot.items.first { $0.id == id } }
-            ?? snapshot.items.first { $0.pids.first == stored.identity.pid && stored.identity.pid != nil }
-        var fresh = stopper.plan(stored.identity, item: item, snapshot: snapshot, scan: scan, action: stored.action)
-        if stored.action == .sigkill { fresh.gates += stored.gates.filter { $0.gate == "G4" } }
-        guard fresh.planId == stored.planId else {
+        case .failure(.changed):
             err(t("Trạng thái đã đổi so với kế hoạch đã duyệt; không làm gì.", "The state changed since the plan was agreed; nothing done."))
             return .blocked
-        }
-        if let b = fresh.blocked {
+        case .failure(.blocked(let b)):
             err(r.red(t("Bị chặn bởi \(b.gate): \(b.reason)", "Blocked by \(b.gate): \(b.reason)")))
             return .blocked
+        case .success(let fresh):
+            out(r.planLines(fresh).joined(separator: "\n"))
+            return finish(stopper.execute(fresh, scan: scan), stopper: stopper, scan: scan)
         }
-        out(r.planLines(fresh).joined(separator: "\n"))
-        return finish(stopper.execute(fresh, scan: scan), stopper: stopper, scan: scan)
     }
 
     func finish(_ outcome: Stopper.Outcome, stopper: Stopper, scan: Scan) -> Exit {
@@ -265,7 +265,7 @@ struct CLI {
           hog version · hog help
 
         CỜ
-          --lang vi|en (hoặc HOG_LANG)  --full  --fast  --no-color (hoặc NO_COLOR)
+          --lang vi|en (hoặc HOG_LANG)  --full  --fast  --pretty (JSON dễ đọc)  --no-color (hoặc NO_COLOR)
 
         MÃ THOÁT
           0 xong · 1 lỗi · 2 dùng sai · 3 cần người đồng ý · 4 bị cổng an toàn chặn
@@ -285,7 +285,7 @@ struct CLI {
           hog version · hog help
 
         FLAGS
-          --lang vi|en (or HOG_LANG)  --full  --fast  --no-color (or NO_COLOR)
+          --lang vi|en (or HOG_LANG)  --full  --fast  --pretty (readable JSON)  --no-color (or NO_COLOR)
 
         EXIT CODES
           0 done · 1 error · 2 usage · 3 needs a person's agreement · 4 blocked by a safety gate

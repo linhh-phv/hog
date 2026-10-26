@@ -13,6 +13,11 @@ public struct Analyzer: Sendable {
 
     public static let significantFootprint: Int64 = 50 * 1_048_576
     public static let significantCPU: Double = 5
+    /// Without `--full`: items without a finding kept (largest first), and processes kept (largest first).
+    public static let maxExtraItems = 20
+    public static let maxProcesses = 15
+    /// Owners smaller than this are dropped from the snapshot unless something kept refers to them.
+    public static let minOwnerFootprint: Int64 = 50 * 1_048_576
 
     public init(catalog: Catalog, rules: RuleSet, explain: Explanations, lang: Lang, full: Bool = false,
                 launchdPrint: @escaping @Sendable (String) -> String? = { _ in nil }) {
@@ -30,12 +35,47 @@ public struct Analyzer: Sendable {
 
     // MARK: - Analysis
 
-    public func analyze(_ scan: Scan) -> Snapshot {
+    /// Everything computed once per scan and shared by every item.
+    struct Context {
+        var own: [Int32: ProcessOwnership]
+        var selfChain: (chain: [Int32], complete: Bool)
+        var selfSet: Set<Int32>
+        /// VS Code window that contains hog (its caller), if any: `self.window`.
+        var selfWindow: Int?
+        var catalogOf: [Int32: String]
+        var sessionPids: Set<Int32>
+    }
+
+    func context(_ scan: Scan) -> Context {
         let own = Ownership.resolve(scan)
         let selfChain = Ownership.ancestors(of: scan.selfPid, in: scan.processes)
         let selfSet = Set([scan.selfPid] + selfChain.chain.filter { $0 != 1 })
-        let catalogOf = matchCatalog(scan)
-        let sessionPids = Set(own.values.compactMap(\.session)).filter { own[$0]?.session == $0 }
+        return Context(own: own, selfChain: selfChain, selfSet: selfSet,
+                       selfWindow: ([scan.selfPid] + selfChain.chain).lazy.compactMap { own[$0]?.window }.first,
+                       catalogOf: matchCatalog(scan),
+                       sessionPids: Set(own.values.compactMap(\.session)).filter { own[$0]?.session == $0 })
+    }
+
+    /// An item for any PID — also small processes that are not part of the snapshot's items — with facts and
+    /// protection, so the stop gates never see a target without its protections (review finding, 2026-10-26).
+    public func item(forPid pid: Int32, in scan: Scan) -> Item? {
+        guard let p = scan.processes[pid] else { return nil }
+        let ctx = context(scan)
+        let isSession = ctx.sessionPids.contains(pid)
+        var item = Item(id: isSession ? "claude:\(pid)" : "proc:\(pid):\(p.startSec ?? 0)", kind: isSession ? .claudeSession : .process,
+                        label: label(pid: pid, p: p, catalogId: ctx.catalogOf[pid], ownership: ctx.own[pid], scan: scan),
+                        catalogId: ctx.catalogOf[pid], pids: [pid], ownerId: ctx.own[pid]?.ownerId,
+                        footprintBytes: Measured(p.footprintBytes), residentRatio: Measured(residentRatio(p)))
+        var restarts: [String: Bool?] = [:]
+        if let label = scan.launchd?[pid] { restarts[label] = launchdPrint(label).flatMap { LaunchctlParser.restartsAfterStop(printOutput: $0) } }
+        item.facts = facts(for: item, scan: scan, ctx: ctx, items: [item], restarts: restarts)
+        item.protection = Measured(RuleEngine.run(rules.rules, kind: item.kind, facts: item.facts).protection)
+        return item
+    }
+
+    public func analyze(_ scan: Scan) -> Snapshot {
+        let ctx = context(scan)
+        let (own, selfChain, catalogOf, sessionPids) = (ctx.own, ctx.selfChain, ctx.catalogOf, ctx.sessionPids)
 
         // Items
         var items: [Item] = []
@@ -60,7 +100,7 @@ public struct Analyzer: Sendable {
 
         // Facts, first pass without launchd configs (each `launchctl print` is a process spawn).
         for i in items.indices {
-            items[i].facts = facts(for: items[i], scan: scan, own: own, catalogOf: catalogOf, selfSet: selfSet, items: items)
+            items[i].facts = facts(for: items[i], scan: scan, ctx: ctx, items: items)
         }
         // Second pass: read the launchd config only for launchd jobs that could be suggested for stopping,
         // in parallel, then recompute their facts (design 3.1: `launchd.restarts_after_stop`).
@@ -75,8 +115,7 @@ public struct Analyzer: Sendable {
             var restarts: [String: Bool?] = [:]
             for (k, c) in candidates.enumerated() { restarts[c.1] = prints[k].flatMap { LaunchctlParser.restartsAfterStop(printOutput: $0) } }
             for (i, _) in candidates {
-                items[i].facts = facts(for: items[i], scan: scan, own: own, catalogOf: catalogOf, selfSet: selfSet, items: items,
-                                       restarts: restarts)
+                items[i].facts = facts(for: items[i], scan: scan, ctx: ctx, items: items, restarts: restarts)
             }
         }
 
@@ -93,9 +132,26 @@ public struct Analyzer: Sendable {
             return footprint(of: a.itemId, items) > footprint(of: b.itemId, items)
         }
         items.sort { ($0.footprintBytes.value ?? -1, $0.id) > ($1.footprintBytes.value ?? -1, $1.id) }
+        if !full {
+            // Size cap (design 4, ≤ 100 KB): items with a finding + the largest others.
+            let withFinding = Set(findings.map(\.itemId))
+            var kept = 0
+            items = items.filter { withFinding.contains($0.id) || { kept += 1; return kept <= Self.maxExtraItems }() }
+            let keptIds = Set(items.map(\.id))
+            itemOfPid = itemOfPid.filter { keptIds.contains($0.value) }
+        }
 
-        let owners = buildOwners(scan: scan, own: own)
-        let processes = buildProcesses(scan: scan, own: own, catalogOf: catalogOf, itemOfPid: itemOfPid)
+        var owners = buildOwners(scan: scan, own: own)
+        let findingItems = Set(findings.map(\.itemId))
+        let processes = buildProcesses(scan: scan, own: own, catalogOf: catalogOf, itemOfPid: itemOfPid, mustInclude: findingItems)
+        if !full {
+            // Keep owners that are large, or referenced by a kept item, or parents of kept owners.
+            var keep = Set(owners.filter { $0.totalFootprintBytes >= Self.minOwnerFootprint }.map(\.id))
+            keep.formUnion(items.compactMap(\.ownerId.value))
+            let parents = Set(owners.filter { keep.contains($0.id) }.compactMap(\.parent.value))
+            keep.formUnion(parents)
+            owners = owners.filter { keep.contains($0.id) }
+        }
         let memory = MemoryInfo(freeBytes: Measured(scan.system.freeBytes), wiredBytes: Measured(scan.system.wiredBytes),
                                 compressorBytes: Measured(scan.system.compressorBytes),
                                 compressedStoredBytes: Measured(scan.system.compressedStoredBytes),
@@ -147,8 +203,8 @@ public struct Analyzer: Sendable {
 
     // MARK: Facts
 
-    func facts(for item: Item, scan: Scan, own: [Int32: ProcessOwnership], catalogOf: [Int32: String],
-               selfSet: Set<Int32>, items: [Item], restarts: [String: Bool?] = [:]) -> [String: FactValue] {
+    func facts(for item: Item, scan: Scan, ctx: Context, items: [Item], restarts: [String: Bool?] = [:]) -> [String: FactValue] {
+        let own = ctx.own
         var f: [String: FactValue] = [:]
         let entry = item.catalogId.value.flatMap { catalog.entries[$0] }
         f["catalog.id"] = item.catalogId.value.map(FactValue.string) ?? .null
@@ -190,7 +246,9 @@ public struct Analyzer: Sendable {
             f["net.established"] = .null
             f["net.listen_count"] = .null
         }
-        f["self.ancestor"] = .bool(selfSet.contains(pid))
+        f["self.ancestor"] = .bool(ctx.selfSet.contains(pid))
+        // Same VS Code window as hog's caller: "the window containing it" (design 6.2, 8 G1).
+        f["self.window"] = .bool(ctx.selfWindow != nil && o?.window == ctx.selfWindow)
         f["own"] = p.uid.map { .bool($0 == scan.selfUid) } ?? .null
         f["exe.name"] = p.exePath.map { .string(($0 as NSString).lastPathComponent) } ?? .null
         f["exe.system"] = Ownership.isSystemExecutable(p.exePath).map(FactValue.bool) ?? .null
@@ -199,7 +257,7 @@ public struct Analyzer: Sendable {
         // Owner facts: the session for session items and their descendants, else window / app / none.
         let session = item.kind == .claudeSession ? pid : o?.session
         if let s = session, let cs = scan.sessions?[s] {
-            f["owner.kind"] = .string(item.kind == .claudeSession ? "claude-session" : "claude-session")
+            f["owner.kind"] = .string("claude-session")
             let busy = cs.busy
             let idle: Int64? = busy == true ? 0 : cs.statusUpdatedAt.map { Int64(scan.takenAt.timeIntervalSince($0)) }
             f["session.busy"] = busy.map(FactValue.bool) ?? .null
@@ -235,10 +293,13 @@ public struct Analyzer: Sendable {
 
         if let label = scan.launchd?[pid] {
             f["launchd.label"] = .string(label)
+            f["launchd.job"] = .bool(true)
             // Not looked up (small, uncatalogued) or unreadable → unknown.
             f["launchd.restarts_after_stop"] = (restarts[label] ?? nil).map(FactValue.bool) ?? .null
         } else {
             f["launchd.label"] = .null
+            // A failed launchd sensor is unknown, not "not a job" (protect rules fire on unknown).
+            f["launchd.job"] = scan.launchd == nil ? .null : .bool(false)
             f["launchd.restarts_after_stop"] = scan.launchd == nil ? .null : .bool(false)
         }
         return f
@@ -339,7 +400,8 @@ public struct Analyzer: Sendable {
 
     // MARK: Processes
 
-    func buildProcesses(scan: Scan, own: [Int32: ProcessOwnership], catalogOf: [Int32: String], itemOfPid: [Int32: String]) -> [ProcessRecord] {
+    func buildProcesses(scan: Scan, own: [Int32: ProcessOwnership], catalogOf: [Int32: String], itemOfPid: [Int32: String],
+                        mustInclude: Set<String> = []) -> [ProcessRecord] {
         var out: [ProcessRecord] = []
         for (pid, p) in scan.processes {
             let listen = scan.network?.listening[pid] ?? []
@@ -365,7 +427,11 @@ public struct Analyzer: Sendable {
                 net: ProcessNet(listen: listen, established: Measured(scan.network.map { n in n.connections.filter { $0.pid == pid }.count })),
                 catalogId: Measured(catalogOf[pid]), ownerId: Measured(o?.ownerId), itemId: Measured(itemOfPid[pid])))
         }
-        return out.sorted { ($0.footprintBytes.value ?? -1, $0.pid) > ($1.footprintBytes.value ?? -1, $1.pid) }
+        let sorted = out.sorted { ($0.footprintBytes.value ?? -1, $0.pid) > ($1.footprintBytes.value ?? -1, $1.pid) }
+        if full { return sorted }
+        var kept = 0
+        // Processes of items with a finding always stay; the rest are capped (largest first).
+        return sorted.filter { $0.itemId.value.map(mustInclude.contains) == true || { kept += 1; return kept <= Self.maxProcesses }() }
     }
 
     // MARK: Headline
@@ -395,7 +461,7 @@ public struct Analyzer: Sendable {
         let (template, level): (HeadlineTemplates.Template, HeadlineLevel) = switch mem.pressure.value {
         case .normal?: (suggestions.isEmpty ? t.okClean : t.okSuggest, .ok)
         case .warn?: (t.warn, .warn)
-        case .critical?: (t.critical, .critical)
+        case .critical?: (suggestions.isEmpty ? t.criticalNoSuggest : t.critical, .critical)
         case nil: (t.unknown, .warn)
         }
         let text = Format.fill(template.text.text(lang) ?? "", facts: [:], extra: extra, lang: lang)

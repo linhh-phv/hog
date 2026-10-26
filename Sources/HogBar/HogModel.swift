@@ -54,6 +54,8 @@ final class HogModel: ObservableObject {
         catalog = .load(.standard("catalog"))
         reloadData()
         // Menu closed: only the pressure level, every 10 s (design system, "Luật dùng").
+        // One scan right after launch, so the first menu opening already has numbers (criterion 10: < 0,5 s).
+        Task { @MainActor in self.refresh() }
         timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.pressure = SystemReader.pressureNow() }
         }
@@ -93,7 +95,9 @@ final class HogModel: ObservableObject {
 
     /// "Dừng…" / "Cách đóng": builds the plan (gates G1, G2, G6, G7) and shows the sheet. Nothing runs yet.
     func prepareStop(_ itemId: String) {
-        guard let scan, let snapshot, let resolved = try? stopper.resolve(itemId, in: snapshot, scan: scan) else { return }
+        let analyzer = self.analyzer
+        guard let scan, let snapshot,
+              let resolved = try? stopper.resolve(itemId, in: snapshot, scan: scan, itemFor: { analyzer.item(forPid: $0, in: scan) }) else { return }
         stopPlan = stopper.plan(resolved.identity, item: resolved.item, snapshot: snapshot, scan: scan)
     }
 
