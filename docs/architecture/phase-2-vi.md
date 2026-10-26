@@ -79,11 +79,15 @@ mục danh mục nào, hay chưa biết) và một khối JSON:
   - từ của một tham số nhiều từ tách theo mọi khoảng trắng (cả xuống dòng, tab); một header làm một tham số mà tên là bí mật
     (`X-Auth: Bearer abc`) thì toàn bộ phần sau tên là `***`;
   - `TÊN=giá-trị` nhận cả tên có `.` và `-` (`--set db.password=x`); JSON `"password": "x"` bị che (cả trong `--json`).
-- **Script có dấu hiệu bí mật → bỏ cả đoạn.** Một tham số nhiều từ (một đoạn script: `sh -c "…"`, `python -c "…"`) mà chứa một từ
-  bí mật (`token`, `key`, `secret`, `password`, `auth`, `cookie`…) hoặc tên một chương trình mang mật khẩu (`mysql`, `redis-cli`, `curl`,
-  `sshpass`…, kể cả dính dấu `;`, `|`, `&&`, `$(`, nháy) thành `…`. Cú pháp shell có quá nhiều cách giấu bí mật (`x&&mysql -pX`,
-  `$(…)`, `export T='a b'`) để che từng từ — qa lần 3 vẫn tìm ra kẽ hở sau bốn vòng vá. Script không có dấu hiệu nào (`cd … && npm run
-  dev`) vẫn giữ, làm sạch từng từ như trên. Ngoại lệ: một header làm một tham số (`X-Api-Key: v`) đi theo luật header.
+- **Script có dấu hiệu bí mật → bỏ cả đoạn.** Một tham số nhiều từ (một đoạn script: `sh -c "…"`, `python -c "…"`, `--cmd=…`) — xét
+  **trước mọi luật khác**, kể cả khi nó mở đầu bằng đường dẫn (`/usr/bin/mysql -pX …`) — mà chứa một từ bí mật (`token`, `key`,
+  `secret`, `password`, `auth`, `cookie`, `jwt`, `otp`, `session`, `private`…) hoặc tên một chương trình mang mật khẩu (bảng
+  `Privacy.passwordShortFlags`: `mysql*`, `mariadb*`, `redis-cli`, `curl`, `sshpass`, `mongosh`, `mycli`, `sqlcmd`, `zip`, `7z`, `ldap*`,
+  `http`/`https`…; tách cả theo `;|&()$`, nháy, `{}<>=\:!`) thành `…`. Cú pháp shell có quá nhiều cách giấu bí mật (`x&&mysql -pX`,
+  `$(…)`, `export T='a b'`) để che từng từ — qa vẫn tìm ra kẽ hở sau bốn vòng vá. Script không có dấu hiệu nào (`cd … && npm run dev`)
+  vẫn giữ, làm sạch từng từ. Ngoại lệ duy nhất xét trước: một header làm một tham số, tên là bí mật (`X-Auth: Bearer abc`) → `X-Auth: ***`.
+  Một tham số có dấu cách chỉ được coi là **một đường dẫn** (`/Applications/Visual Studio Code.app/…`) khi không có cờ sau từ đầu, không
+  có `://`, không có dấu shell.
 - **Lớp 2, theo tên riêng hog đã thấy** (`Redactor`, chỉ áp lên giá trị và tên chương trình, không áp lên tên cờ; tiêu đề cửa sổ chỉ
   lấy phần dự án, bỏ tên file đang mở — thường chính là script đang được hỏi): mọi tên dự án
   (`package.json#name`, thư mục có `.git`…), mọi thành phần thư mục làm việc trong home của mọi tiến trình và phiên Claude (trừ
@@ -92,7 +96,9 @@ mục danh mục nào, hay chưa biết) và một khối JSON:
   thư mục chung (`src`, `dist`, `app`, `work`…) không tính. Bắt được chỗ lớp 1 để lọt: tham số tương đối `code acme-billing`, binary đặt
   theo tên dự án.
 - Container: chỉ tên image, bỏ registry/namespace; tên dạng `<dự-án>-<service>` (Compose tự đặt) chỉ còn `…-<service>`.
-- Còn lại có thể lộ (chấp nhận, người dùng thấy nội dung trước khi dán): thư mục đặt tên trùng đuôi file trong danh sách
+- Còn lại có thể lộ (chấp nhận, người dùng thấy nội dung trước khi dán): mật khẩu của chương trình không có trong bảng và không kèm từ
+  bí mật (`docker login -p X`, `htpasswd -b f u X`, `security unlock-keychain -p X`); tên chương trình viết lách (`${M:-mysql} -pX`,
+  `m\ysql`, `$MYSQL_BIN -pX`); thư mục đặt tên trùng đuôi file trong danh sách
   cho phép (`~/Sites/acme.sh`, `acme.js`, `acme.go`, `acme.py`… — phải giữ các đuôi đó cho tên script); một từ đơn lẻ không phải đường dẫn mà hog chưa từng thấy là tên
   riêng (vd `--filter acme` khi không có tiến trình nào chạy trong thư mục `acme`); tên host không kèm `://` hay `@`.
 - `exe`, `parents`: chỉ tên file thực thi, không đường dẫn (qua lớp 2). `parents`: tối đa 4 tổ tiên, từ gần tới xa, dừng ở `launchd`.
@@ -153,3 +159,4 @@ Khi người dùng dán `hog.share/1` hay ảnh chụp:
 | 2026-10-26 | Làm sạch (reviewer lần 5) | Cờ mật khẩu của các chương trình đã gặp được gộp, không thay; tham số nhiều từ không làm mất cờ của lệnh ngoài; cờ gộp có giá trị dính liền; bỏ nháy/ngoặc trước tên chương trình | Hồi quy: `curl -o mysql --proxy-user a:pw`, `curl https://…/mysql -b sid=x` lọt vì cờ của curl bị thay bằng cờ của mysql |
 | 2026-10-26 | Làm sạch (qa lần 3) | Script có dấu hiệu bí mật bị bỏ cả đoạn thay vì che từng từ | `cd x&&mysql -pX`, `$(redis-cli -a X …)`, header trong nháy, `export TOKEN='a b'` vẫn lọt sau các vòng vá theo từng kiểu |
 | 2026-10-26 | Làm sạch (reviewer lần 6) | Bỏ phần nhận cờ mật khẩu theo từng lệnh bên trong script (thành code chết khi script có dấu hiệu bí mật bị bỏ cả đoạn; cờ đứng riêng do `Privacy.scrubArgList` che); header bí mật một tham số che hết giá trị; cờ gộp có chữ số (`-4su`); test có kiểm đột biến | Test cũ vẫn xanh khi bỏ phép gộp cờ; `X-Auth: Bearer abc` lộ `abc`; `curl -4su a:pw` lộ |
+| 2026-10-26 | Làm sạch (qa lần 4 + reviewer lần 7) | Luật "bỏ cả đoạn" xét trước mọi nhánh, kể cả script mở đầu bằng đường dẫn; header bí mật xét trước nó, header thường không còn được miễn; thêm chương trình mang mật khẩu và từ bí mật; tách thêm theo `=\:!` | `sh -c "/usr/bin/mysql -pX …"`, `--cmd=/usr/bin/mysql -pX`, `Foo: mysql -pX`, `try: …'Bearer x'…` lọt; `mysqlimport`, `mongosh`, `zip -P`, `--jwt` lọt |

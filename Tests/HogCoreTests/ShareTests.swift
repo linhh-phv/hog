@@ -74,7 +74,8 @@ import Testing
         #expect(share(["ssh", "deploy@prod.corp.example"]) == "ssh …")
         #expect(share(["node", "/Users/me/w/node_modules/@acme-corp/tool/bin/cli.js"]) == "node node_modules/@…/tool/…/cli.js")
         #expect(share(["chrome", "--metrics-client-id=0b5f2c7e-3d1a-4b8e-9f00-1234567890ab"]) == "chrome --metrics-client-id=…")
-        #expect(share(["x", "--session", "AbC123dEf456GhI789jKl0"]) == "x --session …")
+        #expect(share(["x", "--session", "AbC123dEf456GhI789jKl0"]) == "x --session ***", "`session` is a secret word (QA 4)")
+        #expect(share(["x", "--id", "AbC123dEf456GhI789jKl0"]) == "x --id …", "a random-looking id")
         #expect(share(["vite", "--port", "3000", "--host", "--mode", "development"]) == "vite --port 3000 --host --mode development",
                 "ordinary words and numbers stay")
     }
@@ -110,7 +111,7 @@ import Testing
         #expect(share(["curl", "-H", "x-api-key:value", "--header", "X-Auth-Token:value"]) == "curl -H x-api-key:*** --header X-Auth-Token:***")
         #expect(share(["helm", "--set", "db.password=x", "--env", "my-token=x", "--define", "auth.secret=x"])
                 == "helm --set db.password=*** --env my-token=*** --define auth.secret=***")
-        #expect(share(["http", "-uadmin:pw", "--user=u:pw"]) == "http -u*** --user=***")
+        #expect(share(["http", "-uadmin:pw", "--user=u:pw"]) == "http -ua*** --user=***", "httpie's -a also counts: masked either way")
         #expect(share(["curl", "--data", #"{"password":"x","user":"me2"}"#]) == #"curl --data {"password":"***","user":"me2"}"#)
         #expect(Privacy.scrubArgs(["curl", "--data", #"{"api_key": "x", "n": 1}"#], home: "/Users/me") == #"curl --data {"api_key": "***", "n": 1}"#)
         #expect(share(["vite", "--host", "localhost:5173"]) == "vite --host localhost:5173", "host:port is not a header")
@@ -181,8 +182,9 @@ import Testing
         #expect(share(["sh", "-c", "docker exec db sh -c 'mysql -phunter2'"]) == "sh -c …")
         #expect(share(["bash", "-c", "(mysql -uroot -phunter2 < dump.sql)"]) == "bash -c …")
         // QA 3: shell syntax that hid a secret from word-by-word masking.
-        for script in ["cat x|mysql -pSECRET", "cd x&&mysql -pSECRET", "(mysql -pSECRET)", "$(redis-cli -a SECRET get k)",
-                       "`mysql -pSECRET`", "cd /srv;mysql -pSECRET", "curl -H 'X-Api-Key:v' x", "export API_TOKEN='aa SECRET bb'",
+        // `hunter2`, not `SECRET`: the word "secret" alone would trigger the rule (reviewer 7).
+        for script in ["cat x|mysql -phunter2", "cd x&&mysql -phunter2", "(mysql -phunter2)", "$(redis-cli -a hunter2 get k)",
+                       "`mysql -phunter2`", "cd /srv;mysql -phunter2", "curl -H 'X-Api-Key:v' x", "export API_TOKEN='aa hunter2 bb'",
                        "python -c \"print({'api_key': 'v'})\""] {
             #expect(share(["sh", "-c", script]) == "sh -c …", "\(script)")
         }
@@ -202,6 +204,25 @@ import Testing
         // Removing the union in Privacy.scrubArgList makes these fail.
         #expect(scrub(["curl", "-o", "mysql", "-b", "sid=x"]) == "curl -o mysql -b ***")
         #expect(share(["curl", "-o", "mysql", "-b", "sid=x"]) == "curl -o mysql -b ***")
+    }
+
+    // QA 4 + reviewer 7 (2026-10-26): scripts starting with a path, header-looking first words, more programs.
+    @Test func qa4Cases() {
+        func share(_ a: [String]) -> String { ShareInfo.shareArgs(a, home: "/Users/me") }
+        for script in ["/usr/local/bin/node /app/server.js --token hunter2 --config c.json", "~/bin/run --token hunter2 --out o.json",
+                       "/usr/bin/curl -u admin:hunter2 https://x", "/usr/bin/mysql -uroot -phunter2 db < dump.sql",
+                       "/opt/homebrew/bin/redis-cli -a hunter2 ping > out.txt", "Foo: mysql -phunter2", "A: mysql -phunter2",
+                       "try: requests.get(u, headers={'Authorization': 'Bearer hunter2'})\nexcept: pass",
+                       "\\mysql -phunter2", "mysqlimport -phunter2 db x.csv", "mongosh -p hunter2", "zip -P hunter2 a.zip f"] {
+            #expect(share(["sh", "-c", script]) == "sh -c …", "\(script)")
+        }
+        #expect(share(["x", "--cmd=/usr/bin/mysql -phunter2 < x.sql"]) == "x …")
+        #expect(share(["x", "--cmd=mysql -phunter2"]) == "x …")
+        #expect(share(["sh", "-c", "~/Sites/acme/run.sh --port 3000"]) == "sh -c run.sh --port 3000", "a script, not one path")
+        #expect(share(["sh", "-c", "~/Sites/acme/run.sh ftp://x"]) == "sh -c run.sh ftp://…")
+        #expect(share(["sh", "-c", "/bin/echo hi; cd /Users/me/work/acme; node x.js"]) == "sh -c … hi; cd … node x.js")
+        #expect(share(["x", "--user-data-dir=/Users/me/Library/Application Support/Code"]) == "x --user-data-dir=…", "a path with spaces")
+        #expect(share(["x", "--jwt", "eyJhbGciOiJIUzI1NiJ9.e30.abc"]) == "x --jwt ***")
     }
 
     @Test func windowTitleWithoutAFileKeepsTheProject() {

@@ -89,33 +89,38 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
         }
         let words = Privacy.scrubArgList(args, home: home).enumerated().map { i, arg -> String in
             if i == 0 { previous = arg; return redactor.names(Privacy.scrubUser(lastComponent(arg))) }
-            if arg.hasPrefix("/") || arg.hasPrefix("~/") {
-                defer { previous = arg }
-                if maskNext { maskNext = false; return "***" }
-                return shareValue(arg, redactor)
-            }
-            if arg.hasPrefix("-"), let eq = arg.firstIndex(of: "="), arg[arg.index(after: eq)...].hasPrefix("/") || arg[arg.index(after: eq)...].hasPrefix("~/") {
-                defer { previous = arg }
-                return shareWord(arg, redactor)  // `--dir=/a path/with spaces`: one piece
-            }
-            // Words of one argument, split on any whitespace (`sh -c "…"`, newlines, tabs); after `&&`, `;`… a new command.
+            // Words of one argument, split on any whitespace (`sh -c "…"`, newlines, tabs).
             let parts = arg.split(omittingEmptySubsequences: false, whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" }).map(String.init)
-            // A script (`sh -c "…"`, `python -c "…"`) with any hint of a secret is dropped whole: shell syntax has too many
-            // ways to hide one (`x&&mysql -pX`, `$(…)`, quotes) to mask it word by word (QA 2026-10-26).
-            if parts.count > 1, !Self.isHeaderShaped(parts[0]), Self.scriptHasSecretHint(arg) {
+            if parts.count > 1 {
                 defer { previous = arg }
-                if maskNext { maskNext = false; return "***" }
-                return "…"
+                // One header as one argument with a secret name: everything after the name (`X-Auth: Bearer abc`).
+                if Self.isHeaderShaped(parts[0]), Privacy.isSecret(Self.headerName(parts[0])) {
+                    if maskNext { maskNext = false; return "***" }
+                    return parts[0] + " ***"
+                }
+                // A script (`sh -c "…"`, `python -c "…"`, `--cmd=…`) with any hint of a secret is dropped whole, wherever it
+                // starts (`/usr/bin/mysql -pX …`): shell syntax has too many ways to hide one to mask it word by word (QA 2026-10-26).
+                if Self.scriptHasSecretHint(arg) {
+                    if maskNext { maskNext = false; return "***" }
+                    return "…"
+                }
             }
-            // One header as one argument with a secret name: everything after the name (`X-Auth: Bearer abc`).
-            if parts.count > 1, Self.isHeaderShaped(parts[0]), Privacy.isSecret(Self.headerName(parts[0])) {
+            // A path with spaces is one piece (`/Applications/Visual Studio Code.app/…`, `--dir=/a b/c`) — only when nothing
+            // in it looks like a command: no flag after the first word, no URL, no shell punctuation.
+            let value = arg.hasPrefix("-") ? arg.split(separator: "=", maxSplits: 1).dropFirst().first.map(String.init) ?? "" : arg
+            if value.hasPrefix("/") || value.hasPrefix("~/"), parts.count == 1 || Self.isPlainPath(arg) {
                 defer { previous = arg }
                 if maskNext { maskNext = false; return "***" }
-                return parts[0] + " ***"
+                return arg.hasPrefix("-") ? shareWord(arg, redactor) : shareValue(arg, redactor)
             }
             return parts.map(word).joined(separator: " ")
         }
         return Privacy.truncate(words.joined(separator: " "))
+    }
+
+    static func isPlainPath(_ arg: String) -> Bool {
+        !arg.contains("://") && !arg.contains(where: { ";|&<>$`'\"(){}".contains($0) })
+            && !arg.split(separator: " ").dropFirst().contains { $0.hasPrefix("-") }
     }
 
     /// `X-Trace: 1`, `Cookie: ***`: one header as one argument — handled by the header rule, not dropped as a script.
@@ -133,7 +138,7 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
     static func scriptHasSecretHint(_ script: String) -> Bool {
         let lower = script.lowercased()
         if Privacy.secretWords.contains(where: lower.contains) { return true }
-        return script.split(whereSeparator: { " \n\t;|&()$`'\"{}<>".contains($0) }).contains { Privacy.credentialProgram(String($0)) != nil }
+        return script.split(whereSeparator: { " \n\t;|&()$`'\"{}<>=\\:!".contains($0) }).contains { Privacy.credentialProgram(String($0)) != nil }
     }
 
     /// `X-Api-Key`, `Authorization`: letters, digits, `-`, `_` only — not an image (`ghcr.io/acme/auth-service:1`) or host.

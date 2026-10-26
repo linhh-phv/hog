@@ -10,7 +10,8 @@ public enum Privacy {
     static let maxScannedLength = 8192
 
     /// Flag names whose values are masked: anything containing one of these words.
-    static let secretWords = ["token", "key", "secret", "password", "passwd", "pwd", "pass", "auth", "credential", "bearer", "cookie"]
+    static let secretWords = ["token", "key", "secret", "password", "passwd", "pwd", "pass", "auth", "credential", "bearer", "cookie",
+                              "jwt", "otp", "session", "private"]
 
     /// Replaces the home directory prefix with `~`.
     public static func scrubPath(_ path: String, home: String = NSHomeDirectory()) -> String {
@@ -26,6 +27,11 @@ public enum Privacy {
         // user:password, proxy user, client certificate passphrase, cookies (QA + reviewer 2026-10-26).
         "curl": ["-u", "--user", "-U", "--proxy-user", "-E", "--cert", "-b", "--cookie"],
         "sshpass": ["-p"],
+        // More clients with a password flag (QA 2026-10-26).
+        "mysqlimport": ["-p"], "mysqlcheck": ["-p"], "mysqlshow": ["-p"], "mysql_upgrade": ["-p"], "mariadb-dump": ["-p"],
+        "mariadb-admin": ["-p"], "mycli": ["-p", "--password"], "mongosh": ["-p", "--password"], "mongo": ["-p", "--password"],
+        "sqlcmd": ["-P"], "zip": ["-P"], "7z": ["-p"], "ldapsearch": ["-w"], "ldapmodify": ["-w"], "http": ["-a", "--auth"],
+        "https": ["-a", "--auth"],
     ]
 
     /// Masks values of secret-looking flags, credentials in URLs, `Authorization:`/`Bearer` values and database
@@ -112,8 +118,7 @@ public enum Privacy {
 
     /// The credential flags of a program named anywhere in the command (`docker exec db mysql -pX`, `sudo curl -b …`).
     static func credentialProgram(_ word: String) -> Set<String>? {
-        let w = word.trimmingCharacters(in: CharacterSet(charactersIn: "'\"(`$)"))  // `'mysql`, `(mysql`, `$(curl`
-        return w.hasPrefix("-") ? nil : passwordShortFlags[(w as NSString).lastPathComponent]
+        word.hasPrefix("-") ? nil : passwordShortFlags[(word as NSString).lastPathComponent]
     }
 
     enum CredentialMatch: Equatable { case valueNext, attached(String) }
