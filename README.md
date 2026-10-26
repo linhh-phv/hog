@@ -39,6 +39,7 @@ hog --json                   # snapshot (compact; --pretty to read, --brief for 
                              # --fast skips VS Code/watchman and the current CPU sample
 hog explain <item|pid|port>  # every measurement, which rules fired and why, what the safety gates say
 hog explain <term>           # what a number means (hog explain terms)
+hog explain <item> --share   # cleaned-up info to paste when asking an assistant what something is
 hog explain system           # measure macOS/system processes once with top (~2 s)
 hog ports | hog orphans      # listening ports grouped by project (the old lps view)
 hog stop <item|pid|port|container>
@@ -79,6 +80,11 @@ What hog knows lives in JSON files, one per entry, in Vietnamese and English:
 - `Sources/HogCore/Resources/rules/` — when to suggest, watch or protect (three-valued logic: a missing measurement never
   supports a stop);
 - `Sources/HogCore/Resources/explain/` — the glossary and the one-line headlines.
+
+**Something hog does not know?** The app lists big unknown things under "Not known yet"; open one and press *Copy info*
+(or run `hog explain <item> --share`). The copied text has no project names, directories, window titles or secrets.
+Paste it into a chat with Claude (or any assistant), and add the answer as a catalog entry. hog itself never calls an
+assistant and sends nothing anywhere.
 
 Local additions go to `~/.config/hog/catalog.d/` and `~/.config/hog/rules.d/` (same id overrides; hard protections
 cannot be overridden). Data files cannot contain commands. Check them with `hog catalog check` / `hog rules check`.
