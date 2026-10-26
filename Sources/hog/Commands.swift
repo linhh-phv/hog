@@ -39,9 +39,9 @@ struct CLI {
         }
     }
 
-    func world(fast: Bool? = nil) -> (Scan, Snapshot) {
+    func world(fast: Bool? = nil, full: Bool? = nil) -> (Scan, Snapshot) {
         let scan = Scanner(fast: fast ?? args.fast).scan()
-        return (scan, Analyzer.standard(lang: args.lang, full: args.full).analyze(scan))
+        return (scan, Analyzer.standard(lang: args.lang, full: full ?? args.full).analyze(scan))
     }
 
     // MARK: status / json
@@ -66,13 +66,19 @@ struct CLI {
             return .usage
         }
         let explanations = Explanations.load(.standard("explain"))
+        if args.share && (explanations.glossary[target] != nil || target == "system" || target == "terms") {
+            err(t("--share chỉ dùng cho một thứ đang chạy (item, pid, cổng), không cho thuật ngữ.",
+                  "--share is for a running thing (item, pid, port), not a term."))
+            return .usage
+        }
         if let g = explanations.glossary[target] { out(r.glossary(g)); return .ok }
         if target == "system" { return systemDetail() }
         if target == "terms" {
             out(explanations.glossary.values.sorted { $0.id < $1.id }.map { "  " + r.pad($0.id, 24) + ($0.name.text(args.lang) ?? "") }.joined(separator: "\n"))
             return .ok
         }
-        let (scan, snapshot) = world()
+        // Full analysis: one item is looked up, so the size cap of `--json` must not hide ids that `--json --full` lists.
+        let (scan, snapshot) = world(full: true)
         let stopper = Stopper(lang: args.lang)
         let analyzer = Analyzer.standard(lang: args.lang)
         guard let resolved = try? stopper.resolve(target, in: snapshot, scan: scan, itemFor: { analyzer.item(forPid: $0, in: scan) }),
@@ -80,6 +86,11 @@ struct CLI {
             err(t("Không tìm thấy \(target) trong các thứ hog theo dõi. Thuật ngữ: `hog explain terms`.",
                   "\(target) is not among the things hog tracks. Terms: `hog explain terms`."))
             return .error
+        }
+        if args.share {
+            // Text to paste into a chat with Claude; hog itself sends nothing (phase-2 design, section 3).
+            out(ShareInfo.make(item, scan: scan).text(args.lang))
+            return .ok
         }
         if args.json {
             let data = (try? SnapshotJSON.encoder().encode(item)) ?? Data()
@@ -259,6 +270,7 @@ struct CLI {
           hog --json                  ảnh chụp đầy đủ cho Claude/hub (--fast: nhanh, không có CPU tức thời)
           hog explain <đích>          vì sao: số đo, quy tắc, danh mục, cổng an toàn
           hog explain <thuật ngữ>     giải nghĩa một con số (hog explain terms để xem danh sách)
+          hog explain <đích> --share  thông tin đã làm sạch để dán hỏi Claude (hog không gửi gì đi)
           hog explain system          đo chi tiết tiến trình hệ thống bằng top (~2 giây)
           hog ports | hog orphans     cổng đang nghe, gom theo dự án (như lps cũ)
           hog stop <đích>             dừng qua cổng an toàn; không TTY → lưu kế hoạch, mã thoát 3
@@ -279,6 +291,7 @@ struct CLI {
           hog --json                  full snapshot for Claude/hub (--fast: quicker, no current CPU)
           hog explain <target>        why: measurements, rules, catalog, safety gates
           hog explain <term>          what a number means (hog explain terms for the list)
+          hog explain <target> --share  cleaned-up info to paste when asking Claude (hog sends nothing)
           hog explain system          measure system processes with top (~2 s)
           hog ports | hog orphans     listening ports grouped by project (like lps)
           hog stop <target>           stop through the safety gates; no TTY → stores the plan, exit 3

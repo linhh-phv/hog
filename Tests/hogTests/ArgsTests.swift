@@ -21,4 +21,11 @@ import HogCore
         let a = try Args(["explain", "resident-ratio"], environment: [:])
         #expect(a.command == "explain" && a.positional == ["resident-ratio"])
     }
+
+    @Test func shareOnlyWithExplain() throws {
+        let a = try Args(["explain", "proc:1:2", "--share"], environment: [:])
+        #expect(a.share && a.command == "explain")
+        #expect(throws: UsageError.self) { try Args(["--share"], environment: [:]) }
+        #expect(throws: UsageError.self) { try Args(["stop", "1", "--share"], environment: [:]) }
+    }
 }

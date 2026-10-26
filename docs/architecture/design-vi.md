@@ -633,7 +633,8 @@ docs/architecture/design-vi.md      tài liệu này · docs/design/ giao diện
 **Giai đoạn** (dùng thật rồi mới làm tiếp):
 
 1. **Lõi + CLI + app thanh menu tối thiểu + giải nghĩa + skill trong hub** — tài liệu này.
-2. **Claude trong app**: nút "Hỏi Claude" (`claude -p` kèm snapshot, chỉ khi bạn bấm) và "Lưu vào danh mục"; giao diện phong phú hơn.
+2. ~~Claude trong app: nút "Hỏi Claude" và "Lưu vào danh mục"~~ — đổi ngày 2026-10-26: hog không gọi Claude; người dùng chép thông tin
+   đã làm sạch, hỏi Claude ở hub, danh mục khôn dần trong repo; giao diện phong phú hơn. Xem [thiết kế giai đoạn 2](phase-2-vi.md).
 3. **Lịch sử**: app đã thường trú nên ghi mẫu RAM theo thời gian (`~/.local/state/hog/`), bắt thứ phình dần, thông báo trước khi máy nặng;
    khi đó "im lâu" đo được thật thay vì thế thay.
 

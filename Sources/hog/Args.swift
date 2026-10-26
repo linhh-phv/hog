@@ -21,6 +21,7 @@ struct Args {
     var yes = false
     var plan: String?
     var noColor = false
+    var share = false
 
     init(_ argv: [String], environment: [String: String] = ProcessInfo.processInfo.environment) throws {
         lang = Self.defaultLang(environment)
@@ -35,6 +36,7 @@ struct Args {
             case "--full": full = true
             case "--yes", "-y": yes = true
             case "--no-color": noColor = true
+            case "--share": share = true
             case "--plan":
                 guard let v = rest.popFirst() else { throw UsageError(description: "--plan needs a plan id") }
                 plan = v
@@ -50,6 +52,7 @@ struct Args {
                 if !sawCommand { command = a; sawCommand = true } else { positional.append(a) }
             }
         }
+        if share && command != "explain" { throw UsageError(description: "--share only works with `hog explain <item>`") }
         if yes && plan == nil { throw UsageError(description: "--yes only works with --plan <id> (see `hog stop`)") }
     }
 

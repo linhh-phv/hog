@@ -29,6 +29,14 @@ public struct MenuSummary: Sendable, Equatable {
         public var action: Action
     }
 
+    /// A big item hog has no catalog entry for ("Chưa rõ là gì"): something to copy and ask about.
+    public struct Unknown: Sendable, Equatable, Identifiable {
+        public var id: String { itemId }
+        public var itemId: String
+        public var label: String
+        public var bytes: Int64
+    }
+
     public struct Note: Sendable, Equatable, Identifiable {
         public var id: String { sensor }
         public var sensor: String
@@ -49,8 +57,11 @@ public struct MenuSummary: Sendable, Equatable {
     public var barTotal: Int64
     public var unreadableCount: Int
     public var cards: [Card]
+    /// Every may-stop/ask/watch suggestion, in card order (the "all suggestions" page).
+    public var allCards: [Card]
     /// Suggestions not shown as cards ("+ N đề xuất khác").
-    public var moreCount: Int
+    public var moreCount: Int { allCards.count - cards.count }
+    public var unknowns: [Unknown]
     public var notes: [Note]
     public var selfBytes: Int64?
     public var takenAt: Date
@@ -96,6 +107,9 @@ public struct MenuSummary: Sendable, Equatable {
         WhyFact(fact: "container.restart_count", glossaryId: "restart-count", vi: "Số lần khởi động lại", en: "Restarts"),
     ]
     public static let maxCards = 3
+    public static let maxUnknowns = 3
+    /// "Chưa rõ là gì" only lists things big enough to matter.
+    public static let unknownMinBytes: Int64 = 100_000_000
 
     public static func make(_ s: Snapshot) -> MenuSummary {
         let lang = s.lang
@@ -130,7 +144,7 @@ public struct MenuSummary: Sendable, Equatable {
                 let (ba, bb) = (items[a.itemId]?.footprintBytes.value ?? 0, items[b.itemId]?.footprintBytes.value ?? 0)
                 return ba != bb ? ba > bb : a.itemId < b.itemId  // largest first
             }
-        let cards = shown.prefix(maxCards).map { f -> Card in
+        let allCards = shown.map { f -> Card in
             let item = items[f.itemId]
             let action: Action = switch f.verdict {
             case .mayStop, .ask: f.stop.strategy == .manual ? .howTo : .stop
@@ -144,6 +158,9 @@ public struct MenuSummary: Sendable, Equatable {
             let text: String = switch (st.name, st.status) {
             case ("docker", .unavailable): t("Docker — engine đang tắt (không phải lỗi).", "Docker — the engine is stopped (not an error).")
             case ("watchman", .unavailable): t("watchman — không có server nào đang chạy.", "watchman — no server running.")
+            case ("vscode", .unavailable) where st.note.value?.contains("timed out") == true:
+                t("VS Code — không trả lời lần trước; hog chờ VS Code khởi động lại mới hỏi tiếp.",
+                  "VS Code — did not answer last time; hog waits for VS Code to restart before asking again.")
             case ("vscode", .unavailable): t("VS Code — không tìm thấy lệnh `code`.", "VS Code — the `code` command was not found.")
             case ("claude", .unavailable): t("Phiên Claude — chưa đọc được.", "Claude sessions — could not be read.")
             default: "\(st.name) — \(st.note.value ?? st.status.rawValue)"
@@ -154,7 +171,19 @@ public struct MenuSummary: Sendable, Equatable {
         return MenuSummary(headline: s.headline.text, level: s.headline.level, pressure: s.memory.pressure.value,
                            compressedStored: s.memory.compressedStoredBytes.value, compressor: s.memory.compressorBytes.value,
                            swapUsed: s.memory.swapUsedBytes.value, groups: groups, othersBytes: others, barTotal: total,
-                           unreadableCount: s.memory.unreadableProcessCount, cards: Array(cards), moreCount: max(0, shown.count - cards.count),
-                           notes: notes, selfBytes: s.hog.selfFootprintBytes.value, takenAt: s.takenAt)
+                           unreadableCount: s.memory.unreadableProcessCount, cards: Array(allCards.prefix(maxCards)), allCards: allCards,
+                           unknowns: unknowns(s, excluding: Set(allCards.prefix(maxCards).map(\.itemId))), notes: notes, selfBytes: s.hog.selfFootprintBytes.value, takenAt: s.takenAt)
+    }
+
+    /// Largest items with no catalog entry, at least `unknownMinBytes`, not hard-protected (macOS itself: nothing to ask
+    /// about stopping), not already shown as a card.
+    static func unknowns(_ s: Snapshot, excluding: Set<String>) -> [Unknown] {
+        s.items.compactMap { i -> Unknown? in
+            guard (i.catalogId.value ?? "").isEmpty, i.protection.value?.level != .hard, !excluding.contains(i.id),
+                  let b = i.footprintBytes.value, b >= unknownMinBytes else { return nil }
+            return Unknown(itemId: i.id, label: i.label, bytes: b)
+        }
+        .sorted { ($0.bytes, $0.itemId) > ($1.bytes, $1.itemId) }
+        .prefix(maxUnknowns).map { $0 }
     }
 }

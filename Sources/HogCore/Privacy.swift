@@ -26,6 +26,11 @@ public enum Privacy {
     ///
     /// Handles `--flag=value`, `--flag value` and `-flag value`. The argument list is joined with spaces.
     public static func scrubArgs(_ args: [String], home: String = NSHomeDirectory()) -> String {
+        truncate(scrubArgList(args, home: home).joined(separator: " "))
+    }
+
+    /// `scrubArgs` without joining: one masked string per argument.
+    static func scrubArgList(_ args: [String], home: String) -> [String] {
         var out: [String] = []
         var maskNext = false
         let program = args.first.map { ($0 as NSString).lastPathComponent } ?? ""
@@ -67,7 +72,7 @@ public enum Privacy {
             }
             out.append(scrubUser(scrubEmbeddedHome(arg, home: home)))
         }
-        return truncate(out.joined(separator: " "))
+        return out
     }
 
     /// Inside one argument: `scheme://user:pass@host` → `scheme://user:***@host`, `Authorization: Bearer x` →
