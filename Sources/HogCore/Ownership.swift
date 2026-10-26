@@ -79,6 +79,14 @@ public enum Ownership {
         return prefixes.contains { path.hasPrefix($0) }
     }
 
+    /// `exe.macos`: macOS itself (`/System`, `/Library/Apple`). Always hard-protected. Tools under `/usr/bin`, `/bin`…
+    /// are `exe.system` but only protected when launchd runs them: run from a shell they are the user's own work
+    /// (an `ssh -N -L` tunnel, `python3 -m http.server`).
+    public static func isMacOSExecutable(_ path: String?) -> Bool? {
+        guard let path else { return nil }
+        return path.hasPrefix("/System/") || path.hasPrefix("/Library/Apple/")
+    }
+
     /// Outermost `X.app` in a path → "X".
     public static func appName(_ path: String) -> String? {
         for comp in path.split(separator: "/") where comp.hasSuffix(".app") {

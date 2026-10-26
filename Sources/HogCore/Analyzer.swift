@@ -193,6 +193,7 @@ public struct Analyzer: Sendable {
         f["own"] = p.uid.map { .bool($0 == scan.selfUid) } ?? .null
         f["exe.name"] = p.exePath.map { .string(($0 as NSString).lastPathComponent) } ?? .null
         f["exe.system"] = Ownership.isSystemExecutable(p.exePath).map(FactValue.bool) ?? .null
+        f["exe.macos"] = Ownership.isMacOSExecutable(p.exePath).map(FactValue.bool) ?? .null
 
         // Owner facts: the session for session items and their descendants, else window / app / none.
         let session = item.kind == .claudeSession ? pid : o?.session

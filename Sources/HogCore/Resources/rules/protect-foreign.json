@@ -12,7 +12,7 @@
         "eq": false
       },
       {
-        "fact": "exe.system",
+        "fact": "exe.macos",
         "eq": true
       },
       {
@@ -21,6 +21,18 @@
           "launchd",
           "WindowServer",
           "kernel_task"
+        ]
+      },
+      {
+        "all": [
+          {
+            "fact": "exe.system",
+            "eq": true
+          },
+          {
+            "fact": "launchd.label",
+            "exists": true
+          }
         ]
       }
     ]
