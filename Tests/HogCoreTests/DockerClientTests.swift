@@ -45,7 +45,8 @@ final class FakeDocker: @unchecked Sendable {
 
     var seen: [String] { lock.lock(); defer { lock.unlock() }; return requests }
 
-    deinit { close(fd); unlink(path) }
+    /// Closes the listener (the serve thread then exits) and removes the socket file.
+    func stop() { close(fd); unlink(path) }
 }
 
 @Suite struct DockerClientTests {
@@ -61,6 +62,7 @@ final class FakeDocker: @unchecked Sendable {
     @Test func readsContainersWithRestartFacts() throws {
         let fake = try FakeDocker(routes: ["GET /containers/json?all=1": (200, listBody),
                                            "GET /containers/abc123def4567890/json": (200, inspectBody)])
+        defer { fake.stop() }
         let list = try DockerClient(socketPath: fake.path).containers()
         #expect(list.count == 1)
         let c = try #require(list.first)
@@ -87,6 +89,7 @@ final class FakeDocker: @unchecked Sendable {
 
     @Test func dockerHostEnvironmentWins() throws {
         let fake = try FakeDocker(routes: [:])
+        defer { fake.stop() }
         #expect(DockerClient.findSocket(home: "/nonexistent", environment: ["DOCKER_HOST": "unix://\(fake.path)"]) == fake.path)
     }
 
