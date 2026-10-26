@@ -11,8 +11,8 @@
   },
   "ok_suggest": {
     "text": {
-      "vi": "Máy chưa thiếu RAM (áp lực: bình thường), nhưng đã nén {compressed_stored} dữ liệu (chiếm {compressor} RAM) và đẩy {swap} ra ổ đĩa. Có {n} thứ có thể tắt.",
-      "en": "The machine is not short of memory (pressure: normal), but {compressed_stored} of data is compressed (taking {compressor} of RAM) and {swap} is swapped to disk. {n} thing(s) can be stopped."
+      "vi": "Máy chưa thiếu RAM (áp lực: bình thường), nhưng đã nén {compressed_stored} dữ liệu (chiếm {compressor} RAM) và đẩy {swap} ra ổ đĩa. Có {n_things} có thể tắt.",
+      "en": "The machine is not short of memory (pressure: normal), but {compressed_stored} of data is compressed (taking {compressor} of RAM) and {swap} is swapped to disk. {n_things} can be stopped."
     },
     "glossary_ids": [
       "memory-pressure",

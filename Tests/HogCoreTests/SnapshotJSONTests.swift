@@ -82,3 +82,14 @@ import Testing
         #expect(s.hasSuffix("…"))
     }
 }
+
+@Suite struct BriefSnapshotTests {
+    @Test func briefKeepsWhatClaudeNeeds() throws {
+        let s = SnapshotJSON.brief(SampleSnapshot.make())
+        #expect(s.processes.isEmpty)
+        #expect(Set(s.items.map(\.id)) == Set(s.findings.map(\.itemId)))
+        #expect(s.owners.contains { $0.id == "vscode:7" }, "windows of kept apps stay")
+        #expect(!s.headline.text.isEmpty)
+        _ = try SnapshotJSON.decode(SnapshotJSON.encode(s))
+    }
+}

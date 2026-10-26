@@ -65,7 +65,7 @@ public enum Privacy {
                     continue
                 }
             }
-            out.append(scrubEmbeddedHome(arg, home: home))
+            out.append(scrubUser(scrubEmbeddedHome(arg, home: home)))
         }
         return truncate(out.joined(separator: " "))
     }
@@ -97,6 +97,12 @@ public enum Privacy {
         guard !home.isEmpty, home != "/",
               let re = try? NSRegularExpression(pattern: NSRegularExpression.escapedPattern(for: home) + #"(?=/|$|[\s"',;:])"#) else { return text }
         return re.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "~")
+    }
+
+    /// The account name also appears outside the home path (`…/watchman/<user>-state/…`, QA 2026-10-26).
+    static func scrubUser(_ text: String, user: String = NSUserName()) -> String {
+        guard user.count >= 3 else { return text }
+        return text.replacingOccurrences(of: user, with: "<user>")
     }
 
     static func truncate(_ text: String) -> String {

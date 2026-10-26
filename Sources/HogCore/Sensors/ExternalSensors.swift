@@ -69,14 +69,66 @@ public struct ExternalSensors: Sendable {
 
     // MARK: VS Code
 
-    /// Only call when a VS Code main process is running (`code --status` may otherwise start things).
-    public func vscode() -> Sensed<CodeStatusParser.Status> {
+    /// `~/.local/state/hog/vscode-status-timeout`: identity of the VS Code main process for which `code --status`
+    /// timed out. While that instance runs, hog does not call it again.
+    func breakerFile() -> URL { URL(fileURLWithPath: home).appendingPathComponent(".local/state/hog/vscode-status-timeout") }
+
+    /// `code --status` (window titles). Only call when VS Code runs: `main` is its main process identity.
+    ///
+    /// `code` asks LaunchServices (`open -n`) to start a `Code --status` process that is *not* our child. When it hangs,
+    /// killing our process group is not enough, so hog removes exactly what it caused (same user, `--status`, started
+    /// after the call) and stops calling it until VS Code restarts (QA, 2026-10-26: orphans piled up).
+    public func vscode(main: (pid: Int32, start: Int64)?) -> Sensed<CodeStatusParser.Status> {
+        let identity = main.map { "\($0.pid):\($0.start)" }
+        if let identity, let broken = try? String(contentsOf: breakerFile(), encoding: .utf8),
+           broken.trimmingCharacters(in: .whitespacesAndNewlines) == identity {
+            return Sensed(value: nil, status: SensorStatus(name: "vscode", status: .unavailable, tookMs: 0,
+                                                           note: "code --status timed out earlier; skipped until VS Code restarts"))
+        }
         guard let code = locator.find("code") else { return Sensed(value: nil, status: missing("vscode", "code")) }
         guard let r = Command.run(code, ["--status"], timeout: 5) else {
             return Sensed(value: nil, status: SensorStatus(name: "vscode", status: .error, tookMs: 0, note: "could not start code"))
         }
-        if r.timedOut || r.status != 0 { return Sensed(value: nil, status: failed("vscode", r)) }
+        if r.timedOut {
+            Self.cleanUpCodeStatus(since: r.startedAt)
+            if let identity {
+                try? FileManager.default.createDirectory(at: breakerFile().deletingLastPathComponent(), withIntermediateDirectories: true)
+                try? identity.write(to: breakerFile(), atomically: true, encoding: .utf8)
+            }
+            return Sensed(value: nil, status: SensorStatus(name: "vscode", status: .error, tookMs: r.tookMs,
+                                                           note: "code --status did not answer in 5 s; cleaned up, skipped until VS Code restarts"))
+        }
+        if r.status != 0 { return Sensed(value: nil, status: failed("vscode", r)) }
         return Sensed(value: CodeStatusParser.parse(r.stdout), status: SensorStatus(name: "vscode", status: .ok, tookMs: r.tookMs))
+    }
+
+    /// Stops the `Code --status` processes and removes the `code-stdout-*` temp files that one timed-out call left
+    /// behind: only ours (same uid), only `--status`, only started after `since`.
+    static func cleanUpCodeStatus(since: Date) {
+        let me = getuid()
+        let cutoff = since.addingTimeInterval(-1)
+        var victims: [(Int32, Int64?, Int64?)] = []
+        for pid in ProcessReader.allPids() {
+            let p = ProcessReader.read(pid)
+            guard p.uid == me, let start = p.startDate, start >= cutoff,
+                  let exe = p.exePath, exe.contains("Visual Studio Code.app/Contents/MacOS/"),
+                  p.args?.contains("--status") == true else { continue }
+            victims.append((pid, p.startSec, p.startUsec))
+            kill(pid, SIGTERM)
+        }
+        if !victims.isEmpty {
+            usleep(500_000)
+            for (pid, sec, usec) in victims {
+                if let live = ProcessReader.bsdInfo(pid), live.startSec == sec, live.startUsec == usec { kill(pid, SIGKILL) }
+            }
+        }
+        let tmp = URL(fileURLWithPath: NSTemporaryDirectory())
+        for name in (try? FileManager.default.contentsOfDirectory(atPath: tmp.path)) ?? [] where name.hasPrefix("code-stdout-") {
+            let url = tmp.appendingPathComponent(name)
+            if let m = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date, m >= cutoff {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
     }
 
     // MARK: Claude sessions

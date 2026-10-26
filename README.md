@@ -35,7 +35,8 @@ open -a Hog               # start the menu bar app
 
 ```bash
 hog                          # headline, memory/CPU, biggest consumers, suggestions
-hog --json                   # full snapshot (for Claude and scripts); --fast skips VS Code/watchman and current CPU
+hog --json                   # snapshot (compact; --pretty to read, --brief for Claude, --full for everything)
+                             # --fast skips VS Code/watchman and the current CPU sample
 hog explain <item|pid|port>  # every measurement, which rules fired and why, what the safety gates say
 hog explain <term>           # what a number means (hog explain terms)
 hog explain system           # measure macOS/system processes once with top (~2 s)
@@ -46,6 +47,11 @@ hog catalog list|show|check · hog rules list|check · hog version · hog help
 ```
 
 Language follows the system (Vietnamese or English); set `HOG_LANG=vi|en` or `--lang` to choose.
+Commands hog calls are looked up by absolute path (apps get no shell `PATH`); add your own in
+`~/.config/hog/config.json`: `{"commands": {"code": ["/path/to/code"]}}`.
+
+The first time the app looks at processes in Desktop, Documents or Downloads, macOS asks for access: hog reads
+`package.json` / `.git` there to name the project. Nothing is changed or sent anywhere.
 Exit codes: `0` done · `1` error · `2` usage · `3` needs a person's agreement · `4` blocked by a safety gate.
 
 ## Safety

@@ -14,6 +14,7 @@ struct Args {
     var positional: [String] = []
     var json = false
     var pretty = false
+    var brief = false
     var fast = false
     var full = false
     var lang: Lang
@@ -29,6 +30,7 @@ struct Args {
             switch a {
             case "--json": json = true
             case "--pretty": pretty = true
+            case "--brief": brief = true
             case "--fast": fast = true
             case "--full": full = true
             case "--yes", "-y": yes = true

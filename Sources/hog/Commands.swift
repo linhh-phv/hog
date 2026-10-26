@@ -50,7 +50,7 @@ struct CLI {
         let (_, snapshot) = world()
         if args.json {
             // Compact by default: this goes into Claude's context (design 4: ≤ 100 KB). --pretty for people.
-            guard let data = try? SnapshotJSON.encode(snapshot, pretty: args.pretty) else { return .error }
+            guard let data = try? SnapshotJSON.encode(args.brief ? SnapshotJSON.brief(snapshot) : snapshot, pretty: args.pretty) else { return .error }
             out(String(decoding: data, as: UTF8.self))
         } else {
             out(r.status(snapshot))
@@ -221,6 +221,7 @@ struct CLI {
         case "check":
             return report(c.warnings, count: c.entries.count, kind: t("mục danh mục", "catalog entries"))
         default:
+            err(t("Dùng: hog catalog list | show <id> | check", "Usage: hog catalog list | show <id> | check"))
             return .usage
         }
     }
@@ -237,6 +238,7 @@ struct CLI {
         case "check":
             return report(set.warnings, count: set.rules.count, kind: t("quy tắc", "rules"))
         default:
+            err(t("Dùng: hog rules list | check", "Usage: hog rules list | check"))
             return .usage
         }
     }
@@ -265,7 +267,7 @@ struct CLI {
           hog version · hog help
 
         CỜ
-          --lang vi|en (hoặc HOG_LANG)  --full  --fast  --pretty (JSON dễ đọc)  --no-color (hoặc NO_COLOR)
+          --lang vi|en (hoặc HOG_LANG)  --full  --fast  --pretty (JSON dễ đọc)  --brief (JSON gọn cho Claude)  --no-color (hoặc NO_COLOR)
 
         MÃ THOÁT
           0 xong · 1 lỗi · 2 dùng sai · 3 cần người đồng ý · 4 bị cổng an toàn chặn
@@ -285,7 +287,7 @@ struct CLI {
           hog version · hog help
 
         FLAGS
-          --lang vi|en (or HOG_LANG)  --full  --fast  --pretty (readable JSON)  --no-color (or NO_COLOR)
+          --lang vi|en (or HOG_LANG)  --full  --fast  --pretty (readable JSON)  --brief (short JSON for Claude)  --no-color (or NO_COLOR)
 
         EXIT CODES
           0 done · 1 error · 2 usage · 3 needs a person's agreement · 4 blocked by a safety gate

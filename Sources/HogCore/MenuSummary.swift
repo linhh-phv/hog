@@ -60,6 +60,9 @@ public struct MenuSummary: Sendable, Equatable {
     /// Glossary entries the app links to (metric tiles + "why" page). Tested to exist in both languages.
     public static let tileGlossaryIds = ["memory-pressure", "compressed-stored", "swap-used"]
 
+    /// Every number the CLI status line prints, with its glossary entry (criterion 5).
+    public static let cliGlossaryIds = ["memory-pressure", "compressed-stored", "compressor-occupied", "swap-used", "cpu-pct", "load", "footprint"]
+
     public struct WhyFact: Sendable {
         public var fact: String
         public var glossaryId: String?

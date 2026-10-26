@@ -77,10 +77,15 @@ import Testing
 
     @Test func procStartIsUTCEvenUnderAnotherTimeZone() throws {
         // CI runners are usually UTC; force a non-UTC zone so a local-time parse would fail.
-        let saved = getenv("TZ").map { String(cString: $0) }
-        setenv("TZ", "Asia/Ho_Chi_Minh", 1); tzset()
-        defer { if let saved { setenv("TZ", saved, 1) } else { unsetenv("TZ") }; tzset() }
-        #expect(TimeZone.current.secondsFromGMT() != 0)
+        // TimeZone.current is cached, so set the default zone explicitly (works on a UTC CI runner too).
+        let saved = NSTimeZone.default
+        NSTimeZone.default = TimeZone(identifier: "Asia/Ho_Chi_Minh")!
+        defer { NSTimeZone.default = saved }
+        // Premise: a formatter that does NOT pin UTC now reads the string 7 h off — so a local-time bug would fail.
+        let naive = DateFormatter()
+        naive.locale = Locale(identifier: "en_US_POSIX")
+        naive.dateFormat = "EEE MMM d HH:mm:ss yyyy"
+        #expect(naive.date(from: "Mon Oct 26 03:20:00 2026") != start)
         #expect(ClaudeSessionParser.parseLstartUTC("Mon Oct 26 03:20:00 2026") == start)
         #expect(ClaudeSessionParser.parseLstartUTC("Thu Oct  1 08:31:17 2026") != nil, "space-padded day")
     }

@@ -207,8 +207,10 @@ public struct Analyzer: Sendable {
         let own = ctx.own
         var f: [String: FactValue] = [:]
         let entry = item.catalogId.value.flatMap { catalog.entries[$0] }
-        f["catalog.id"] = item.catalogId.value.map(FactValue.string) ?? .null
-        f["catalog.family"] = entry.map { .string($0.family) } ?? .null
+        // Matching the catalog is deterministic: no match is "" (known), not null (unknown), so rules about a family
+        // do not report it as "not measured" (QA 2026-10-26, G7).
+        f["catalog.id"] = .string(item.catalogId.value ?? "")
+        f["catalog.family"] = .string(entry?.family ?? "")
         f["catalog.detached"] = .bool(entry?.detachedByDesign ?? false)
 
         if item.kind == .container, let c = scan.containers?.first(where: { "ctr:\($0.id.prefix(12))" == item.id }) {
@@ -264,6 +266,12 @@ public struct Analyzer: Sendable {
             f["session.idle_s"] = idle.map(FactValue.int) ?? .null
             f["owner.busy"] = f["session.busy"]
             f["owner.idle_s"] = f["session.idle_s"]
+        } else if o?.orphan == true {
+            // An orphan has no owner by definition (whatever started it is gone), even when its binary sits inside an
+            // .app (Python.app for `python3 -m http.server`): QA 2026-10-26.
+            f["owner.kind"] = .string("none")
+            f["owner.busy"] = .bool(false)
+            f["owner.idle_s"] = .null
         } else if o?.window != nil {
             f["owner.kind"] = .string("vscode-window")
             f["owner.busy"] = .null  // no busy/idle signal for a VS Code window
@@ -365,8 +373,11 @@ public struct Analyzer: Sendable {
                 let id = "vscode:\(w)"
                 chain.append(id)
                 if meta[id] == nil {
-                    let title = scan.windows?[w]?.title
-                    meta[id] = Owner(id: id, kind: .vscodeWindow, label: title ?? "VS Code [\(w)]",
+                    // Without `code --status` there is no title: name the window by its most common project.
+                    let projects = own.filter { $0.value.window == w }.compactMap(\.value.project)
+                    let common = Dictionary(grouping: projects, by: { $0 }).max { $0.value.count < $1.value.count }?.key
+                    let fallback = (lang == .vi ? "Cửa sổ VS Code \(w)" : "VS Code window \(w)") + (common.map { " — \($0)" } ?? "")
+                    meta[id] = Owner(id: id, kind: .vscodeWindow, label: scan.windows?[w]?.title ?? fallback,
                                      parent: o.app.map { "app:\(Ownership.slug($0))" })
                 }
             }
@@ -454,6 +465,7 @@ public struct Analyzer: Sendable {
         let mem = s.memory
         let extra: [String: String] = [
             "top1": top(1), "top3": top(3), "list": list, "n": String(suggestions.count),
+            "n_things": lang == .vi ? "\(suggestions.count) thứ" : (suggestions.count == 1 ? "1 thing" : "\(suggestions.count) things"),
             "compressed_stored": mem.compressedStoredBytes.value.map { Format.bytes($0, lang) } ?? "?",
             "compressor": mem.compressorBytes.value.map { Format.bytes($0, lang) } ?? "?",
             "swap": mem.swapUsedBytes.value.map { Format.bytes($0, lang) } ?? "?",

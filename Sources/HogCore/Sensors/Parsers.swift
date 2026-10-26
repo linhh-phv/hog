@@ -158,6 +158,22 @@ public enum CodeStatusParser {
 
     public static func windows(_ text: String) -> [Int: Window] { parse(text).windows }
 
+    /// Without `code --status`: one window per extension host (`Code Helper (Plugin)` with `--inspect-port=0`, measured
+    /// 2026-10-26), numbered by PID order, no title. Processes under it still map to their window.
+    public static func fallback(_ processes: [Int32: RawProcess]) -> Status? {
+        let hosts = processes.values.filter {
+            ($0.exePath?.hasSuffix("/Code Helper (Plugin)") ?? false) && ($0.args?.contains("--inspect-port=0") ?? false)
+        }.map(\.pid).sorted()
+        guard !hosts.isEmpty else { return nil }
+        var windows: [Int: Window] = [:]
+        var roles: [Int32: String] = [:]
+        for (i, pid) in hosts.enumerated() {
+            windows[i + 1] = Window(index: i + 1, extensionHostPid: pid)
+            roles[pid] = "extension-host"
+        }
+        return Status(windows: windows, roles: roles)
+    }
+
     /// `window [2] (title)` → ("window", 2, "title"); `extension-host [2]` → ("extension-host", 2, nil).
     static func parseName(_ name: String) -> (String, Int, String?)? {
         guard let open = name.firstIndex(of: "["), let close = name[open...].firstIndex(of: "]"),

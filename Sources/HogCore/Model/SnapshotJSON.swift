@@ -36,6 +36,19 @@ public enum SnapshotJSON {
         try encoder(pretty: pretty).encode(snapshot)
     }
 
+    /// `--brief`: what Claude needs to answer "why is the machine heavy" in one read (fits a tool's output limit):
+    /// no `processes`, only items that have a finding, owners limited to the largest top-level ones and their windows.
+    public static func brief(_ s: Snapshot, owners maxOwners: Int = 12) -> Snapshot {
+        var b = s
+        let withFinding = Set(s.findings.map(\.itemId))
+        b.items = s.items.filter { withFinding.contains($0.id) }
+        b.processes = []
+        let top = s.owners.filter { $0.parent.value == nil }.sorted { $0.totalFootprintBytes > $1.totalFootprintBytes }.prefix(maxOwners)
+        let topIds = Set(top.map(\.id))
+        b.owners = s.owners.filter { topIds.contains($0.id) || ($0.parent.value.map(topIds.contains) ?? false) }
+        return b
+    }
+
     public static func decode(_ data: Data) throws -> Snapshot {
         try decoder().decode(Snapshot.self, from: data)
     }

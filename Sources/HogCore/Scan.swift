@@ -70,7 +70,12 @@ public struct Scanner: Sendable {
         nonisolated(unsafe) var watchman: Sensed<ExternalSensors.Watchman>?
         nonisolated(unsafe) var docker: Sensed<[DockerClient.Container]>?
         let ext = external
-        let vscodeRunning = first.values.contains { $0.exePath.map(Self.isVSCodeMain) ?? false }
+        // The VS Code main process: `…/Visual Studio Code.app/Contents/MacOS/Code`, not a `--status` helper.
+        let vscodeMain = first.values.filter {
+            ($0.exePath.map(Self.isVSCodeMain) ?? false) && !($0.args?.contains("--status") ?? false)
+        }.min { ($0.startSec ?? .max) < ($1.startSec ?? .max) }
+        let vscodeRunning = vscodeMain != nil
+        let mainIdentity = vscodeMain.map { (pid: $0.pid, start: $0.startSec ?? 0) }
         let group = DispatchGroup()
         let q = DispatchQueue.global(qos: .userInitiated)
         q.async(group: group) { launchd = ext.launchdJobs() }
@@ -79,7 +84,7 @@ public struct Scanner: Sendable {
         q.async(group: group) { docker = ext.docker() }
         if !fast {
             if vscodeRunning {
-                q.async(group: group) { vscode = ext.vscode() }
+                q.async(group: group) { vscode = ext.vscode(main: mainIdentity) }
             }
             q.async(group: group) { watchman = ext.watchman() }
         }
@@ -116,7 +121,7 @@ public struct Scanner: Sendable {
         return Scan(takenAt: started, home: external.home, system: SystemReader.read(),
                     cpu: ticks0.flatMap { a in ticks1.flatMap { SystemReader.cpuPercent(from: a, to: $0) } }.map { CPUSplit(user: $0.user, sys: $0.sys, idle: $0.idle) },
                     processes: processes, cpuNowPct: cpuNow, launchd: launchd?.value, network: network?.value,
-                    vscode: vscode?.value, sessions: sessions?.value, watchman: watchman?.value,
+                    vscode: vscode?.value ?? (vscodeRunning ? CodeStatusParser.fallback(processes) : nil), sessions: sessions?.value, watchman: watchman?.value,
                     containers: docker?.value, sensors: sensors.sorted { $0.name < $1.name })
     }
 
