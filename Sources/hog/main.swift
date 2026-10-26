@@ -1,6 +1,8 @@
 import Foundation
 import HogCore
 
+Command.forwardSignals()
+
 do {
     let args = try Args(Array(CommandLine.arguments.dropFirst()))
     exit(CLI(args).run().rawValue)

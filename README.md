@@ -66,7 +66,9 @@ Stopping always goes through the same gates, in the CLI, in the app and for Clau
 - stopping never deletes anything; every stop is logged to `~/.local/state/hog/actions.jsonl`;
 - "unused" is only said when it was measured (connections, age, CPU, how much is still in RAM…).
 
-Sensors are read-only and never start anything (no Docker CLI, `watchman --no-spawn`, sockets checked first).
+Sensors are read-only and never start anything (no Docker CLI, `watchman --no-spawn`, sockets checked first). One
+exception: when `code --status` hangs, hog removes the `Code --status` processes and temp files that call itself
+left behind, and stops asking until VS Code restarts (`~/.local/state/hog/vscode-status-timeout`).
 hog sends nothing over the network.
 
 ## Data, not code

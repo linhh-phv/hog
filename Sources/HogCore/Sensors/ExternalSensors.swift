@@ -13,6 +13,8 @@ public struct ExternalSensors: Sendable {
     public var home: String
     /// Watchman roots asked in parallel at most; above this `watchman.subscriptions` stays `null` (design 3.1).
     public var watchmanRootCap: Int = 64
+    /// What a timed-out `code --status` left behind is removed by this (injected in tests, which must not touch real processes).
+    public var cleanUpCodeStatus: @Sendable (Date) -> Void = { ExternalSensors.cleanUpCodeStatus(since: $0) }
 
     public init(locator: CommandLocator = CommandLocator(), home: String = NSHomeDirectory()) {
         self.locator = locator
@@ -90,7 +92,7 @@ public struct ExternalSensors: Sendable {
             return Sensed(value: nil, status: SensorStatus(name: "vscode", status: .error, tookMs: 0, note: "could not start code"))
         }
         if r.timedOut {
-            Self.cleanUpCodeStatus(since: r.startedAt)
+            cleanUpCodeStatus(r.startedAt)
             if let identity {
                 try? FileManager.default.createDirectory(at: breakerFile().deletingLastPathComponent(), withIntermediateDirectories: true)
                 try? identity.write(to: breakerFile(), atomically: true, encoding: .utf8)
@@ -104,12 +106,15 @@ public struct ExternalSensors: Sendable {
 
     /// Stops the `Code --status` processes and removes the `code-stdout-*` temp files that one timed-out call left
     /// behind: only ours (same uid), only `--status`, only started after `since`.
-    static func cleanUpCodeStatus(since: Date) {
-        let me = getuid()
+    @discardableResult
+    static func cleanUpCodeStatus(since: Date, pids: [Int32] = ProcessReader.allPids(), uid: uid_t = getuid(),
+                                  tmp: URL = URL(fileURLWithPath: NSTemporaryDirectory()),
+                                  read: (Int32) -> RawProcess = { ProcessReader.read($0) }) -> [Int32] {
+        let me = uid
         let cutoff = since.addingTimeInterval(-1)
         var victims: [(Int32, Int64?, Int64?)] = []
-        for pid in ProcessReader.allPids() {
-            let p = ProcessReader.read(pid)
+        for pid in pids {
+            let p = read(pid)
             guard p.uid == me, let start = p.startDate, start >= cutoff,
                   let exe = p.exePath, exe.contains("Visual Studio Code.app/Contents/MacOS/"),
                   p.args?.contains("--status") == true else { continue }
@@ -122,13 +127,13 @@ public struct ExternalSensors: Sendable {
                 if let live = ProcessReader.bsdInfo(pid), live.startSec == sec, live.startUsec == usec { kill(pid, SIGKILL) }
             }
         }
-        let tmp = URL(fileURLWithPath: NSTemporaryDirectory())
         for name in (try? FileManager.default.contentsOfDirectory(atPath: tmp.path)) ?? [] where name.hasPrefix("code-stdout-") {
             let url = tmp.appendingPathComponent(name)
             if let m = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date, m >= cutoff {
                 try? FileManager.default.removeItem(at: url)
             }
         }
+        return victims.map(\.0)
     }
 
     // MARK: Claude sessions

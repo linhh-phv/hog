@@ -13,6 +13,29 @@ public enum Command {
         public var startedAt: Date
     }
 
+    /// Process groups of commands still running, so a signal to hog can be passed on (they are in their own groups,
+    /// so Ctrl-C would not reach them).
+    nonisolated(unsafe) static var running: Set<pid_t> = []
+    static let runningLock = NSLock()
+
+    /// Call once in a command-line tool: on SIGINT/SIGTERM, kill the running command groups, then exit.
+    public static func forwardSignals() {
+        for sig in [SIGINT, SIGTERM] {
+            signal(sig, SIG_IGN)
+            let source = DispatchSource.makeSignalSource(signal: sig, queue: .global())
+            source.setEventHandler {
+                runningLock.lock(); let groups = running; runningLock.unlock()
+                for g in groups { kill(-g, SIGTERM) }
+                usleep(200_000)
+                for g in groups { kill(-g, SIGKILL) }
+                exit(128 + sig)
+            }
+            source.resume()
+            signalSources.append(source)
+        }
+    }
+    nonisolated(unsafe) static var signalSources: [DispatchSourceSignal] = []
+
     /// Runs `path args…` in its **own process group**, killing the whole group after `timeout` seconds (SIGTERM, then
     /// SIGKILL): a timed-out command must not leave children behind (QA found `code --status` leaving orphans).
     /// Returns `nil` only when it could not be started.
@@ -42,6 +65,8 @@ public enum Command {
         let rc = posix_spawn(&pid, path, &actions, &attr, argv, &envp)
         close(outPipe[1]); close(errPipe[1])
         guard rc == 0 else { close(outPipe[0]); close(errPipe[0]); return nil }
+        runningLock.lock(); running.insert(pid); runningLock.unlock()
+        defer { runningLock.lock(); running.remove(pid); runningLock.unlock() }
 
         let group = DispatchGroup()
         nonisolated(unsafe) var outData = Data(), errData = Data()

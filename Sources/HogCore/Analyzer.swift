@@ -136,7 +136,8 @@ public struct Analyzer: Sendable {
             // Size cap (design 4, ≤ 100 KB): items with a finding + the largest others.
             let withFinding = Set(findings.map(\.itemId))
             var kept = 0
-            items = items.filter { withFinding.contains($0.id) || { kept += 1; return kept <= Self.maxExtraItems }() }
+            // Containers always stay: they have no footprint (sorted last) and no other way back as a stop target.
+            items = items.filter { withFinding.contains($0.id) || $0.kind == .container || { kept += 1; return kept <= Self.maxExtraItems }() }
             let keptIds = Set(items.map(\.id))
             itemOfPid = itemOfPid.filter { keptIds.contains($0.value) }
         }

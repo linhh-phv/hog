@@ -101,6 +101,10 @@ App mở từ Finder hay khi đăng nhập **không thừa hưởng `PATH` của
 
 Một lệnh chỉ-đọc mà vô tình **bật** một dịch vụ là lỗi nặng hơn không đo. Do đó:
 
+(Ngoại lệ duy nhất cho "chỉ đọc", thêm sau qa 2026-10-26: `code --status` hết giờ thì hog dọn đúng tiến trình `Code --status` và file
+`code-stdout-*` mà chính lần gọi đó để lại, rồi ghi bộ ngắt — xem mục 13.)
+
+
 - Trước khi nói chuyện với một dịch vụ: kiểm sự tồn tại (socket, tiến trình). Không có → `unavailable`.
 - Cờ chống tự khởi động bắt buộc (`watchman --no-spawn --no-local`). Cảm biến nào chưa chứng minh được là không
   khởi động gì thì **không được thêm**.

@@ -28,6 +28,8 @@ swift run hog        # run the CLI
 - No third-party dependencies (`Package.swift` has no `dependencies`).
 - Measure, don't guess: a value that could not be measured is `nil`/`null`, never `0` or `false`.
 - Sensors are read-only and must never start a service (`watchman --no-spawn --no-local`, no Docker CLI, check sockets first).
+  Only exception: cleaning up exactly what a timed-out `code --status` left behind (`ExternalSensors.cleanUpCodeStatus`).
+- External commands go through `Command.run` (own process group, timeout kills the group; the CLI forwards Ctrl-C).
 - Tests only signal processes the test itself spawned. Never touch real processes of the machine.
 - This repo is public: no real names, work emails, company or private project names, or machine paths in code, fixtures,
   docs or commit messages. Fixtures use fake user, project and path names (`me`, `web-app`).
