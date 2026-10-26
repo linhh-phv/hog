@@ -106,14 +106,27 @@ public struct CPUInfo: Codable, Sendable, Equatable {
     public var load: Measured<[Double]>
     /// macOS's own thermal assessment (`ProcessInfo.thermalState`); no temperature in degrees without root.
     public var thermal: Measured<ThermalState>
+    /// Biggest CPU users, from every process of the scan (before the size cap): apps with all their processes, programs
+    /// without an app grouped by name, and `system` — CPU the machine used that no readable process accounts for (root
+    /// processes such as WindowServer, kernel_task). `null` when per-process CPU was not measured (`--fast`).
+    public var top: Measured<[CPUUser]>
 
     public init(userPct: Measured<Double> = nil, sysPct: Measured<Double> = nil, idlePct: Measured<Double> = nil,
-                load: Measured<[Double]> = nil, thermal: Measured<ThermalState> = nil) {
-        self.userPct = userPct; self.sysPct = sysPct; self.idlePct = idlePct; self.load = load; self.thermal = thermal
+                load: Measured<[Double]> = nil, thermal: Measured<ThermalState> = nil, top: Measured<[CPUUser]> = nil) {
+        self.userPct = userPct; self.sysPct = sysPct; self.idlePct = idlePct; self.load = load; self.thermal = thermal; self.top = top
     }
 
     /// Share of the whole machine in use (100 − idle); `nil` in fast mode.
     public var usedPct: Double? { idlePct.value.map { max(0, 100 - $0) } }
+}
+
+/// One line of "most CPU": `pct` is % of one core (100 = one core fully busy); `count` = processes summed.
+public struct CPUUser: Codable, Sendable, Equatable, Identifiable {
+    public var id: String
+    public var label: String
+    public var pct: Double
+    public var count: Int
+    public init(id: String, label: String, pct: Double, count: Int) { self.id = id; self.label = label; self.pct = pct; self.count = count }
 }
 
 /// `ProcessInfo.ThermalState`: nominal (normal), fair (warm), serious (hot, the system slows down), critical.

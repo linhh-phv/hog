@@ -129,9 +129,13 @@ enum Renderer {
             memory: MemoryInfo(compressorBytes: Measured(3_330_000_000), compressedStoredBytes: Measured(7_410_000_000),
                                swapUsedBytes: Measured(6_010_000_000), pressure: Measured(.normal), unreadableProcessCount: 181,
                                measuredFootprintBytes: 21_000_000_000),
-            cpu: CPUInfo(idlePct: Measured(hot ? 22 : 88), thermal: Measured(hot ? .serious : .nominal)),
+            cpu: CPUInfo(idlePct: Measured(hot ? 22 : 88), thermal: Measured(hot ? .serious : .nominal),
+                         top: Measured(hot ? [CPUUser(id: "app:visual-studio-code", label: "Visual Studio Code", pct: 310, count: 24),
+                                              CPUUser(id: "app:google-chrome", label: "Google Chrome", pct: 95, count: 12),
+                                              CPUUser(id: "exe:node", label: "node", pct: 88, count: 1)]
+                                        : [CPUUser(id: "app:visual-studio-code", label: "Visual Studio Code", pct: 14, count: 24)])),
             headline: Headline(level: hot ? .warn : .ok, text: "Máy chưa thiếu RAM, nhưng đã nén 6,9 GB dữ liệu (chiếm 3,1 GB RAM) và đẩy 5,6 GB ra ổ đĩa. Có 3 thứ có thể tắt."
-                               + (hot ? " Máy đang nóng (macOS tự đánh giá) và sẽ tự giảm tốc. Ăn CPU nhiều nhất: Visual Studio Code (310 %), Google Chrome (95 %), node (88 %)." : ""),
+                               + (hot ? " Máy đang nóng (macOS tự đánh giá) và có thể tự giảm tốc. Ăn CPU nhiều nhất: Visual Studio Code (310 %), Google Chrome (95 %), node (88 %)." : ""),
                                glossaryIds: []),
             sensors: [SensorStatus(name: "docker", status: .unavailable, tookMs: 0, note: "engine socket missing")],
             owners: [

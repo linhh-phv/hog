@@ -155,7 +155,7 @@ import Testing
     @Test func glossaryIdsUsedByTheAppExist() throws {
         let ids = MenuSummary.tileGlossaryIds + MenuSummary.cliGlossaryIds + MenuSummary.whyFacts.map(\.glossaryId) + ["system-processes"]
         let h = try #require(analyzer.explain.headlines)
-        for id in ids + [h.okClean, h.okSuggest, h.warn, h.critical, h.criticalNoSuggest, h.unknown].flatMap(\.glossaryIds) {
+        for id in ids + [h.okClean, h.okSuggest, h.warn, h.critical, h.criticalNoSuggest, h.unknown, h.hot, h.busy].flatMap(\.glossaryIds) {
             let e = analyzer.explain.glossary[id]
             #expect(e != nil, "missing glossary \(id)")
             #expect(e.map { ($0.name.missingLanguages + $0.plain.missingLanguages).isEmpty } ?? false)

@@ -234,7 +234,7 @@ struct SettingsPage: View {
                 Text("English").tag(HogModel.LangSetting.en.rawValue)
             }
             Toggle(model.t("Mở cùng máy", "Open at login"), isOn: Binding(get: { model.launchAtLogin }, set: { model.launchAtLogin = $0 }))
-            Toggle(model.t("Đổi màu icon theo áp lực", "Colour the icon by pressure"), isOn: $model.coloredIcon)
+            Toggle(model.t("Đổi màu icon theo áp lực và nhiệt", "Colour the icon by pressure and heat"), isOn: $model.coloredIcon)
             Text(model.t("hog không gửi dữ liệu đi đâu. Nhật ký dừng: ~/.local/state/hog/actions.jsonl",
                          "hog sends nothing anywhere. Stop log: ~/.local/state/hog/actions.jsonl"))
                 .font(Theme.caption).foregroundStyle(Theme.text2)

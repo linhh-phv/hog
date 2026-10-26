@@ -198,7 +198,9 @@ Ví dụ rút gọn (dữ liệu giả):
     "unreadable_process_count": 200,
     "system_detail": null
   },
-  "cpu": { "user_pct": 8.5, "sys_pct": 13.1, "idle_pct": 78.4, "load": [1.6, 2.2, 2.7] },
+  "cpu": { "user_pct": 8.5, "sys_pct": 13.1, "idle_pct": 78.4, "load": [1.6, 2.2, 2.7], "thermal": "nominal",
+           "top": [ { "id": "system", "label": "macOS and system services", "pct": 49.0, "count": 0 },
+                    { "id": "app:visual-studio-code", "label": "Visual Studio Code", "pct": 17.0, "count": 27 } ] },
   "headline": {
     "level": "ok",
     "text": "Máy chưa thiếu RAM (áp lực: bình thường), nhưng đã nén 10,4 GB dữ liệu (chiếm 5,3 GB RAM) và đẩy 3,1 GB ra ổ đĩa. Có 1 thứ có thể tắt: watchman (giữ 1,3 GB, 11 ngày không ai dùng).",
@@ -328,7 +330,9 @@ của Apple và hiểu biết chung, **chưa đối chiếu bằng mắt trên m
 | `cached-files` | Bộ đệm file | Cached Files | RAM tạm giữ nội dung file để mở lại nhanh; macOS **tự trả lại ngay** khi cần. Không phải vấn đề. |
 | `wired` | Bộ nhớ hệ thống cố định | Wired Memory | Của nhân macOS, không nén được, không tắt được. Không cần quan tâm. |
 | `app-memory` | RAM của các app | App Memory | Tổng RAM các chương trình dùng. |
-| `cpu-pct` | CPU | % CPU | 100% = một nhân chạy hết sức; máy 8 nhân tối đa 800%. |
+| `cpu-pct` | CPU | % CPU | 100% = một nhân chạy hết sức; máy 8 nhân tối đa 800%. Chỉ đo được tiến trình của user; phần còn lại là "macOS và dịch vụ hệ thống". |
+| `cpu-machine` (2026-10-27) | CPU cả máy | CPU Load (% User + % System) | Phần trăm tổng sức mọi nhân; cao kéo dài là lý do hay gặp nhất khiến máy nóng. |
+| `thermal-state` (2026-10-27) | Nhiệt | — | macOS tự đánh giá: bình thường / ấm / nóng / rất nóng; nóng trở lên thì macOS có thể giảm tốc CPU. Không phải độ C. |
 | `cpu-avg` | CPU trung bình từ lúc chạy | (không có; gần với CPU Time / tuổi) | Thấp suốt nhiều giờ = chương trình gần như không làm gì. |
 | `orphan` | Mồ côi | (không có) | Chương trình mà thứ đã mở nó (terminal, editor) đã tắt, nhưng nó vẫn chạy — hay là dev server bị bỏ quên. |
 | `idle-session` | Phiên Claude rảnh | (không có) | Phiên không làm gì từ {time}. Phiên rảnh lâu vẫn giữ RAM. |
@@ -419,6 +423,7 @@ Thứ tự hiển thị: `may-stop` / `ask` > `watch` > `info`. **Mọi** quy t�
 | `launchd-restarts` | advice, `info` | `launchd.restarts_after_stop` = true, `footprint_bytes` ≥ 100 MB, `exe.system` = false (Finder, ControlCenter… không bao giờ bị dừng, dòng này với chúng là nhiễu) — "launchd sẽ bật lại nó nếu chỉ dừng". Việc **không gửi tín hiệu** cho job như vậy nằm trong code dựng kế hoạch dừng (mục 8), không trong quy tắc: kế hoạch tụt về hướng dẫn (ví dụ `launchctl bootout gui/<uid>/<label>`). Giai đoạn 1 hog **không** gỡ job launchd |
 | `duplicate-language-server` | advice, `info` | `catalog.family` = `language-server` và `siblings.same_catalog_other_windows` ≥ 1 |
 | `memory-heavy` | advice, `watch` | `footprint_bytes` ≥ 1 GiB |
+| `cpu-heavy` (2026-10-27) | advice, `watch` | `cpu.now_pct` ≥ 80 (% một nhân) **và** `cpu.avg_pct` ≥ 10 — không kích hoạt khi chưa đo CPU (`--fast`) |
 
 Ngưỡng 2 giờ của `claude-session-abandoned` là **đề xuất** (phiên bị bỏ quên đo được rảnh 178–331 phút, phiên đang làm việc
 cách 3 phút). Ngưỡng 0,1 của `dormant-large` cũng là đề xuất, từ một điểm đo (watchman 0,005, phiên Claude đang chạy 0,85).
@@ -689,3 +694,4 @@ Ghi khi code giai đoạn 1 (task `hog/phase-1`), theo lời user *"sau khi tri�
 | 2026-10-26 | Lệnh ngoài, mục 3.2 (qa lần 3) | Luồng đọc dùng `poll` và dừng theo lệnh; fd chỉ đóng sau khi luồng đọc đã dừng | Đóng fd khi luồng đọc còn chặn trong `read` thì số fd bị dùng lại có thể làm nó đọc nhầm pipe của lệnh sau |
 | 2026-10-26 | Riêng tư, mục 4 (qa lần 3) | Che giá trị header `Cookie:`/`Set-Cookie:` như `Authorization:` | `curl -H "Cookie: sid=…"` lọt |
 | 2026-10-27 | CPU và nhiệt (task `cpu-thermal`) | Snapshot có `cpu.thermal` (`nominal`/`fair`/`serious`/`critical`) từ `ProcessInfo.thermalState` — không lệnh ngoài, không quyền admin, đọc cả ở `--fast` và mỗi 10 s cho icon; câu kết luận thêm câu "máy đang nóng" (`serious`/`critical`, nâng mức lên ít nhất `warn`/`critical`) hoặc "CPU đang bận" (CPU cả máy ≥ 80 %), kèm 3 thứ ăn CPU nhiều nhất (theo app, % một nhân); app có dòng "CPU · Nhiệt" và mục "Đang ăn CPU" (khi máy ấm trở lên hoặc CPU ≥ 50 %), icon đổi màu theo mức xấu hơn giữa áp lực và nhiệt; quy tắc `cpu-heavy` (watch: ≥ 80 % một nhân lúc đo và ≥ 10 % trung bình từ lúc chạy); giải nghĩa `thermal-state`, `cpu-machine` | User hỏi *"hog có đo cpu máy nóng gì không?"*. Nhiệt độ bằng độ C và quạt cần `sudo powermetrics` hoặc API riêng của Apple: không làm |
+| 2026-10-27 | CPU và nhiệt (reviewer + qa chốt) | `cpu.top` tính từ **mọi** tiến trình của lần quét, trước bước cắt kích thước: app gốc (cộng mọi tiến trình), chương trình không chủ gộp theo tên (`perl (×8)`), và `system` = CPU cả máy đã dùng trừ phần tiến trình đọc được (tiến trình của user khác: WindowServer, kernel_task); `null` ở `--fast`. Tiến trình ≥ 50 % một nhân thành item dù nhỏ. `cpu.avg_pct` chia cho thời gian tới mẫu CPU thứ hai. Câu "nóng" nói "có thể tự giảm tốc" | Danh sách cũ chỉ lấy từ item (bỏ sót tiến trình nhỏ ăn 100 %), bỏ qua tiến trình hệ thống mà không báo; tiến trình 1 s tuổi báo trung bình 197 %; "chưa đo (--fast)" hiện cả khi không chạy `--fast` |

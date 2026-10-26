@@ -10,8 +10,8 @@
     "en": "How hot macOS itself judges the machine to be (from its internal sensors): normal, warm, hot, very hot. Not degrees."
   },
   "how_to_read": {
-    "vi": "Ấm là thường khi đang làm nặng. Nóng / rất nóng = macOS đang tự giảm tốc CPU để hạ nhiệt, nên máy chậm hẳn.",
-    "en": "Warm is usual under load. Hot / very hot = macOS is slowing the CPU down to cool off, so everything gets slower."
+    "vi": "Ấm là thường khi đang làm nặng. Nóng / rất nóng = macOS có thể giảm tốc CPU để hạ nhiệt, nên máy chậm đi.",
+    "en": "Warm is usual under load. Hot / very hot = macOS may slow the CPU down to cool off, so things get slower."
   },
   "act": {
     "vi": "Nóng mà không làm gì nặng → xem \"Đang ăn CPU\" và tắt thứ không dùng; để máy chỗ thoáng.",

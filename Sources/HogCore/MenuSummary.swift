@@ -37,13 +37,6 @@ public struct MenuSummary: Sendable, Equatable {
         public var bytes: Int64
     }
 
-    /// One line of "Đang ăn CPU": an app (all its processes) or an item without an app, in % of one core.
-    public struct CPURow: Sendable, Equatable, Identifiable {
-        public var id: String
-        public var label: String
-        public var pct: Double
-    }
-
     public struct Note: Sendable, Equatable, Identifiable {
         public var id: String { sensor }
         public var sensor: String
@@ -72,7 +65,7 @@ public struct MenuSummary: Sendable, Equatable {
     public var thermal: ThermalState?
     /// Whole-machine CPU in use (%); `nil` when not measured (fast mode).
     public var cpuUsedPct: Double?
-    public var cpuRows: [CPURow]
+    public var cpuRows: [CPUUser]
     /// Show "Đang ăn CPU" only when it matters: warm or hotter, or the CPU at least half busy.
     public var showCPU: Bool { !cpuRows.isEmpty && ((thermal ?? .nominal) >= .fair || (cpuUsedPct ?? 0) >= Self.showCPUAbovePct) }
     public var notes: [Note]
@@ -195,15 +188,9 @@ public struct MenuSummary: Sendable, Equatable {
                            notes: notes, selfBytes: s.hog.selfFootprintBytes.value, takenAt: s.takenAt)
     }
 
-    /// Biggest CPU users: top-level owners (an app counts all its processes) and items with no owner, by current CPU.
-    /// Empty when per-process CPU was not measured (fast mode).
-    public static func cpuRows(_ s: Snapshot, max n: Int) -> [CPURow] {
-        var rows = s.owners.filter { $0.parent.value == nil }.compactMap { o in o.totalCpuPct.value.map { CPURow(id: o.id, label: o.label, pct: $0) } }
-        for i in s.items where i.ownerId.value == nil {
-            if case .double(let p)? = i.facts["cpu.now_pct"] { rows.append(CPURow(id: i.id, label: i.label, pct: p)) }
-            else if case .int(let p)? = i.facts["cpu.now_pct"] { rows.append(CPURow(id: i.id, label: i.label, pct: Double(p))) }
-        }
-        return Array(rows.filter { $0.pct >= minCPURowPct }.sorted { ($0.pct, $0.id) > ($1.pct, $1.id) }.prefix(n))
+    /// Biggest CPU users (`cpu.top`, computed from the whole scan by the analyzer). Empty in fast mode.
+    public static func cpuRows(_ s: Snapshot, max n: Int) -> [CPUUser] {
+        Array((s.cpu.top.value ?? []).filter { $0.pct >= minCPURowPct }.prefix(n))
     }
 
     public static func isUnknownCandidate(_ i: Item) -> Bool {

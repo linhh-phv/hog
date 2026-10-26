@@ -42,7 +42,7 @@ import Testing
         #expect(explain.warnings.isEmpty, "\(explain.warnings)")
         #expect(explain.glossary.count == 28)
         let h = try #require(explain.headlines)
-        for t in [h.okClean, h.okSuggest, h.warn, h.critical, h.unknown] {
+        for t in [h.okClean, h.okSuggest, h.warn, h.critical, h.unknown, h.hot, h.busy] {
             #expect(t.text.missingLanguages.isEmpty)
             for id in t.glossaryIds { #expect(explain.glossary[id] != nil, "headline uses unknown glossary id \(id)") }
         }

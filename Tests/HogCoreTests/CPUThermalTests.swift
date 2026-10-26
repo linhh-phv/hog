@@ -43,6 +43,7 @@ import Testing
         let s = analyzer.analyze(scan(thermal: .serious, idle: 20))
         #expect(s.headline.text.contains("The machine is hot"))
         #expect(s.headline.text.contains("Busy (120 %)") && s.headline.text.contains("cruncher (95 %)"))
+        #expect(!s.headline.text.contains("{"), "every placeholder filled")
         #expect(s.headline.level == .warn, "hot raises the level to at least warn")
         #expect(s.headline.glossaryIds.contains("thermal-state"))
         #expect(analyzer.analyze(scan(thermal: .critical, idle: 20)).headline.level == .critical)
@@ -79,5 +80,53 @@ import Testing
         // Not measured (fast mode): the rule does not fire.
         let fast = analyzer.analyze(scan(thermal: .nominal, idle: nil))
         #expect(!fast.findings.contains { $0.rules.contains("cpu-heavy") })
+    }
+
+    // Reviewer 2026-10-27: the thresholds themselves.
+    func one(now: Double, avgSeconds: Double) -> Scan {
+        var p = RawProcess(pid: 300); p.ppid = 1; p.uid = getuid(); p.footprintBytes = 200_000_000
+        p.exePath = "/usr/local/bin/edge"; p.cwd = "/"; p.startSec = Int64(Date().timeIntervalSince1970) - 1000
+        p.cpuTimeNs = UInt64(avgSeconds * 1e9)
+        return Scan(system: RawSystem(memTotalBytes: 16 << 30, ncpu: 8, pageSize: 16384), cpu: CPUSplit(user: 50, sys: 0, idle: 50),
+                    processes: [300: p], cpuNowPct: [300: now], launchd: [:])
+    }
+
+    @Test func cpuHeavyThresholds() {
+        func fires(_ s: Scan) -> Bool { analyzer.analyze(s).findings.contains { $0.rules.contains("cpu-heavy") } }
+        #expect(!fires(one(now: 79, avgSeconds: 500)), "79 % now")
+        #expect(!fires(one(now: 80, avgSeconds: 89)), "8.9 % average")
+        #expect(fires(one(now: 80, avgSeconds: 101)), "80 % now, 10.1 % average")
+    }
+
+    @Test func topCountsSmallAndSystemProcesses() throws {
+        // A 30 MB process at 100 % (not an item by size) and CPU nobody readable accounts for.
+        var small = RawProcess(pid: 400); small.ppid = 1; small.uid = getuid(); small.footprintBytes = 30_000_000
+        small.exePath = "/usr/local/bin/cruncher"; small.cwd = "/"; small.startSec = Int64(Date().timeIntervalSince1970) - 600
+        small.cpuTimeNs = 300_000_000_000
+        var twin = small; twin.pid = 401
+        let scan = Scan(system: RawSystem(memTotalBytes: 16 << 30, ncpu: 8, pageSize: 16384), cpu: CPUSplit(user: 40, sys: 10, idle: 50),
+                        processes: [400: small, 401: twin], cpuNowPct: [400: 100, 401: 100], launchd: [:])
+        let s = analyzer.analyze(scan)
+        let top = try #require(s.cpu.top.value)
+        #expect(top.first?.label == "macOS and system services" && top.first.map { abs($0.pct - 200) < 0.01 } == true, "8 cores × 50 % − 200 %")
+        #expect(top.contains { $0.label == "cruncher (×2)" && $0.pct == 200 && $0.count == 2 }, "same program grouped")
+        #expect(s.items.contains { $0.pids == [400] }, "100 % makes it an item whatever its size")
+        #expect(s.findings.contains { $0.rules.contains("cpu-heavy") })
+    }
+
+    @Test func noReadableCPUIsNotFastMode() {
+        let s = analyzer.analyze(scan(thermal: .serious, idle: 99.9))
+        #expect(!s.headline.text.contains("--fast"))
+    }
+
+    @Test func averageUsesTheSampleTime() {
+        // 1.9 s of CPU, started 1 s before the scan, second sample 1 s later: 95 %, not 190 %.
+        var p = RawProcess(pid: 500); p.ppid = 1; p.uid = getuid(); p.footprintBytes = 200_000_000
+        p.exePath = "/usr/local/bin/young"; p.cwd = "/"; p.startSec = Int64(Date().timeIntervalSince1970) - 1; p.startUsec = 0
+        p.cpuTimeNs = 1_900_000_000
+        var scan = Scan(system: RawSystem(memTotalBytes: 16 << 30, ncpu: 8, pageSize: 16384), processes: [500: p], cpuNowPct: [500: 95], launchd: [:])
+        scan.cpuSampledAt = scan.takenAt.addingTimeInterval(1)
+        let item = analyzer.analyze(scan).items.first { $0.pids == [500] }
+        if case .double(let avg)? = item?.facts["cpu.avg_pct"] { #expect(avg <= 100) } else { Issue.record("no average") }
     }
 }

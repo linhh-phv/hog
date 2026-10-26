@@ -14,8 +14,8 @@
     "en": "100% = one core fully busy; an 8-core machine goes up to 800%."
   },
   "act": {
-    "vi": "Cao kéo dài với thứ bạn không dùng → xem có nên tắt.",
-    "en": "Sustained high use by something you do not use → consider stopping it."
+    "vi": "Cao kéo dài với thứ bạn không dùng → xem có nên tắt. hog chỉ đo được tiến trình của bạn; phần còn lại của cả máy hiện là \"macOS và dịch vụ hệ thống\".",
+    "en": "Sustained high use by something you do not use → consider stopping it. hog only measures your own processes; the rest of the machine shows as \"macOS and system services\"."
   },
   "provenance": {
     "added": "2026-10-26",

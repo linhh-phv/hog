@@ -64,8 +64,8 @@
   },
   "hot": {
     "text": {
-      "vi": "Máy đang {thermal} (macOS tự đánh giá) và sẽ tự giảm tốc. Ăn CPU nhiều nhất: {cpu_top}.",
-      "en": "The machine is {thermal} (macOS's own assessment) and will slow itself down. Most CPU: {cpu_top}."
+      "vi": "Máy đang {thermal} (macOS tự đánh giá) và có thể tự giảm tốc. Ăn CPU nhiều nhất: {cpu_top}.",
+      "en": "The machine is {thermal} (macOS's own assessment) and may slow itself down. Most CPU: {cpu_top}."
     },
     "glossary_ids": [
       "thermal-state",

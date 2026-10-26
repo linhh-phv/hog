@@ -184,7 +184,7 @@ struct ThermalValue: View {
 /// "Đang ăn CPU": shown when warm or hotter, or the CPU at least half busy (`MenuSummary.showCPU`).
 struct CPUList: View {
     @EnvironmentObject var model: HogModel
-    let rows: [MenuSummary.CPURow]
+    let rows: [CPUUser]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {

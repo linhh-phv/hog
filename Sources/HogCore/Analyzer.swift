@@ -85,6 +85,7 @@ public struct Analyzer: Sendable {
             let ownUid = p.uid.map { $0 == scan.selfUid }
             let significant = (p.footprintBytes ?? 0) >= Self.significantFootprint || catalogOf[pid] != nil
                 || own[pid]?.orphan == true || !(scan.network?.listening[pid] ?? []).isEmpty
+                || (scan.cpuNowPct[pid] ?? 0) >= Self.significantCPUPct  // small but burning CPU: cpu-heavy can see it
             guard isSession || (ownUid == true && significant) else { continue }
             let id = isSession ? "claude:\(pid)" : "proc:\(pid):\(p.startSec ?? 0)"
             itemOfPid[pid] = id
@@ -147,6 +148,7 @@ public struct Analyzer: Sendable {
         }
 
         var owners = buildOwners(scan: scan, own: own)
+        let cpuTop = cpuTop(scan: scan, own: own, owners: owners)
         let findingItems = Set(findings.map(\.itemId))
         let processes = buildProcesses(scan: scan, own: own, catalogOf: catalogOf, itemOfPid: itemOfPid, mustInclude: findingItems)
         if !full {
@@ -172,7 +174,7 @@ public struct Analyzer: Sendable {
                            uptimeS: Measured(scan.system.uptimeS)),
             memory: memory,
             cpu: CPUInfo(userPct: Measured(scan.cpu?.user), sysPct: Measured(scan.cpu?.sys), idlePct: Measured(scan.cpu?.idle),
-                         load: Measured(scan.system.load), thermal: Measured(scan.system.thermal)),
+                         load: Measured(scan.system.load), thermal: Measured(scan.system.thermal), top: Measured(cpuTop)),
             headline: Headline(level: .ok, text: "", glossaryIds: []),
             sensors: scan.sensors, owners: owners, processes: processes, items: items, findings: findings,
             warnings: (catalog.warnings + rules.warnings + explain.warnings).map(\.description))
@@ -237,12 +239,15 @@ public struct Analyzer: Sendable {
         let o = own[pid]
         let age = p.startDate.map { Int64(scan.takenAt.timeIntervalSince($0)) }
         f["age_s"] = age.map(FactValue.int) ?? .null
+        // CPU time is from the second sample: divide by the time up to that sample, not by the whole seconds at the scan
+        // start (QA 2026-10-27: a process 1 s old showed a 197 % average).
+        let cpuAge = p.startDate.map { (scan.cpuSampledAt ?? scan.takenAt).timeIntervalSince($0) }
         f["orphan"] = o?.orphan.map(FactValue.bool) ?? .null
         f["footprint_bytes"] = p.footprintBytes.map(FactValue.int) ?? .null
         f["resident_ratio"] = residentRatio(p).map(FactValue.double) ?? .null
         f["cpu.now_pct"] = scan.cpuNowPct[pid].map(FactValue.double) ?? .null
-        if let ns = p.cpuTimeNs, let age, age > 0 {
-            f["cpu.avg_pct"] = .double(Double(ns) / 1e9 / Double(age) * 100)
+        if let ns = p.cpuTimeNs, let cpuAge, cpuAge >= 1 {
+            f["cpu.avg_pct"] = .double(Double(ns) / 1e9 / cpuAge * 100)
         } else {
             f["cpu.avg_pct"] = .null
         }
@@ -486,11 +491,17 @@ public struct Analyzer: Sendable {
         var ids = template.glossaryIds
         // CPU and heat (task cpu-thermal): a second sentence only when it matters.
         let rows = MenuSummary.cpuRows(s, max: 3)
+        let cpuTopText: String = if s.cpu.top.value == nil {
+            lang == .vi ? "chưa đo (--fast)" : "not measured (--fast)"
+        } else if rows.isEmpty {
+            lang == .vi ? "không thứ gì từ 1 % một nhân" : "nothing at 1 % of a core or more"
+        } else {
+            rows.map { "\($0.label) (\(Format.percent($0.pct, lang)))" }.joined(separator: ", ")
+        }
         let cpuExtra: [String: String] = [
             "thermal": s.cpu.thermal.value.map { Format.thermal($0, lang) } ?? "?",
             "cpu_used": s.cpu.usedPct.map { Format.percent($0, lang) } ?? "?",
-            "cpu_top": rows.isEmpty ? (lang == .vi ? "chưa đo (--fast)" : "not measured (--fast)")
-                : rows.map { "\($0.label) (\(Format.percent($0.pct, lang)))" }.joined(separator: ", "),
+            "cpu_top": cpuTopText,
         ]
         var second: HeadlineTemplates.Template?
         if let th = s.cpu.thermal.value, th >= .serious {
@@ -508,4 +519,47 @@ public struct Analyzer: Sendable {
 
     /// Whole-machine CPU use above which the headline says the CPU is busy.
     static let busyCPUPct: Double = 80
+    /// A process this busy (% of one core) becomes an item whatever its size.
+    static let significantCPUPct: Double = 50
+    static let maxCPUTop = 5
+
+    /// Biggest CPU users from every process of the scan, before the size cap (reviewer + QA 2026-10-27): top-level owners
+    /// (an app with all its processes), programs without an owner grouped by name, and `system` for CPU the machine used
+    /// that no readable process accounts for (other users' processes: WindowServer, kernel_task…). `nil` in fast mode.
+    func cpuTop(scan: Scan, own: [Int32: ProcessOwnership], owners: [Owner]) -> [CPUUser]? {
+        guard !scan.cpuNowPct.isEmpty || scan.cpu != nil else { return nil }
+        let parent = Dictionary(uniqueKeysWithValues: owners.map { ($0.id, $0.parent.value) })
+        let label = Dictionary(uniqueKeysWithValues: owners.map { ($0.id, $0.label) })
+        func root(_ id: String) -> String {
+            var id = id, seen: Set<String> = []
+            while let p = parent[id] ?? nil, !seen.contains(p) { seen.insert(id); id = p }
+            return id
+        }
+        var groups: [String: CPUUser] = [:]
+        var readable = 0.0
+        for (pid, pct) in scan.cpuNowPct where pid != scan.selfPid {
+            readable += pct
+            let key: String, name: String
+            if let o = own[pid]?.ownerId { key = root(o); name = label[key] ?? key } else {
+                let exe = scan.processes[pid]?.exePath.map { ($0 as NSString).lastPathComponent } ?? "pid \(pid)"
+                key = "exe:" + exe; name = exe
+            }
+            var g = groups[key] ?? CPUUser(id: key, label: name, pct: 0, count: 0)
+            g.pct += pct; g.count += 1
+            groups[key] = g
+        }
+        var rows = groups.values.map { g -> CPUUser in
+            var g = g
+            if g.id.hasPrefix("exe:"), g.count > 1 { g.label += " (×\(g.count))" }
+            return g
+        }
+        if let idle = scan.cpu?.idle {
+            let used = max(0, 100 - idle) / 100 * Double(scan.system.ncpu) * 100
+            let rest = used - readable - (scan.cpuNowPct[scan.selfPid] ?? 0)
+            if rest >= 1 {
+                rows.append(CPUUser(id: "system", label: lang == .vi ? "macOS và dịch vụ hệ thống" : "macOS and system services", pct: rest, count: 0))
+            }
+        }
+        return Array(rows.filter { $0.pct >= 1 }.sorted { ($0.pct, $0.id) > ($1.pct, $1.id) }.prefix(Self.maxCPUTop))
+    }
 }

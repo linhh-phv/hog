@@ -9,7 +9,8 @@ idle for hours, a container restarting in a loop.
 
 hog answers four questions, in this order:
 
-1. **Is the machine short of memory?** — one sentence, based on memory pressure, compression and swap.
+1. **Is the machine short of memory — or hot?** — one sentence, based on memory pressure, compression and swap, and on
+   macOS's own thermal assessment and CPU use (what uses the most CPU, including macOS itself).
 2. **What is eating it, and who owns it?** — grouped by app → VS Code window → Claude session / project.
 3. **Can I stop it, and what do I lose?** — suggestions backed by measurements, never guesses.
 4. **What does this number mean?** — every number has a plain-language explanation, with the Activity Monitor name.

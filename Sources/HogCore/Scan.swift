@@ -14,6 +14,8 @@ public struct Scan: Sendable {
     public var processes: [Int32: RawProcess]
     /// Per-process CPU % between the two samples; empty in fast mode.
     public var cpuNowPct: [Int32: Double]
+    /// When the second CPU sample was read (`cpuTimeNs` is from then); `nil` in fast mode.
+    public var cpuSampledAt: Date?
     public var launchd: [Int32: String]?
     public var network: ExternalSensors.Network?
     public var vscode: CodeStatusParser.Status?
@@ -90,6 +92,7 @@ public struct Scanner: Sendable {
         }
         if !fast { Thread.sleep(forTimeInterval: max(0, cpuInterval - Date().timeIntervalSince(started))) }
         let second = fast ? first : Self.readAll(includeArgs: false)
+        let sampledAt = Date()
         let ticks1 = fast ? nil : SystemReader.cpuTicks()
         group.wait()
 
@@ -123,6 +126,7 @@ public struct Scanner: Sendable {
                     processes: processes, cpuNowPct: cpuNow, launchd: launchd?.value, network: network?.value,
                     vscode: vscode?.value ?? (vscodeRunning ? CodeStatusParser.fallback(processes) : nil), sessions: sessions?.value, watchman: watchman?.value,
                     containers: docker?.value, sensors: sensors.sorted { $0.name < $1.name })
+            .with { if !fast { $0.cpuSampledAt = sampledAt } }
     }
 
     static func readAll(includeArgs: Bool = true) -> [Int32: RawProcess] {
@@ -136,4 +140,8 @@ public struct Scanner: Sendable {
     static func isVSCodeMain(_ path: String) -> Bool {
         path.contains("Visual Studio Code.app/Contents/MacOS/")
     }
+}
+
+extension Scan {
+    func with(_ change: (inout Scan) -> Void) -> Scan { var s = self; change(&s); return s }
 }
