@@ -116,7 +116,7 @@ enum Renderer {
                     stop: StopAdvice(strategy: strategy, respawns: .onDemand, effect: "Tắt không mất dữ liệu; lần sau Metro/Jest cần thì nó được bật lại."))
         }
         return Snapshot(
-            lang: .vi, takenAt: Date(),
+            lang: .vi, takenAt: Date(timeIntervalSince1970: 1_793_000_000),  // fixed: renders are reproducible
             hog: HogInfo(pid: getpid(), ancestors: [], ancestorsComplete: true, selfFootprintBytes: Measured(31_000_000)),
             host: HostInfo(arch: "arm64", ncpu: 8, memTotalBytes: 17_179_869_184, uptimeS: nil),
             memory: MemoryInfo(compressorBytes: Measured(3_330_000_000), compressedStoredBytes: Measured(7_410_000_000),
