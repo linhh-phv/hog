@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [
         .executable(name: "hog", targets: ["hog"]),
+        .executable(name: "HogBar", targets: ["HogBar"]),
         .library(name: "HogCore", targets: ["HogCore"]),
     ],
     targets: [
@@ -18,6 +19,7 @@ let package = Package(
             ]
         ),
         .executableTarget(name: "hog", dependencies: ["HogCore"]),
+        .executableTarget(name: "HogBar", dependencies: ["HogCore"]),
         .testTarget(
             name: "HogCoreTests",
             dependencies: ["HogCore"],

@@ -15,6 +15,10 @@ public struct RawSystem: Sendable, Equatable {
     public var pressureLevel: Int32?
     public var uptimeS: Int64?
     public var load: [Double]?
+
+    public init(memTotalBytes: Int64, ncpu: Int, pageSize: Int64) {
+        self.memTotalBytes = memTotalBytes; self.ncpu = ncpu; self.pageSize = pageSize
+    }
 }
 
 public enum SystemReader {
@@ -39,6 +43,9 @@ public enum SystemReader {
         if getloadavg(&loads, 3) == 3 { s.load = loads }
         return s
     }
+
+    /// Only the pressure level: one sysctl, cheap enough for the menu bar icon every 10 s.
+    public static func pressureNow() -> Pressure? { pressure(sysctlInt32("kern.memorystatus_vm_pressure_level")) }
 
     /// Maps the kernel pressure level: 1 normal, 2 warn, 4 critical. Anything else is unknown.
     public static func pressure(_ level: Int32?) -> Pressure? {

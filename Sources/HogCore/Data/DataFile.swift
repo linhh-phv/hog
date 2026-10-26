@@ -67,9 +67,33 @@ public struct DataSource: Sendable {
 
     /// Bundled `Resources/<kind>` plus `~/.config/hog/<kind>.d`.
     public static func standard(_ kind: String, home: String = NSHomeDirectory()) -> DataSource {
-        DataSource(bundledDirectory: Bundle.module.resourceURL?.appendingPathComponent(kind),
+        DataSource(bundledDirectory: resourceBundle?.resourceURL?.appendingPathComponent(kind),
                    localDirectory: URL(fileURLWithPath: home).appendingPathComponent(".config/hog/\(kind).d"))
     }
+
+    static let bundleName = "hog_HogCore.bundle"
+
+    /// Where the bundled data was found (shown by `hog version`).
+    public static var resourcePath: String? { resourceBundle?.bundleURL.path }
+
+    /// The resource bundle. SwiftPM's `Bundle.module` looks at the *root* of an `.app` (which cannot be code-signed)
+    /// and crashes when the bundle is missing, so installed locations are tried first:
+    /// `Hog.app/Contents/Resources/`, next to the (symlink-resolved) executable, and `../Resources` from it — which
+    /// covers the `hog` CLI installed as a symlink into `Hog.app/Contents/MacOS/`. `Bundle.module` only for dev/tests.
+    static let resourceBundle: Bundle? = {
+        var dirs: [URL] = []
+        if let r = Bundle.main.resourceURL { dirs.append(r) }
+        dirs.append(Bundle.main.bundleURL)
+        if let exe = Bundle.main.executableURL?.resolvingSymlinksInPath() {
+            dirs.append(exe.deletingLastPathComponent())
+            dirs.append(exe.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Resources"))
+        }
+        for d in dirs {
+            let url = d.appendingPathComponent(bundleName)
+            if FileManager.default.fileExists(atPath: url.path), let b = Bundle(url: url) { return b }
+        }
+        return Bundle.module
+    }()
 
     /// `(file name, data, isLocal)` for every `*.json`, bundled first, each group sorted by name.
     func files() -> [(name: String, data: Data, isLocal: Bool)] {

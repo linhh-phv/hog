@@ -83,9 +83,14 @@ public struct MenuSummary: Sendable, Equatable {
 
         // Cards: may-stop → ask → watch; info stays out of the menu.
         let order: [Verdict] = [.mayStop, .ask, .watch]
-        let shown = s.findings.filter { order.contains($0.verdict) }
-            .sorted { (order.firstIndex(of: $0.verdict)!, $0.itemId) < (order.firstIndex(of: $1.verdict)!, $1.itemId) }
         let items = Dictionary(uniqueKeysWithValues: s.items.map { ($0.id, $0) })
+        let shown = s.findings.filter { order.contains($0.verdict) }
+            .sorted { a, b in
+                let (ra, rb) = (order.firstIndex(of: a.verdict)!, order.firstIndex(of: b.verdict)!)
+                if ra != rb { return ra < rb }
+                let (ba, bb) = (items[a.itemId]?.footprintBytes.value ?? 0, items[b.itemId]?.footprintBytes.value ?? 0)
+                return ba != bb ? ba > bb : a.itemId < b.itemId  // largest first
+            }
         let cards = shown.prefix(maxCards).map { f -> Card in
             let item = items[f.itemId]
             let action: Action = switch f.verdict {

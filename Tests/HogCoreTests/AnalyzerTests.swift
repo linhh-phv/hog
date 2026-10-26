@@ -135,7 +135,8 @@ import Testing
     @Test func headlineAndPrivacy() throws {
         let s = analyzer.analyze(scan())
         #expect(s.headline.level == .ok)
-        #expect(s.headline.text.contains("watchman") || s.headline.text.contains("Watchman"))
+        #expect(s.headline.text.contains("thứ có thể tắt."), "the menu lists them as cards, so the headline only counts them")
+        #expect(!s.headline.text.contains("Watchman ("))
         #expect(s.headline.text.contains("10,4 GB"))
         let json = String(decoding: try SnapshotJSON.encode(s), as: UTF8.self)
         #expect(!json.contains(home), "home must be scrubbed to ~")

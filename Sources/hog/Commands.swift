@@ -24,7 +24,10 @@ struct CLI {
         case "stop": return stop()
         case "catalog": return catalog()
         case "rules": return rules()
-        case "version": out("hog \(Hog.version)"); return .ok
+        case "version":
+            out("hog \(Hog.version)")
+            out("data: " + (DataSource.resourcePath.map { Privacy.scrubPath($0) } ?? "?"))
+            return .ok
         case "help": out(help()); return .ok
         case "kill":
             err(t("`kill` đã bỏ: dùng `hog stop <cổng|pid>` (luôn qua cổng an toàn, không tự SIGKILL).",
