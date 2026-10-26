@@ -66,16 +66,16 @@ Nguyên tắc xuyên suốt:
 | Phần còn nằm trong RAM | `ri_resident_size` | (cùng lời gọi) | ✔ | Tỉ lệ `resident / footprint` cho biết tiến trình **có đang được đụng tới không**: watchman 6M/1316M (gần như toàn bộ đã bị nén hoặc đẩy ra swap), phiên Claude đang chạy 191M/225M. Tỉ lệ có thể > 1 vì resident tính cả bộ nhớ dùng chung → kẹp về 1. |
 | Phần bị nén của từng tiến trình | **không có API native** cho tiến trình khác | — | ✔ (đã thử) | `footprint − resident` **không** thay được: đúng với watchman (1310 so với `top` 1313) nhưng sai với phiên Claude (34 so với 134). Nên `compressed_bytes` của tiến trình là `null` ở lần quét nhanh; khi người xem mở chi tiết một thứ, gọi `top -l 2 -s 1 -stats pid,cmprs -pid <pid>` (≈ 1,85 s) để lấy số thật. |
 | Cha–con, uid, giờ khởi chạy | `proc_pidinfo(PROC_PIDTBSDINFO)` → `pbi_ppid`, `pbi_uid`, `pbi_start_tvsec` | < 1 ms | ✔ | Giờ khởi chạy là phần **danh tính** của tiến trình (mục 8, G3). |
-| Đường dẫn thực thi | `proc_pidpath`, dự phòng `KERN_PROCARGS2` | < 1 ms | ✔ | Tên đầy đủ, không bị cắt 16 ký tự như `top`. **Bẫy (qa đo):** file thực thi đã bị xoá/thay (app được cập nhật trong lúc tiến trình cũ còn chạy) thì `proc_pidpath` trả rỗng (errno 2), còn `KERN_PROCARGS2` vẫn có đường dẫn lúc khởi chạy. Cả hai đều không đọc được → `exe_path` = `null`, kéo theo `orphan` = `null`. |
+| Đường dẫn thực thi | `proc_pidpath`, dự phòng `KERN_PROCARGS2` | < 1 ms | ✔ | Tên đầy đủ, không bị cắt 16 ký tự như `top`. **Bẫy (qa đo):** file thực thi đã bị xoá/thay (app được cập nhật trong lúc tiến trình cũ còn chạy) thì `proc_pidpath` trả rỗng (errno 2), còn `KERN_PROCARGS2` vẫn có đường dẫn lúc khởi chạy — nhưng đó là đường dẫn **đúng như truyền vào `execve`**, chưa resolve (reviewer thử: chạy `./mysleep` thì ra `./mysleep`), nên chỉ nhận khi là **đường dẫn tuyệt đối**. Không có đường dẫn tuyệt đối nào → `exe_path` = `null`, kéo theo `orphan` = `null`. |
 | Tham số dòng lệnh | `sysctl KERN_PROCARGS2` | — | ✔ (qa) | Cần để nhận diện (vd `--resume`, `typesMap.json`). Dự phòng: `ps -o command=` (0,06 s, đã kiểm). |
 | cwd | `proc_pidinfo(PROC_PIDVNODEPATHINFO)` | < 1 ms | ✔ | Thay cho gọi `lsof -d cwd` từng tiến trình như `lps` v0.1.0. |
 | CPU của tiến trình | `ri_user_time + ri_system_time`, hai mẫu cách nhau | — | ✔ | Đổi đơn vị bằng `mach_timebase_info`. CLI lấy hai mẫu cách 1 s. App lấy mẫu thứ nhất lúc mở menu và mẫu thứ hai lúc quét đầy đủ xong (~2 s) — **không** dùng mẫu của lần mở menu trước (có thể cách hàng giờ, ra trung bình nhiều giờ). CPU trung bình cả đời = tổng thời gian CPU / tuổi. |
 | Áp lực bộ nhớ | `sysctlbyname("kern.memorystatus_vm_pressure_level")` | < 1 ms | ✔ | 1 = bình thường, 2 = cảnh báo, 4 = nghiêm trọng (theo tài liệu XNU; trên máy mới thấy giá trị 1). Đây là chỉ báo chính thức; **không** dùng "free %" của `memory_pressure`. |
 | Swap | `sysctlbyname("vm.swapusage")` | < 1 ms | ✔ | `total` thay đổi theo thời điểm (5120M ngày 15, 4096M ngày 26). |
 | RAM toàn máy, RAM nén | `host_statistics64(HOST_VM_INFO64)` | < 1 ms | ✔ | Chạy được, khớp `vm_stat` (qa đo: occupied 5,25 GiB, stored 10,75 GiB). Phép thử đầu tiên của Claude trả toàn số 0 là do lỗi trong phép thử, không phải do API. "Pages occupied by compressor" (RAM vật lý bộ nén chiếm, khớp `top`) và "Pages stored in compressor" (dữ liệu logic đã nén) là **hai con số khác nhau**, gấp nhau ~2 lần (ngày 26: 5,4 GB và 10,6 GB) — hog xuất cả hai, tên khác nhau. |
-| Job của launchd | `launchctl list` (PID ↔ label), `launchctl print gui/<uid>/<label>` khi cần chi tiết | 0,03 s mỗi lệnh | ✔ | Ngày 26: 290 tiến trình của user có cha là PID 1, **172** trong số đó là job launchd có label. watchman là job `com.github.facebook.watchman` với LaunchAgent do **chính watchman tạo** khi tự khởi động: `RunAtLoad = true`, `KeepAlive = { Crashed = true }` — launchd **chỉ** bật lại khi nó crash (`man launchd.plist`, mục Crashed), **không** bật lại khi tắt bình thường. Widget (`.appex`) có cha là PID 1 nhưng **không** có trong `launchctl list`. Fact `launchd.restarts_after_stop` đọc `KeepAlive` theo từng khoá: `true` (bool) → `true`; dict chỉ gồm `Crashed` → `false` (dừng bình thường không bị bật lại); dict khác hoặc không đọc được → `null`. **Đã thử (qa, job launchd riêng cùng cấu hình `KeepAlive = { Crashed = true }`):** SIGTERM và SIGKILL không bị bật lại (theo dõi 18–24 s), SIGSEGV bị bật lại sau ~9 s. Log của watchman thật: sau một lần SIGTERM nó nằm yên 17 phút tới khi có client gọi; sau `shutdown-server` ngày 15 nằm yên 21 phút. |
+| Job của launchd | `launchctl list` (PID ↔ label); `launchctl print gui/<uid>/<label>` để lấy dòng `path =` (đường dẫn plist), rồi đọc **plist** bằng `PropertyListSerialization` — `launchctl print` không in dict `KeepAlive` | 0,03 s mỗi lệnh | ✔ | Ngày 26: 290 tiến trình của user có cha là PID 1, **172** trong số đó là job launchd có label. watchman là job `com.github.facebook.watchman` với LaunchAgent do **chính watchman tạo** khi tự khởi động: `RunAtLoad = true`, `KeepAlive = { Crashed = true }` — launchd **chỉ** bật lại khi nó crash (`man launchd.plist`, mục Crashed), **không** bật lại khi tắt bình thường. Widget (`.appex`) có cha là PID 1 nhưng **không** có trong `launchctl list`. Fact `launchd.restarts_after_stop` đọc `KeepAlive` **theo khoá và giá trị**: `KeepAlive = true` → `true`; dict chỉ gồm `Crashed = true` → `false` (chỉ bật lại khi crash); `Crashed = false` → `true` (`man launchd.plist`: bật lại khi thoát **bình thường**, tức đúng lúc hog dừng nó); dict khác → `null`. **Không phải job** (`launchd.label` = null), job **không có** `KeepAlive` hoặc `KeepAlive = false`, và job **không có plist** (ví dụ 7 job `application.*` "submitted by runningboardd" trên máy — reviewer đo) → `false`. `null` chỉ dành cho job có plist mà không đọc được hoặc có dict không phân loại được. **Đã thử (qa, job launchd riêng cùng cấu hình `KeepAlive = { Crashed = true }`):** SIGTERM và SIGKILL không bị bật lại (theo dõi 18–24 s), SIGSEGV bị bật lại sau ~9 s. Log của watchman thật: sau một lần SIGTERM nó nằm yên 17 phút tới khi có client gọi; sau `shutdown-server` ngày 15 nằm yên 21 phút. |
 | Cổng LISTEN, số kết nối | `lsof -nP -iTCP -sTCP:LISTEN` và `…:ESTABLISHED` | < 0,2 s | ✔ | Cách `lps` đang dùng. Bản native (`proc_pidfdinfo` cho socket) để sau. |
-| Cửa sổ VS Code | `code --status` | 1,73 s | ✔ | Cho `window [N] (tiêu đề)`, `extension-host [N]`, `file-watcher [N]` cùng số `N` và PID. **Cột `Mem MB` của lệnh này in số rác** (hàng chục tỷ MB) → không dùng. Cây cha–con đã đủ quy một tiến trình về `extension-host [N]`; `code --status` chỉ cần để biết `N` ↔ tiêu đề cửa sổ. |
+| Cửa sổ VS Code | `code --status` | 2,7–2,8 s (ngày 15 đo được 1,73 s) | ✔ | Cho `window [N] (tiêu đề)`, `extension-host [N]`, `file-watcher [N]` cùng số `N` và PID. **Cột `Mem MB` của lệnh này in số rác** (hàng chục tỷ MB) → không dùng. Cây cha–con đã đủ quy một tiến trình về `extension-host [N]`; `code --status` chỉ cần để biết `N` ↔ tiêu đề cửa sổ. |
 | Phiên Claude | `~/.claude/sessions/<pid>.json` | < 0,01 s | ✔ | Có `pid`, `sessionId`, `cwd`, `startedAt`, `procStart`, `kind`, `entrypoint`, `status` (`idle`/`busy`), `statusUpdatedAt`. `procStart` là chuỗi kiểu `ps lstart` nhưng ở **giờ UTC** (`"Mon Oct 26 03:31:30 2026"`), độ phân giải giây — qa đo trên máy +07: so với `ps lstart` lệch đúng 25200 s ở 11/11 phiên, so với `pbi_start_tvsec` (coi chuỗi là UTC) lệch 0 s ở 11/11. Ngày 15: 7 phiên `idle` từ 178 đến 331 phút, 1 phiên `busy` cách 3 phút. Là định dạng nội bộ của Claude Code, **không có cam kết ổn định** → đọc dung sai (mục 3.3). Không đọc `*.key` cùng thư mục. |
 | Lần hoạt động cuối (dự phòng) | mtime của `~/.claude/projects/<thư-mục>/<sessionId>.jsonl` | < 0,01 s | ✔ | Chỉ dùng khi thiếu `sessions/<pid>.json`. **Không giải mã tên thư mục** (`/` và `-` đều thành `-`, mơ hồ). |
 | watchman | `watchman --no-spawn --no-local watch-list`, `… debug-get-subscriptions <root>` | 0,19 s | ✔ | Theo `watchman --help`, mặc định nó **thử khởi động service nếu chưa có** → luôn có `--no-spawn --no-local` (qa đã thử với socket không tồn tại: rc=1, không in gì, không sinh tiến trình, không tạo LaunchAgent → quy ước **rc=1 + rỗng = `unavailable`**). `subscriptions: []` = không ai đăng ký. Ngày 26: server chạy từ ngày 15 (cha là PID 1, cwd `/` — là daemon nên **không** khớp định nghĩa "mồ côi" ở mục 3.4), footprint 1316M, resident 6M. |
@@ -352,7 +352,8 @@ Quy tắc là **dữ liệu** (`rules/<id>.json`). Ngôn ngữ cố ý nhỏ: kh
     { "fact": "orphan",           "eq": true },
     { "fact": "net.established",  "eq": 0 },
     { "fact": "age_s",            "gte": 3600 },
-    { "fact": "cpu.avg_pct",      "lt": 1.0 }
+    { "fact": "cpu.avg_pct",      "lt": 1.0 },
+    { "fact": "catalog.detached", "eq": false }
   ] },
   "reason": {
     "vi": "Tiến trình mồ côi (cha đã thoát), không ai đang kết nối, gần như không dùng CPU suốt {age_s}.",
@@ -453,6 +454,8 @@ Một mục = một file `catalog/<id>.json`: "đây là cái gì, tắt thì sa
 
 - `match`: **một** phần tử khớp là đủ; trong một phần tử **mọi** điều kiện phải đúng. Điều kiện: `exe`, `exe_path_contains`,
   `args_contains`, `parent_catalog`, `listens_port`, `container_image`. Nhiều mục cùng khớp → mục nhiều điều kiện hơn thắng.
+- `detached_by_design` (bool, mặc định `false`): thứ người dùng **cố ý** để chạy nền tách khỏi shell (tmux, screen, Gradle daemon). Cho
+  fact `catalog.detached` = true, nên `orphan-quiet` không đề xuất dừng nó dù khớp định nghĩa mồ côi (mục 3.4).
 - `respawns`: `never` · `by-parent` · `on-demand` · `supervisor`. Dừng thứ `by-parent` là vô ích → hog gợi ý đóng cửa sổ.
 - `stop.strategy` **chỉ chọn trong tập có sẵn trong code**: `signal`, `watchman-shutdown`, `docker-container`, `manual`.
   **Danh mục không được chứa lệnh tuỳ ý** — file do Claude hay người viết không bao giờ thành thứ thực thi được.
@@ -473,7 +476,7 @@ Ghi đè cục bộ: `~/.config/hog/catalog.d/*.json`, cùng quy tắc như mụ
 | 5 | `vscode-pty-host` | giữ các terminal tích hợp | ✔ | 15 | `vite-dev` | dev server Vite | ○ |
 | 6 | `tsserver` | language server TypeScript | ✔ | 16 | `adb-server` | cầu nối Android Debug Bridge | ○ |
 | 7 | `typings-installer` | tải type cho tsserver | ✔ | 17 | `spotlight-mdworker` | lập chỉ mục Spotlight | ✔ |
-| 8 | `pylance` | language server Python | ○ | 18 | `gradle-daemon` | daemon build Gradle | ○ |
+| 8 | `pylance` | language server Python | ○ | 18 | `gradle-daemon` | daemon build Gradle, `detached_by_design` | ○ |
 | 9 | `claude-code-session` | một phiên Claude Code | ✔ | 19 | `ios-simulator` | CoreSimulator | ○ |
 | 10 | `watchman` | theo dõi file, unix socket | ✔ | 20 | `android-emulator` | emulator Android (qemu) | ○ |
 | 21 | `tmux-server` | máy chủ tmux, `detached_by_design` | ○ | 22 | `screen` | GNU screen, `detached_by_design` | ✔ (qa) |
@@ -485,7 +488,7 @@ Pylance chưa có ✔ vì lúc đo nó không chạy (số đo "2 GB + 1,3 GB" l
 Dừng **luôn do hog làm** — nút "Dừng" trong app hoặc `hog stop`. Claude không `kill`/`docker stop` trực tiếp. Các cổng dưới đây
 nằm trong `HogCore`, **không có cờ hay nút nào tắt được** (`--yes` chỉ thay câu hỏi xác nhận, không thay cổng).
 
-**Job launchd sẽ bật lại** (`launchd.restarts_after_stop` = true hoặc `null`): kế hoạch dừng không gửi tín hiệu mà chỉ hướng dẫn —
+**Job launchd sẽ bật lại** (`launchd.restarts_after_stop` = true, hoặc `null` — chỉ xảy ra với job có plist mà không đọc được, xem mục 3.1; tiến trình thường và app GUI là `false`): kế hoạch dừng không gửi tín hiệu mà chỉ hướng dẫn —
 dừng thứ sẽ tự bật lại là vô ích, còn gỡ job là thay đổi cấu hình máy, chưa làm ở giai đoạn 1.
 
 **Tắt ≠ xoá.** Không có đường nào thực hiện `rm`, `docker rm`, `volume prune`, `orbctl reset` hay thao tác mất dữ liệu nào.
@@ -557,7 +560,7 @@ Mã thoát CLI: `0` xong · `1` lỗi · `2` dùng sai · `3` cần người xá
 ```
 
 - **Lấy mẫu:** khi menu đóng, mỗi 10 s chỉ đọc mức áp lực (một `sysctl`) để đổi màu icon. Mở menu → hiện ngay bản quét gần
-  nhất, đồng thời quét đầy đủ (~2 s) rồi cập nhật. Không quét nền nặng.
+  nhất, đồng thời quét đầy đủ (~3 s, mục 3.1) rồi cập nhật. Không quét nền nặng.
 - **Tự đo mình:** dòng cuối luôn hiện RAM của chính hog. Mục tiêu ≤ 50 MB (chưa đo — đo ngay khi có bản chạy đầu tiên).
 - **"Dừng…"** mở hộp thoại kế hoạch của mục 8 (đích, chủ sở hữu, bằng chứng, tắt thì mất gì) → xác nhận. Thứ có `manual` thì nút là
   "Cách đóng" (chỉ hướng dẫn).
@@ -578,14 +581,18 @@ Mã thoát CLI: `0` xong · `1` lỗi · `2` dùng sai · `3` cần người xá
    cha–con), G3 (đổi tiến trình giữa lúc hiện và lúc gửi → huỷ), G4, G6.
 6. **Docker** — máy chủ HTTP giả trên unix socket: đặt `no` → đọc lại → stop; `update` lỗi thì không stop; không có socket →
    `unavailable`.
-7. **Hợp đồng JSON** — golden file; kiểm số nguyên byte, thời gian UTC, không có đường dẫn home tuyệt đối, không có biến môi trường.
-8. **`hog ports`** — danh sách cổng/PID/dự án khớp `lps` v0.1.0 trên cùng fixture; riêng nhãn `[orphan]` dùng định nghĩa mới ở mục 3.4
+7. **Hành vi mới từ hai vòng review** — ánh xạ `KeepAlive` → `launchd.restarts_after_stop` (bool, `{Crashed = true}`,
+   `{Crashed = false}`, vắng, không plist); kế hoạch dừng tụt về hướng dẫn khi job sẽ bị bật lại (mục 8); `catalog.detached` chặn
+   `orphan-quiet`; `procStart` đọc như UTC — test này **chạy với `TZ` khác UTC** (runner CI thường là UTC, sẽ không bắt được lỗi
+   đọc nhầm giờ địa phương); đường dẫn `KERN_PROCARGS2` tương đối → `null`.
+8. **Hợp đồng JSON** — golden file; kiểm số nguyên byte, thời gian UTC, không có đường dẫn home tuyệt đối, không có biến môi trường.
+9. **`hog ports`** — danh sách cổng/PID/dự án khớp `lps` v0.1.0 trên cùng fixture; riêng nhãn `[orphan]` dùng định nghĩa mới ở mục 3.4
    (cố ý khác `lps`), test ghi rõ các dòng khác vì lý do đó.
-9. **Trên máy thật** (bạn chạy, chụp màn hình gửi lại): CLI < 4 s; app mở menu < 0,5 s với bản quét gần nhất; app ≤ 50 MB; nhận
+10. **Trên máy thật** (bạn chạy, chụp màn hình gửi lại): CLI < 4 s; app mở menu < 0,5 s với bản quét gần nhất; app ≤ 50 MB; nhận
    ra cửa sổ VS Code sở hữu tsserver; `idle_s` cho từng phiên Claude; watchman không ai đăng ký được đề xuất; docker `unavailable` khi engine
    tắt; cột "Activity Monitor" của bảng thuật ngữ được đối chiếu bằng mắt.
 
-**Xong giai đoạn 1** khi 1–8 xanh trong CI, 9 đạt, bạn duyệt, và đã có skill trong hub (mục 11).
+**Xong giai đoạn 1** khi 1–9 xanh trong CI, 10 đạt, bạn duyệt, và đã có skill trong hub (mục 11).
 
 ## 11. Cấu trúc repo, cài đặt, skill trong hub
 
@@ -608,7 +615,7 @@ docs/architecture/design-vi.md  tài liệu này
 - Tap: khi hog có bản đầu, **gỡ `Formula/lps.rb`** (kèm đoạn formula tự xoá bản `lps` không-brew ở thư mục người dùng — hành vi xoá
   file ngoài quyền của một formula). Nếu sau này phát hành qua tap: dùng file đính kèm Release + `SHA256SUMS`, **không** dùng tarball
   mã nguồn của tag — sha256 của tarball đã đổi hai lần ngày 2026-10-15 (dời tag, đổi tên repo).
-- Mã bash `lps`/`install.sh` cũ: giữ ở `legacy/` tới khi `hog ports` khớp (mục 10.8), rồi xoá. README, `CLAUDE.md` của repo và ví dụ
+- Mã bash `lps`/`install.sh` cũ: giữ ở `legacy/` tới khi `hog ports` khớp (mục 10.9), rồi xoá. README, `CLAUDE.md` của repo và ví dụ
   output (đang chứa tên dự án thật) viết lại cùng giai đoạn 1.
 - **Skill trong hub** (`.claude/skills/`, sửa thẳng trên `main` của hub): khi user hỏi "máy nặng vì gì", Claude chạy `hog --json`, đọc
   `headline` + `findings`, trả lời theo thứ tự câu kết luận → ai đang ăn → đề xuất kèm bằng chứng → thứ **đừng đụng** và vì sao, dùng
