@@ -74,10 +74,10 @@ mục danh mục nào, hay chưa biết) và một khối JSON:
   - cờ mang mật khẩu theo vị trí: `curl -u/-U/--proxy-user/-E/--cert/-b/--cookie`, `sshpass -p`, client CSDL `-p`/`-a` — chương trình
     được nhận ở **bất kỳ vị trí nào** (`docker exec db mysql -pX`, `sudo curl -b …`, kể cả sau nháy/ngoặc `'mysql`, `(mysql`) và cờ
     của các chương trình đã gặp được **gộp** (`curl -o mysql -b x`: `-b` của curl vẫn tính); cờ gộp tính cả khi giá trị dính liền
-    (`curl -su a:pw`, `-suadmin:pw`); che dư chấp nhận được (`sshpass -p x ssh -p 2222`, `--name mysql -p 3000`: cổng thành `***`);
+    (`curl -su a:pw`, `-suadmin:pw`); che dư chấp nhận được (`sshpass -p x ssh -p 2222`, `--name mysql -p 3000`: cổng thành `***`; `curl -XPUT` thành `-XPU***`);
   - `-u`/`--user` kèm `user:mật-khẩu` (tách rời, `-uuser:pw`, `--user=u:pw`) → `***`, với mọi chương trình; `-u root` giữ nguyên;
-  - trong một tham số nhiều lệnh (`sh -c "… && mysql -pX && redis-cli -a Y"`), mỗi lệnh sau `&&`, `||`, `;`, `|` được nhận tên để áp
-    luật `-p`/`-a` của client CSDL; từ tách theo mọi khoảng trắng (cả xuống dòng, tab);
+  - từ của một tham số nhiều từ tách theo mọi khoảng trắng (cả xuống dòng, tab); một header làm một tham số mà tên là bí mật
+    (`X-Auth: Bearer abc`) thì toàn bộ phần sau tên là `***`;
   - `TÊN=giá-trị` nhận cả tên có `.` và `-` (`--set db.password=x`); JSON `"password": "x"` bị che (cả trong `--json`).
 - **Script có dấu hiệu bí mật → bỏ cả đoạn.** Một tham số nhiều từ (một đoạn script: `sh -c "…"`, `python -c "…"`) mà chứa một từ
   bí mật (`token`, `key`, `secret`, `password`, `auth`, `cookie`…) hoặc tên một chương trình mang mật khẩu (`mysql`, `redis-cli`, `curl`,
@@ -152,3 +152,4 @@ Khi người dùng dán `hog.share/1` hay ảnh chụp:
 | 2026-10-26 | Làm sạch (reviewer lần 4) | Phiên bản sau `@` không còn phần `-…`/`+…`; cờ mật khẩu theo vị trí nhận chương trình ở mọi vị trí và cờ gộp | `deploy@10-0-1-20`, `web@1-prod.acme.com` lọt; `curl -su a:pw`, `docker exec … mysql -pX`, `sudo curl -b …` lọt |
 | 2026-10-26 | Làm sạch (reviewer lần 5) | Cờ mật khẩu của các chương trình đã gặp được gộp, không thay; tham số nhiều từ không làm mất cờ của lệnh ngoài; cờ gộp có giá trị dính liền; bỏ nháy/ngoặc trước tên chương trình | Hồi quy: `curl -o mysql --proxy-user a:pw`, `curl https://…/mysql -b sid=x` lọt vì cờ của curl bị thay bằng cờ của mysql |
 | 2026-10-26 | Làm sạch (qa lần 3) | Script có dấu hiệu bí mật bị bỏ cả đoạn thay vì che từng từ | `cd x&&mysql -pX`, `$(redis-cli -a X …)`, header trong nháy, `export TOKEN='a b'` vẫn lọt sau các vòng vá theo từng kiểu |
+| 2026-10-26 | Làm sạch (reviewer lần 6) | Bỏ phần nhận cờ mật khẩu theo từng lệnh bên trong script (thành code chết khi script có dấu hiệu bí mật bị bỏ cả đoạn; cờ đứng riêng do `Privacy.scrubArgList` che); header bí mật một tham số che hết giá trị; cờ gộp có chữ số (`-4su`); test có kiểm đột biến | Test cũ vẫn xanh khi bỏ phép gộp cờ; `X-Auth: Bearer abc` lộ `abc`; `curl -4su a:pw` lộ |

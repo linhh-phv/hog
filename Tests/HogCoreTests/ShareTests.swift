@@ -189,6 +189,21 @@ import Testing
         #expect(share(["curl", "-H", "X-Trace: 1", "-b", "sid=x"]) == "curl -H X-Trace: 1 -b ***", "outer flags survive an argument with spaces")
     }
 
+    // Reviewer 6 (2026-10-26): tests that fail when the masking they name is removed.
+    @Test func reviewer6Cases() {
+        func share(_ a: [String]) -> String { ShareInfo.shareArgs(a, home: "/Users/me") }
+        func scrub(_ a: [String]) -> String { Privacy.scrubArgs(a, home: "/Users/me") }
+        #expect(share(["sh", "-c", "curl -o mysql -b sid=x"]) == "sh -c …", "a script naming a credential program is dropped")
+        #expect(share(["sh", "-c", "cd /srv;mysql -phunter2"]) == "sh -c …")
+        #expect(share(["curl", "-H", "X-Auth: Bearer abc"]) == "curl -H X-Auth: ***", "every word of a secret header")
+        #expect(share(["curl", "--header=X-Api-Key: a b c"]) == "curl --header=X-Api-Key: ***")
+        #expect(share(["curl", "-H", "X-Trace: 1 2"]) == "curl -H X-Trace: 1 2", "an ordinary header stays")
+        #expect(scrub(["curl", "-4su", "admin:hunter2", "https://x"]) == "curl -4su *** https://x")
+        // Removing the union in Privacy.scrubArgList makes these fail.
+        #expect(scrub(["curl", "-o", "mysql", "-b", "sid=x"]) == "curl -o mysql -b ***")
+        #expect(share(["curl", "-o", "mysql", "-b", "sid=x"]) == "curl -o mysql -b ***")
+    }
+
     @Test func windowTitleWithoutAFileKeepsTheProject() {
         let w = CodeStatusParser.Window(index: 1, title: "web-app — Work")
         var s = scan([])

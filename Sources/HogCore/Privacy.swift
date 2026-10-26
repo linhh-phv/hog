@@ -130,7 +130,7 @@ public enum Privacy {
         }
         let letters = Array(w.dropFirst())
         guard let i = letters.firstIndex(where: { flags.contains("-" + String($0)) }) else { return nil }
-        guard letters[..<i].allSatisfy(\.isLetter) else { return nil }  // only flags before it (`-sSu`)
+        guard letters[..<i].allSatisfy({ $0.isLetter || $0.isNumber }) else { return nil }  // only flags before it (`-sSu`, `-4su`)
         return i == letters.count - 1 ? .valueNext : .attached("-" + String(letters[...i]) + "***")
     }
 

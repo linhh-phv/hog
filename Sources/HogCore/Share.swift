@@ -67,26 +67,17 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
     /// An absolute path stays one piece even with spaces (`/Applications/Visual Studio Code.app/…`); other arguments with
     /// spaces (`sh -c "cd … && npm run dev"`, `-H "X-Api-Key: v"`) are handled word by word.
     static func shareArgs(_ args: [String], home: String, redactor: Redactor = Redactor(names: [])) -> String {
+        // Credential flags of known programs (`mysql -p`, `curl -b`…) are masked by `Privacy.scrubArgList` before this, and a
+        // script naming such a program is dropped whole below; what is left here: `-u user:pw` of any program, secret headers.
         var maskNext = false
         var previous = ""
-        var flags: Set<String> = []  // credential flags of the programs named so far in this command
-        // One word: credentials by position (`-u user:pw`, a database client's `-p`/`-a`), secret headers, then `shareWord`.
-        func word(_ w: String, startsCommand: Bool) -> String {
+        func word(_ w: String) -> String {
             defer { previous = w }
-            if startsCommand { flags = Privacy.credentialProgram(w) ?? flags }
             if maskNext { maskNext = false; return "***" }
-            if ["&&", "||", ";", "|"].contains(w) { flags = []; return w }
             // `-u user:password`, `-uuser:pw`, `--user=u:pw` (curl, wget, httpie… any program).
             if ["-u", "--user"].contains(previous), w.contains(":"), !w.hasPrefix("-") { return "***" }
             if w.hasPrefix("--user="), w.contains(":") { return "--user=***" }
             if w.hasPrefix("-u"), !w.hasPrefix("--"), w.count > 2, w.contains(":") { return "-u***" }
-            if let more = Privacy.credentialProgram(w) { flags.formUnion(more) }  // union: `curl -o mysql -b x` keeps curl's
-            if let m = Privacy.credential(flags, w) {
-                switch m {
-                case .valueNext: maskNext = true; return w
-                case .attached(let masked): return masked
-                }
-            }
             // A header whose name is secret-looking: `X-Api-Key: v` (value next), `x-api-key:v`, `--header=X-Auth:v`.
             let (prefix, value) = w.hasPrefix("-") && w.contains("=")
                 ? (String(w[...w.firstIndex(of: "=")!]), String(w[w.index(after: w.firstIndex(of: "=")!)...])) : ("", w)
@@ -97,7 +88,7 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
             return shareWord(w, redactor)
         }
         let words = Privacy.scrubArgList(args, home: home).enumerated().map { i, arg -> String in
-            if i == 0 { flags = Privacy.credentialProgram(arg) ?? []; previous = arg; return redactor.names(Privacy.scrubUser(lastComponent(arg))) }
+            if i == 0 { previous = arg; return redactor.names(Privacy.scrubUser(lastComponent(arg))) }
             if arg.hasPrefix("/") || arg.hasPrefix("~/") {
                 defer { previous = arg }
                 if maskNext { maskNext = false; return "***" }
@@ -116,14 +107,13 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
                 if maskNext { maskNext = false; return "***" }
                 return "…"
             }
-            var startsCommand = parts.count > 1
-            // A command inside one argument (`sh -c "…"`) has its own flags; the outer command's come back after it.
-            let outer = flags
-            defer { flags = outer }
-            return parts.map { w -> String in
-                defer { startsCommand = ["&&", "||", ";", "|"].contains(w) }
-                return word(w, startsCommand: startsCommand)
-            }.joined(separator: " ")
+            // One header as one argument with a secret name: everything after the name (`X-Auth: Bearer abc`).
+            if parts.count > 1, Self.isHeaderShaped(parts[0]), Privacy.isSecret(Self.headerName(parts[0])) {
+                defer { previous = arg }
+                if maskNext { maskNext = false; return "***" }
+                return parts[0] + " ***"
+            }
+            return parts.map(word).joined(separator: " ")
         }
         return Privacy.truncate(words.joined(separator: " "))
     }
@@ -132,6 +122,10 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
     static func isHeaderShaped(_ first: String) -> Bool {
         let name = first.hasPrefix("-") ? String(first.split(separator: "=", maxSplits: 1).last ?? "") : first  // `--header=X-Auth:`
         return name.hasSuffix(":") && isHeaderName(name.dropLast())
+    }
+
+    static func headerName(_ first: String) -> String {
+        String((first.hasPrefix("-") ? String(first.split(separator: "=", maxSplits: 1).last ?? "") : first).dropLast())
     }
 
     /// A secret word anywhere (`token`, `key`, `password`…), or a program with credential flags (`mysql`, `curl`,
