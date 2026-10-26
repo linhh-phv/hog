@@ -172,7 +172,7 @@ public struct Analyzer: Sendable {
                            uptimeS: Measured(scan.system.uptimeS)),
             memory: memory,
             cpu: CPUInfo(userPct: Measured(scan.cpu?.user), sysPct: Measured(scan.cpu?.sys), idlePct: Measured(scan.cpu?.idle),
-                         load: Measured(scan.system.load)),
+                         load: Measured(scan.system.load), thermal: Measured(scan.system.thermal)),
             headline: Headline(level: .ok, text: "", glossaryIds: []),
             sensors: scan.sensors, owners: owners, processes: processes, items: items, findings: findings,
             warnings: (catalog.warnings + rules.warnings + explain.warnings).map(\.description))
@@ -481,7 +481,31 @@ public struct Analyzer: Sendable {
         case .critical?: (suggestions.isEmpty ? t.criticalNoSuggest : t.critical, .critical)
         case nil: (t.unknown, .warn)
         }
-        let text = Format.fill(template.text.text(lang) ?? "", facts: [:], extra: extra, lang: lang)
-        return Headline(level: level, text: text, glossaryIds: template.glossaryIds)
+        var text = Format.fill(template.text.text(lang) ?? "", facts: [:], extra: extra, lang: lang)
+        var finalLevel = level
+        var ids = template.glossaryIds
+        // CPU and heat (task cpu-thermal): a second sentence only when it matters.
+        let rows = MenuSummary.cpuRows(s, max: 3)
+        let cpuExtra: [String: String] = [
+            "thermal": s.cpu.thermal.value.map { Format.thermal($0, lang) } ?? "?",
+            "cpu_used": s.cpu.usedPct.map { Format.percent($0, lang) } ?? "?",
+            "cpu_top": rows.isEmpty ? (lang == .vi ? "chưa đo (--fast)" : "not measured (--fast)")
+                : rows.map { "\($0.label) (\(Format.percent($0.pct, lang)))" }.joined(separator: ", "),
+        ]
+        var second: HeadlineTemplates.Template?
+        if let th = s.cpu.thermal.value, th >= .serious {
+            second = t.hot
+            finalLevel = max(finalLevel, th == .critical ? .critical : .warn)
+        } else if let used = s.cpu.usedPct, used >= Self.busyCPUPct {
+            second = t.busy
+        }
+        if let second {
+            text += " " + Format.fill(second.text.text(lang) ?? "", facts: [:], extra: cpuExtra, lang: lang)
+            ids += second.glossaryIds.filter { !ids.contains($0) }
+        }
+        return Headline(level: finalLevel, text: text, glossaryIds: ids)
     }
+
+    /// Whole-machine CPU use above which the headline says the CPU is busy.
+    static let busyCPUPct: Double = 80
 }

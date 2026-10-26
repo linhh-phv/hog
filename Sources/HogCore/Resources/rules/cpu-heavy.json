@@ -1,0 +1,25 @@
+{
+  "id": "cpu-heavy",
+  "applies_to": [
+    "process",
+    "claude-session"
+  ],
+  "class": "advice",
+  "verdict": "watch",
+  "when": {
+    "all": [
+      {
+        "fact": "cpu.now_pct",
+        "gte": 80
+      },
+      {
+        "fact": "cpu.avg_pct",
+        "gte": 10
+      }
+    ]
+  },
+  "reason": {
+    "vi": "Đang dùng {cpu.now_pct} CPU (trung bình {cpu.avg_pct} từ lúc chạy) — một lý do máy nóng.",
+    "en": "Using {cpu.now_pct} CPU now ({cpu.avg_pct} on average since it started) — one reason the machine gets hot."
+  }
+}

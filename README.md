@@ -34,7 +34,7 @@ open -a Hog               # start the menu bar app
 ## Use
 
 ```bash
-hog                          # headline, memory/CPU, biggest consumers, suggestions
+hog                          # headline, memory/CPU/heat, biggest consumers (RAM and CPU), suggestions
 hog --json                   # snapshot (compact; --pretty to read, --brief for Claude, --full for everything)
                              # --fast skips VS Code/watchman and the current CPU sample
 hog explain <item|pid|port>  # every measurement, which rules fired and why, what the safety gates say

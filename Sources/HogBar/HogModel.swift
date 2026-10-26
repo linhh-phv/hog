@@ -13,6 +13,7 @@ final class HogModel: ObservableObject {
     @Published var summary: MenuSummary?
     @Published var scanning = false
     @Published var pressure: Pressure? = SystemReader.pressureNow()
+    @Published var thermal: ThermalState? = SystemReader.thermalNow()
     @Published var page: Page = .main {
         didSet {
             if case .item = page { back = oldValue == .suggestions ? .suggestions : .main } else { back = .main }
@@ -41,6 +42,7 @@ final class HogModel: ObservableObject {
     private(set) var explanations: Explanations
     private(set) var catalog: Catalog
     private var timer: Timer?
+    private var thermalObserver: NSObjectProtocol?
 
     /// Forced language (for --render).
     var overrideLang: Lang?
@@ -65,7 +67,12 @@ final class HogModel: ObservableObject {
         // One scan right after launch, so the first menu opening already has numbers (criterion 10: < 0,5 s).
         Task { @MainActor in self.refresh() }
         timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.pressure = SystemReader.pressureNow() }
+            Task { @MainActor in self?.pressure = SystemReader.pressureNow(); self?.thermal = SystemReader.thermalNow() }
+        }
+        // macOS posts this when the thermal state changes: the icon follows at once, not 10 s later.
+        thermalObserver = NotificationCenter.default.addObserver(forName: ProcessInfo.thermalStateDidChangeNotification, object: nil,
+                                                                 queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.thermal = SystemReader.thermalNow() }
         }
     }
 
@@ -75,7 +82,7 @@ final class HogModel: ObservableObject {
         catalog = .load(.standard("catalog"))
     }
 
-    var icon: NSImage { PigIcon.image(pressure: pressure, colored: coloredIcon) }
+    var icon: NSImage { PigIcon.image(pressure: pressure, thermal: thermal, colored: coloredIcon) }
 
     /// Menu opened: show the last snapshot at once and scan in the background (~3 s).
     func refresh() {
@@ -90,6 +97,7 @@ final class HogModel: ObservableObject {
                 self.snapshot = snapshot
                 self.summary = MenuSummary.make(snapshot)
                 self.pressure = snapshot.memory.pressure.value
+                self.thermal = snapshot.cpu.thermal.value
                 self.scanning = false
             }
         }
@@ -170,5 +178,6 @@ final class HogModel: ObservableObject {
         self.snapshot = snapshot
         self.summary = MenuSummary.make(snapshot)
         self.pressure = snapshot.memory.pressure.value
+        self.thermal = snapshot.cpu.thermal.value
     }
 }

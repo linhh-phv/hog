@@ -1,0 +1,25 @@
+{
+  "id": "thermal-state",
+  "activity_monitor": null,
+  "name": {
+    "vi": "Nhiệt",
+    "en": "Heat"
+  },
+  "plain": {
+    "vi": "macOS tự đánh giá máy nóng tới đâu (từ cảm biến nhiệt bên trong): bình thường, ấm, nóng, rất nóng. Không phải số độ C.",
+    "en": "How hot macOS itself judges the machine to be (from its internal sensors): normal, warm, hot, very hot. Not degrees."
+  },
+  "how_to_read": {
+    "vi": "Ấm là thường khi đang làm nặng. Nóng / rất nóng = macOS đang tự giảm tốc CPU để hạ nhiệt, nên máy chậm hẳn.",
+    "en": "Warm is usual under load. Hot / very hot = macOS is slowing the CPU down to cool off, so everything gets slower."
+  },
+  "act": {
+    "vi": "Nóng mà không làm gì nặng → xem \"Đang ăn CPU\" và tắt thứ không dùng; để máy chỗ thoáng.",
+    "en": "Hot while you are not doing anything heavy → check \"Using CPU\" and stop what you do not use; give the machine air."
+  },
+  "provenance": {
+    "added": "2026-10-27",
+    "source": "docs",
+    "verified": false
+  }
+}

@@ -37,6 +37,13 @@ public struct MenuSummary: Sendable, Equatable {
         public var bytes: Int64
     }
 
+    /// One line of "Đang ăn CPU": an app (all its processes) or an item without an app, in % of one core.
+    public struct CPURow: Sendable, Equatable, Identifiable {
+        public var id: String
+        public var label: String
+        public var pct: Double
+    }
+
     public struct Note: Sendable, Equatable, Identifiable {
         public var id: String { sensor }
         public var sensor: String
@@ -62,6 +69,12 @@ public struct MenuSummary: Sendable, Equatable {
     /// Suggestions not shown as cards ("+ N đề xuất khác").
     public var moreCount: Int { allCards.count - cards.count }
     public var unknowns: [Unknown]
+    public var thermal: ThermalState?
+    /// Whole-machine CPU in use (%); `nil` when not measured (fast mode).
+    public var cpuUsedPct: Double?
+    public var cpuRows: [CPURow]
+    /// Show "Đang ăn CPU" only when it matters: warm or hotter, or the CPU at least half busy.
+    public var showCPU: Bool { !cpuRows.isEmpty && ((thermal ?? .nominal) >= .fair || (cpuUsedPct ?? 0) >= Self.showCPUAbovePct) }
     public var notes: [Note]
     public var selfBytes: Int64?
     public var takenAt: Date
@@ -69,10 +82,11 @@ public struct MenuSummary: Sendable, Equatable {
     public static let maxGroups = 3
 
     /// Glossary entries the app links to (metric tiles + "why" page). Tested to exist in both languages.
-    public static let tileGlossaryIds = ["memory-pressure", "compressed-stored", "swap-used"]
+    public static let tileGlossaryIds = ["memory-pressure", "compressed-stored", "swap-used", "cpu-machine", "thermal-state"]
 
     /// Every number the CLI status line prints, with its glossary entry (criterion 5).
-    public static let cliGlossaryIds = ["memory-pressure", "compressed-stored", "compressor-occupied", "swap-used", "cpu-pct", "load", "footprint", "ram-total"]
+    public static let cliGlossaryIds = ["memory-pressure", "compressed-stored", "compressor-occupied", "swap-used", "cpu-pct", "load", "footprint",
+                                        "ram-total", "cpu-machine", "thermal-state"]
 
     /// Glossary entry for every measured fact (`hog explain <item>` prints it next to the number; criterion 5).
     /// Structural facts (what something *is*) are excluded: they are names, not numbers.
@@ -108,6 +122,10 @@ public struct MenuSummary: Sendable, Equatable {
     ]
     public static let maxCards = 3
     public static let maxUnknowns = 3
+    public static let maxCPURows = 3
+    public static let showCPUAbovePct: Double = 50
+    /// Rows under 1% of a core are noise.
+    static let minCPURowPct: Double = 1
     /// "Chưa rõ là gì" only lists things big enough to matter.
     public static let unknownMinBytes: Int64 = 100_000_000
 
@@ -172,7 +190,20 @@ public struct MenuSummary: Sendable, Equatable {
                            compressedStored: s.memory.compressedStoredBytes.value, compressor: s.memory.compressorBytes.value,
                            swapUsed: s.memory.swapUsedBytes.value, groups: groups, othersBytes: others, barTotal: total,
                            unreadableCount: s.memory.unreadableProcessCount, cards: Array(allCards.prefix(maxCards)), allCards: allCards,
-                           unknowns: unknowns(s, excluding: Set(allCards.prefix(maxCards).map(\.itemId))), notes: notes, selfBytes: s.hog.selfFootprintBytes.value, takenAt: s.takenAt)
+                           unknowns: unknowns(s, excluding: Set(allCards.prefix(maxCards).map(\.itemId))),
+                           thermal: s.cpu.thermal.value, cpuUsedPct: s.cpu.usedPct, cpuRows: cpuRows(s, max: maxCPURows),
+                           notes: notes, selfBytes: s.hog.selfFootprintBytes.value, takenAt: s.takenAt)
+    }
+
+    /// Biggest CPU users: top-level owners (an app counts all its processes) and items with no owner, by current CPU.
+    /// Empty when per-process CPU was not measured (fast mode).
+    public static func cpuRows(_ s: Snapshot, max n: Int) -> [CPURow] {
+        var rows = s.owners.filter { $0.parent.value == nil }.compactMap { o in o.totalCpuPct.value.map { CPURow(id: o.id, label: o.label, pct: $0) } }
+        for i in s.items where i.ownerId.value == nil {
+            if case .double(let p)? = i.facts["cpu.now_pct"] { rows.append(CPURow(id: i.id, label: i.label, pct: p)) }
+            else if case .int(let p)? = i.facts["cpu.now_pct"] { rows.append(CPURow(id: i.id, label: i.label, pct: Double(p))) }
+        }
+        return Array(rows.filter { $0.pct >= minCPURowPct }.sorted { ($0.pct, $0.id) > ($1.pct, $1.id) }.prefix(n))
     }
 
     public static func isUnknownCandidate(_ i: Item) -> Bool {

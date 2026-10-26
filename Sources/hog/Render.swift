@@ -64,7 +64,16 @@ struct Render {
         var cpuLine = "CPU "
         if let idle = s.cpu.idlePct.value { cpuLine += Format.percent(100 - idle, lang) } else { cpuLine += dim(t("chưa đo (--fast)", "not measured (--fast)")) }
         if let l = s.cpu.load.value, l.count == 3 { cpuLine += " · " + t("tải", "load") + " " + l.map { Format.number($0, 1, lang) }.joined(separator: " / ") }
+        if let th = s.cpu.thermal.value {
+            let word = Format.thermal(th, lang)
+            cpuLine += " · " + t("nhiệt", "heat") + " " + (th >= .serious ? red(word) : (th == .fair ? yellow(word) : word))
+        }
         out.append(cpuLine)
+        let rows = MenuSummary.cpuRows(s, max: MenuSummary.maxCPURows)
+        if !rows.isEmpty {
+            out.append(t("Ăn CPU nhiều nhất: ", "Most CPU: ") + rows.map { "\($0.label) " + dim(Format.percent($0.pct, lang)) }.joined(separator: ", ")
+                       + dim(t("  (% một nhân)", "  (% of one core)")))
+        }
 
         out.append("")
         out.append(bold(t("Đang ăn nhiều nhất", "Biggest")))

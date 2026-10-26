@@ -1,12 +1,14 @@
 import AppKit
 import HogCore
 
-/// The menu bar icon: a monochrome pig face (design system, `MenuBarIcon`). Template when pressure is normal so macOS
-/// tints it like system icons; coloured for warning/critical.
+/// The menu bar icon: a monochrome pig face (design system, `MenuBarIcon`). Template when all is normal so macOS
+/// tints it like system icons; coloured by the worse of memory pressure and heat (hot → orange, very hot → red).
 enum PigIcon {
-    static func image(pressure: Pressure?, colored: Bool) -> NSImage {
+    static func image(pressure: Pressure?, thermal: ThermalState? = nil, colored: Bool) -> NSImage {
         let size = NSSize(width: 18, height: 16)
-        let tint: NSColor? = colored ? (pressure == .critical ? .systemRed : (pressure == .warn ? .systemOrange : nil)) : nil
+        let critical = pressure == .critical || thermal == .critical
+        let warn = pressure == .warn || thermal == .serious
+        let tint: NSColor? = colored ? (critical ? .systemRed : (warn ? .systemOrange : nil)) : nil
         let img = NSImage(size: size, flipped: true) { _ in
             (tint ?? .black).setStroke()
             (tint ?? .black).setFill()

@@ -61,5 +61,25 @@
       "compressed-stored",
       "swap-used"
     ]
+  },
+  "hot": {
+    "text": {
+      "vi": "Máy đang {thermal} (macOS tự đánh giá) và sẽ tự giảm tốc. Ăn CPU nhiều nhất: {cpu_top}.",
+      "en": "The machine is {thermal} (macOS's own assessment) and will slow itself down. Most CPU: {cpu_top}."
+    },
+    "glossary_ids": [
+      "thermal-state",
+      "cpu-pct"
+    ]
+  },
+  "busy": {
+    "text": {
+      "vi": "CPU đang bận ({cpu_used} sức cả máy). Ăn CPU nhiều nhất: {cpu_top}.",
+      "en": "The CPU is busy ({cpu_used} of the whole machine). Most CPU: {cpu_top}."
+    },
+    "glossary_ids": [
+      "cpu-machine",
+      "cpu-pct"
+    ]
   }
 }

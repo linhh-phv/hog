@@ -7,6 +7,7 @@
       2.7
     ],
     "sys_pct" : 13.1,
+    "thermal" : null,
     "user_pct" : 8.5
   },
   "findings" : [

@@ -104,14 +104,30 @@ public struct CPUInfo: Codable, Sendable, Equatable {
     public var sysPct: Measured<Double>
     public var idlePct: Measured<Double>
     public var load: Measured<[Double]>
+    /// macOS's own thermal assessment (`ProcessInfo.thermalState`); no temperature in degrees without root.
+    public var thermal: Measured<ThermalState>
 
     public init(userPct: Measured<Double> = nil, sysPct: Measured<Double> = nil, idlePct: Measured<Double> = nil,
-                load: Measured<[Double]> = nil) {
-        self.userPct = userPct; self.sysPct = sysPct; self.idlePct = idlePct; self.load = load
+                load: Measured<[Double]> = nil, thermal: Measured<ThermalState> = nil) {
+        self.userPct = userPct; self.sysPct = sysPct; self.idlePct = idlePct; self.load = load; self.thermal = thermal
     }
+
+    /// Share of the whole machine in use (100 − idle); `nil` in fast mode.
+    public var usedPct: Double? { idlePct.value.map { max(0, 100 - $0) } }
 }
 
-public enum HeadlineLevel: String, Codable, Sendable { case ok, warn, critical }
+/// `ProcessInfo.ThermalState`: nominal (normal), fair (warm), serious (hot, the system slows down), critical.
+public enum ThermalState: String, Codable, Sendable, Comparable {
+    case nominal, fair, serious, critical
+    private var rank: Int { switch self { case .nominal: 0; case .fair: 1; case .serious: 2; case .critical: 3 } }
+    public static func < (a: ThermalState, b: ThermalState) -> Bool { a.rank < b.rank }
+}
+
+public enum HeadlineLevel: String, Codable, Sendable, Comparable {
+    case ok, warn, critical
+    private var rank: Int { switch self { case .ok: 0; case .warn: 1; case .critical: 2 } }
+    public static func < (a: HeadlineLevel, b: HeadlineLevel) -> Bool { a.rank < b.rank }
+}
 
 public struct Headline: Codable, Sendable, Equatable {
     public var level: HeadlineLevel

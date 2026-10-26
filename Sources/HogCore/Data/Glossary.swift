@@ -30,6 +30,10 @@ public struct HeadlineTemplates: Codable, Sendable, Equatable {
     public var criticalNoSuggest: Template
     /// pressure could not be read
     public var unknown: Template
+    /// second sentence: the machine is hot (thermal state serious/critical)
+    public var hot: Template
+    /// second sentence: not hot, but the CPU is busy
+    public var busy: Template
 }
 
 public struct Explanations: Sendable {
@@ -125,6 +129,20 @@ public enum Format {
         case let (n, x) where n.hasSuffix("_ratio"): return percent((x.number ?? 0) * 100, lang)
         case (_, .bool(let b)): return lang == .vi ? (b ? "có" : "không") : (b ? "yes" : "no")
         default: return v.description
+        }
+    }
+
+    /// macOS's thermal assessment in words.
+    public static func thermal(_ t: ThermalState, _ lang: Lang) -> String {
+        switch (t, lang) {
+        case (.nominal, .vi): "bình thường"
+        case (.fair, .vi): "ấm"
+        case (.serious, .vi): "nóng"
+        case (.critical, .vi): "rất nóng"
+        case (.nominal, .en): "normal"
+        case (.fair, .en): "warm"
+        case (.serious, .en): "hot"
+        case (.critical, .en): "very hot"
         }
     }
 

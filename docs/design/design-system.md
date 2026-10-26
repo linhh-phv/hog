@@ -67,6 +67,8 @@ HogCore lo).
 | `MenuBarIcon` | mặt heo đơn sắc 18×16 (hai tai, mõm hai lỗ mũi), màu theo thanh menu | thường · `warn` khi áp lực cảnh báo · `red` khi nghiêm trọng |
 | `HeadlineCard` | ô `raised` chứa câu kết luận một dòng (`headline.text`) | — |
 | `MetricTile` ×3 | nhãn `caption` + `?` · số `metric` | Áp lực (chữ + hình + màu) · Đã nén · Ra ổ đĩa |
+| `CPUHeatRow` (cpu-thermal) | "CPU 23 % `?` · Nhiệt ● bình thường `?`" một dòng dưới các ô đo; nhiệt = hình + màu + chữ | ● bình thường (`ok`) · ◐ ấm · ▲ nóng (`warn`) · ▲ rất nóng (`red`) · ? chưa đo |
+| `CPUList` (cpu-thermal) | "Đang ăn CPU `?`" + tối đa 3 dòng tên · % một nhân, dưới thanh RAM | chỉ hiện khi máy ấm trở lên hoặc CPU cả máy ≥ 50 % |
 | `RAMBar` + `Legend` | thanh chia theo chủ sở hữu (tối đa 3 + "còn lại"), chú thích chữ + số | dòng có chủ con bấm được (`›`/`⌄`) để mở theo cửa sổ VS Code; "Còn lại + hệ thống · Đo chi tiết" |
 | `SuggestionCard` | verdict (chữ + hình + màu) · tên · số · lý do · một nút | nút "Dừng…" (chiến lược tự làm) hoặc "Cách đóng" (`manual`) · "Vì sao?" |
 | `StopSheet` | tiêu đề "Dừng X?", chủ sở hữu + PID, Vì sao / Tắt thì sao / hog sẽ, danh sách cổng (✓ đạt, ? cần đồng ý) | nút "Dừng" khi chỉ cần xác nhận; "Vẫn dừng" khi có cổng `?`; không có nút khi bị chặn (chỉ lý do) |
@@ -80,7 +82,8 @@ HogCore lo).
 
 ## Luật dùng
 
-- Menu đóng: icon chỉ đổi màu theo áp lực (đọc mỗi 10 s). Mở menu: hiện bản quét gần nhất ngay + `ScanBanner`, quét đầy đủ rồi thay.
+- Menu đóng: icon chỉ đổi màu theo mức xấu hơn giữa áp lực bộ nhớ và nhiệt (đọc mỗi 10 s; nhiệt còn theo thông báo của macOS).
+  Nóng → cam như áp lực cảnh báo, rất nóng → đỏ như nghiêm trọng; ấm không đổi màu. Mở menu: hiện bản quét gần nhất ngay + `ScanBanner`, quét đầy đủ rồi thay.
 - Đề xuất xếp `may-stop` → `ask` → `watch`; tối đa 3 thẻ, còn lại "+ N đề xuất khác" (bấm → trang "Mọi đề xuất"). `info` không
   hiện trong menu (có trong `hog --json`).
 - "Chưa rõ là gì" (giai đoạn 2): tối đa 3 `UnknownRow` sau Đề xuất — item ≥ 100 MB chưa có trong danh mục, không thuộc một app, không bị

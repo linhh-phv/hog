@@ -1,0 +1,25 @@
+{
+  "id": "cpu-machine",
+  "activity_monitor": "CPU Load (% User + % System)",
+  "name": {
+    "vi": "CPU cả máy",
+    "en": "Machine CPU"
+  },
+  "plain": {
+    "vi": "Phần trăm tổng sức của mọi nhân CPU đang được dùng, đo trong khoảng 1 giây.",
+    "en": "Share of all CPU cores' capacity in use, measured over about one second."
+  },
+  "how_to_read": {
+    "vi": "Khác CPU của từng chương trình: ở đây 100% = mọi nhân chạy hết sức. Cao kéo dài là lý do hay gặp nhất khiến máy nóng.",
+    "en": "Unlike a program's CPU: here 100% = every core fully busy. Staying high is the most common reason a machine gets hot."
+  },
+  "act": {
+    "vi": "Cao kéo dài → xem thứ đang ăn CPU nhiều nhất.",
+    "en": "High for long → look at what uses the most CPU."
+  },
+  "provenance": {
+    "added": "2026-10-27",
+    "source": "docs",
+    "verified": false
+  }
+}

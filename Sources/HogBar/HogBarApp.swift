@@ -72,6 +72,12 @@ enum Renderer {
             write(model, dir, "menu-suggestions-light")
         }
         model.page = .main
+        // CPU and heat (task cpu-thermal): the main page when the machine is hot.
+        if sample {
+            model.load(Self.sampleSnapshot(hot: true))
+            write(model, dir, "menu-hot-light")
+            model.load(Self.sampleSnapshot())
+        }
         if let first = model.summary?.cards.first {
             model.prepareStopForRender(first.itemId)
             write(model, dir, "menu-stop-light")
@@ -97,7 +103,7 @@ enum Renderer {
     }
 
     /// Fake data shaped like a real run (no real names).
-    static func sampleSnapshot() -> Snapshot {
+    static func sampleSnapshot(hot: Bool = false) -> Snapshot {
         let item = Item(id: "proc:69339:1", kind: .process, label: "Watchman", catalogId: "watchman", pids: [69339],
                         footprintBytes: Measured(339_000_000), residentRatio: Measured(0.04),
                         facts: ["age_s": .int(10_800), "watchman.subscriptions": .int(0), "footprint_bytes": .int(339_000_000),
@@ -107,6 +113,7 @@ enum Renderer {
         let node = Item(id: "proc:52311:1", kind: .process, label: "node", pids: [52311], footprintBytes: Measured(412_000_000),
                         residentRatio: Measured(0.3),
                         facts: ["age_s": .int(172_800), "footprint_bytes": .int(412_000_000), "cpu.avg_pct": .double(0.1),
+                                "cpu.now_pct": .double(hot ? 88 : 0.2),
                                 "net.listen_count": .int(1), "net.established": .int(0), "orphan": .bool(false),
                                 "resident_ratio": .double(0.3), "owner.kind": .string("none")])
         let python = Item(id: "proc:48820:1", kind: .process, label: "python3.12", pids: [48820], footprintBytes: Measured(268_000_000),
@@ -122,15 +129,18 @@ enum Renderer {
             memory: MemoryInfo(compressorBytes: Measured(3_330_000_000), compressedStoredBytes: Measured(7_410_000_000),
                                swapUsedBytes: Measured(6_010_000_000), pressure: Measured(.normal), unreadableProcessCount: 181,
                                measuredFootprintBytes: 21_000_000_000),
-            cpu: CPUInfo(),
-            headline: Headline(level: .ok, text: "Máy chưa thiếu RAM, nhưng đã nén 6,9 GB dữ liệu (chiếm 3,1 GB RAM) và đẩy 5,6 GB ra ổ đĩa. Có 3 thứ có thể tắt.", glossaryIds: []),
+            cpu: CPUInfo(idlePct: Measured(hot ? 22 : 88), thermal: Measured(hot ? .serious : .nominal)),
+            headline: Headline(level: hot ? .warn : .ok, text: "Máy chưa thiếu RAM, nhưng đã nén 6,9 GB dữ liệu (chiếm 3,1 GB RAM) và đẩy 5,6 GB ra ổ đĩa. Có 3 thứ có thể tắt."
+                               + (hot ? " Máy đang nóng (macOS tự đánh giá) và sẽ tự giảm tốc. Ăn CPU nhiều nhất: Visual Studio Code (310 %), Google Chrome (95 %), node (88 %)." : ""),
+                               glossaryIds: []),
             sensors: [SensorStatus(name: "docker", status: .unavailable, tookMs: 0, note: "engine socket missing")],
             owners: [
-                Owner(id: "app:visual-studio-code", kind: .app, label: "Visual Studio Code", selfFootprintBytes: 3_650_000_000, totalFootprintBytes: 11_600_000_000),
+                Owner(id: "app:visual-studio-code", kind: .app, label: "Visual Studio Code", selfFootprintBytes: 3_650_000_000, totalFootprintBytes: 11_600_000_000,
+                      totalCpuPct: Measured(hot ? 310 : 14)),
                 Owner(id: "vscode:1", kind: .vscodeWindow, label: "web-app (Workspace)", parent: "app:visual-studio-code", totalFootprintBytes: 4_720_000_000),
                 Owner(id: "vscode:2", kind: .vscodeWindow, label: "hog (Workspace)", parent: "app:visual-studio-code", totalFootprintBytes: 1_930_000_000),
                 Owner(id: "vscode:3", kind: .vscodeWindow, label: "api (Workspace)", parent: "app:visual-studio-code", totalFootprintBytes: 1_290_000_000),
-                Owner(id: "app:google-chrome", kind: .app, label: "Google Chrome", totalFootprintBytes: 3_650_000_000),
+                Owner(id: "app:google-chrome", kind: .app, label: "Google Chrome", totalFootprintBytes: 3_650_000_000, totalCpuPct: Measured(hot ? 95 : 6)),
                 Owner(id: "app:discord", kind: .app, label: "Discord", totalFootprintBytes: 899_000_000),
             ],
             items: [item, s1, s2, node, python],

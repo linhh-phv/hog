@@ -15,6 +15,7 @@ public struct RawSystem: Sendable, Equatable {
     public var pressureLevel: Int32?
     public var uptimeS: Int64?
     public var load: [Double]?
+    public var thermal: ThermalState?
 
     public init(memTotalBytes: Int64, ncpu: Int, pageSize: Int64) {
         self.memTotalBytes = memTotalBytes; self.ncpu = ncpu; self.pageSize = pageSize
@@ -41,7 +42,21 @@ public enum SystemReader {
         s.uptimeS = uptime()
         var loads = [Double](repeating: 0, count: 3)
         if getloadavg(&loads, 3) == 3 { s.load = loads }
+        s.thermal = thermalNow()
         return s
+    }
+
+    /// macOS's thermal assessment: no command, no root, no cost (also read every 10 s for the menu bar icon).
+    public static func thermalNow() -> ThermalState? { thermal(ProcessInfo.processInfo.thermalState) }
+
+    public static func thermal(_ t: ProcessInfo.ThermalState) -> ThermalState? {
+        switch t {
+        case .nominal: .nominal
+        case .fair: .fair
+        case .serious: .serious
+        case .critical: .critical
+        @unknown default: nil
+        }
     }
 
     /// Only the pressure level: one sysctl, cheap enough for the menu bar icon every 10 s.

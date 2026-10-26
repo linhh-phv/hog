@@ -147,6 +147,63 @@ struct RAMBar: View {
     }
 }
 
+/// "CPU 23 % ? · Nhiệt ● bình thường ?": one line under the tiles (task cpu-thermal). Heat uses shape + colour + word.
+struct CPUHeatRow: View {
+    @EnvironmentObject var model: HogModel
+    let summary: MenuSummary
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text("CPU").foregroundStyle(Theme.text2)
+            Text(summary.cpuUsedPct.map { Format.percent($0, model.lang) } ?? "?").monospacedDigit()
+            QuestionButton(glossaryId: "cpu-machine")
+            Text("·").foregroundStyle(Theme.text2).padding(.horizontal, 2)
+            Text(model.t("Nhiệt", "Heat")).foregroundStyle(Theme.text2)
+            ThermalValue(thermal: summary.thermal)
+            QuestionButton(glossaryId: "thermal-state")
+            Spacer()
+        }
+        .font(Theme.small)
+    }
+}
+
+struct ThermalValue: View {
+    @EnvironmentObject var model: HogModel
+    let thermal: ThermalState?
+    var body: some View {
+        switch thermal {
+        case .nominal?: Text("● " + Format.thermal(.nominal, model.lang)).foregroundStyle(Theme.ok)
+        case .fair?: Text("◐ " + Format.thermal(.fair, model.lang)).foregroundStyle(Theme.text)
+        case .serious?: Text("▲ " + Format.thermal(.serious, model.lang)).foregroundStyle(Theme.warn)
+        case .critical?: Text("▲ " + Format.thermal(.critical, model.lang)).foregroundStyle(Theme.red)
+        case nil: Text("? " + model.t("chưa đo", "unknown")).foregroundStyle(Theme.text2)
+        }
+    }
+}
+
+/// "Đang ăn CPU": shown when warm or hotter, or the CPU at least half busy (`MenuSummary.showCPU`).
+struct CPUList: View {
+    @EnvironmentObject var model: HogModel
+    let rows: [MenuSummary.CPURow]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 4) {
+                Text(model.t("Đang ăn CPU", "Using CPU")).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.text2)
+                QuestionButton(glossaryId: "cpu-pct")
+            }
+            ForEach(rows) { r in
+                HStack {
+                    Text(r.label).lineLimit(1)
+                    Spacer()
+                    Text(Format.percent(r.pct, model.lang)).monospacedDigit()
+                }
+                .font(Theme.small)
+            }
+        }
+    }
+}
+
 struct VerdictTag: View {
     @EnvironmentObject var model: HogModel
     let verdict: Verdict

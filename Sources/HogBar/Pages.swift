@@ -67,7 +67,9 @@ struct MainPage: View {
                     Text(s.swapUsed.map { Format.bytes($0, model.lang) } ?? "?")
                 }
             }
+            CPUHeatRow(summary: s)
             RAMBar(summary: s)
+            if s.showCPU { CPUList(rows: s.cpuRows) }
         }
         .padding(Theme.s3)
         Divider().overlay(Theme.sep).padding(.horizontal, Theme.s3)
