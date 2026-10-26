@@ -26,7 +26,7 @@ Requires macOS 14+ on Apple Silicon and Swift 6 (Xcode or the command line tools
 git clone https://github.com/linhh-phv/hog.git
 cd hog
 scripts/install.sh        # Hog.app in your user Applications folder + ~/.local/bin/hog
-open ~/Applications/Hog.app
+open -a Hog               # start the menu bar app
 ```
 
 `scripts/build-app.sh` only builds `dist/Hog.app` (ad-hoc signed) without installing anything.
