@@ -176,10 +176,12 @@ public struct MenuSummary: Sendable, Equatable {
     }
 
     /// Largest items with no catalog entry, at least `unknownMinBytes`, not hard-protected (macOS itself: nothing to ask
-    /// about stopping), not already shown as a card.
+    /// about stopping), not part of an app (a "Google Chrome Helper" is already explained by its app), not a Claude
+    /// session, not already shown as a card.
     static func unknowns(_ s: Snapshot, excluding: Set<String>) -> [Unknown] {
         s.items.compactMap { i -> Unknown? in
             guard (i.catalogId.value ?? "").isEmpty, i.protection.value?.level != .hard, !excluding.contains(i.id),
+                  i.kind != .claudeSession, i.facts["owner.kind"] != .string("app"),
                   let b = i.footprintBytes.value, b >= unknownMinBytes else { return nil }
             return Unknown(itemId: i.id, label: i.label, bytes: b)
         }

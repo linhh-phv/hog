@@ -186,12 +186,31 @@ struct SuggestionCard: View {
             switch card.action {
             case .stop: SmallButton(title: model.t("Dừng…", "Stop…")) { model.prepareStop(card.itemId) }
             case .howTo: SmallButton(title: model.t("Cách đóng", "How to")) { model.prepareStop(card.itemId) }
-            case .why: Button(model.t("Vì sao?", "Why?")) { model.page = .why(card.itemId) }.buttonStyle(.plain).foregroundStyle(Theme.accent).font(Theme.small)
+            case .why: Button(model.t("Vì sao?", "Why?")) { model.page = .item(card.itemId) }.buttonStyle(.plain).foregroundStyle(Theme.accent).font(Theme.small)
             }
         }
         .padding(.vertical, Theme.s2).padding(.horizontal, 10).tile()
         .contentShape(Rectangle())
-        .onTapGesture { model.page = .why(card.itemId) }
+        .onTapGesture { model.page = .item(card.itemId) }
+    }
+}
+
+/// "Chưa rõ là gì": a big item hog has no catalog entry for. Tap → item page (copy its info to ask Claude).
+struct UnknownRow: View {
+    @EnvironmentObject var model: HogModel
+    let unknown: MenuSummary.Unknown
+
+    var body: some View {
+        Button { model.page = .item(unknown.itemId) } label: {
+            HStack(spacing: 6) {
+                Text(unknown.label).lineLimit(1)
+                Spacer()
+                Text(Format.bytes(unknown.bytes, model.lang)).monospacedDigit().foregroundStyle(Theme.text2)
+                Text("›").foregroundStyle(Theme.text2)
+            }
+            .font(Theme.small).foregroundStyle(Theme.text).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 

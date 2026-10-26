@@ -59,15 +59,28 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
     }
 
     /// Secrets masked first (`Privacy.scrubArgs` reads flag/value pairs), then every argument that contains `/` keeps only
-    /// what follows the last `/` (`~/work/acme/server.js` → `server.js`, `--dir=/x/y` → `--dir=y`).
+    /// what follows the last `/` (`~/work/acme/server.js` → `server.js`, `--dir=/x/y` → `--dir=y`), except the package name
+    /// after a package directory (`sharePath`).
     static func shareArgs(_ args: [String], home: String) -> String {
         Privacy.truncate(Privacy.scrubArgList(args, home: home).map { t -> String in
             guard t.contains("/") else { return t }
             if let eq = t.firstIndex(of: "="), t.hasPrefix("-") {
-                return String(t[...eq]) + lastComponent(String(t[t.index(after: eq)...]))
+                return String(t[...eq]) + sharePath(String(t[t.index(after: eq)...]))
             }
-            return lastComponent(t)
+            return sharePath(t)
         }.joined(separator: " "))
+    }
+
+    /// Directories whose next component is a public package name (a VS Code extension, an npm or Python package): the
+    /// best clue to what a process is, and not the person's own directory names.
+    static let packageDirs: Set<String> = ["extensions", "node_modules", "site-packages", "dist-packages", "gems"]
+
+    /// `…/extensions/<ext>/dist/server.js` → `extensions/<ext>/…/server.js`; otherwise the last component.
+    static func sharePath(_ s: String) -> String {
+        let parts = s.split(separator: "/").map(String.init)
+        guard let i = parts.lastIndex(where: packageDirs.contains), i + 1 < parts.count else { return lastComponent(s) }
+        let tail = i + 2 < parts.count ? (i + 3 < parts.count ? "/…/" : "/") + parts[parts.count - 1] : ""
+        return parts[i] + "/" + parts[i + 1] + tail
     }
 
     static func lastComponent(_ s: String) -> String {

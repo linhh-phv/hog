@@ -6,7 +6,7 @@ import SwiftUI
 /// App state. All sensing, rules and stopping go through HogCore (the CLI uses the very same code).
 @MainActor
 final class HogModel: ObservableObject {
-    enum Page: Equatable { case main, why(String), system, settings }
+    enum Page: Equatable { case main, item(String), suggestions, system, settings }
     enum LangSetting: String, CaseIterable { case system, vi, en }
 
     @Published var snapshot: Snapshot?
@@ -20,6 +20,8 @@ final class HogModel: ObservableObject {
     @Published var toast: String?
     @Published var systemRows: [SystemDetail.Row]?
     @Published var systemMeasuring = false
+    /// Item whose info was just copied (the button shows "Copied").
+    @Published var copiedItem: String?
 
     @Published var langSetting: String = UserDefaults.standard.string(forKey: "lang") ?? LangSetting.system.rawValue {
         didSet { UserDefaults.standard.set(langSetting, forKey: "lang"); reloadData(); refresh() }
@@ -119,6 +121,17 @@ final class HogModel: ObservableObject {
                 }
             }
         }
+    }
+
+    // MARK: Share
+
+    /// "Chép thông tin": `hog.share/1` to the clipboard, to paste into a chat with Claude. hog sends nothing (phase-2 design).
+    func copyShare(_ itemId: String) {
+        guard let scan, let item = snapshot?.items.first(where: { $0.id == itemId }) else { return }
+        let text = ShareInfo.make(item, scan: scan).text(lang)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        copiedItem = itemId
     }
 
     // MARK: System detail

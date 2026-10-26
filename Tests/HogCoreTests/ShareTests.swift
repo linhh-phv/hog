@@ -46,6 +46,18 @@ import Testing
         #expect(text.contains("```json") && text.contains("\"schema\" : \"hog.share/1\""))
     }
 
+    @Test func packageNamesAreKept() {
+        #expect(ShareInfo.sharePath("/Applications/Visual Studio Code.app/Contents/Resources/app/extensions/markdown-language-features/dist/serverWorkerMain")
+                == "extensions/markdown-language-features/…/serverWorkerMain")
+        #expect(ShareInfo.sharePath("/Users/me/.vscode/extensions/ms-python.vscode-pylance-2024.1.1/dist/server.bundle.js")
+                == "extensions/ms-python.vscode-pylance-2024.1.1/…/server.bundle.js")
+        #expect(ShareInfo.sharePath("/Users/me/work/web-app/node_modules/next/dist/bin/next") == "node_modules/next/…/next")
+        #expect(ShareInfo.sharePath("/Users/me/work/web-app/node_modules/vite/bin.js") == "node_modules/vite/bin.js")
+        #expect(ShareInfo.sharePath("/Users/me/work/web-app/node_modules/vite") == "node_modules/vite")
+        #expect(ShareInfo.sharePath("/Users/me/work/web-app/server.js") == "server.js")
+        #expect(ShareInfo.sharePath("/x/node_modules") == "node_modules", "nothing after the package dir")
+    }
+
     @Test func containerSharesImageNameOnly() {
         let c = DockerClient.Container(id: "abc123def4567890", name: "web-app-db", image: "registry.example.com/team/postgres:16",
                                        state: "running", publishedPorts: [5432], restartCount: 3, restartPolicy: "always")
@@ -65,9 +77,9 @@ import Testing
 }
 
 @Suite struct UnknownsTests {
-    func item(_ id: String, _ bytes: Int64, catalog: String? = nil, protection: ProtectionLevel? = nil) -> Item {
+    func item(_ id: String, _ bytes: Int64, catalog: String? = nil, protection: ProtectionLevel? = nil, ownerKind: String = "none") -> Item {
         Item(id: id, kind: .process, label: id, catalogId: catalog, pids: [1], footprintBytes: Measured(bytes),
-             protection: protection.map { Protection(level: $0, rules: ["r"]) })
+             protection: protection.map { Protection(level: $0, rules: ["r"]) }, facts: ["owner.kind": .string(ownerKind)])
     }
 
     @Test func picksLargestUncataloguedUnprotected() {
@@ -76,11 +88,14 @@ import Testing
             item("a", 300_000_000), item("b", 900_000_000), item("c", 500_000_000), item("d", 200_000_000),
             item("small", 99_000_000), item("known", 2_000_000_000, catalog: "tsserver"),
             item("macos", 3_000_000_000, protection: .hard), item("soft", 150_000_000, protection: .soft),
-            item("empty-catalog", 250_000_000, catalog: ""),
+            item("empty-catalog", 250_000_000, catalog: ""), item("chrome-helper", 800_000_000, ownerKind: "app"),
+            item("in-window", 120_000_000, ownerKind: "vscode-window"),
         ]
         let u = MenuSummary.make(s).unknowns
         #expect(u.map(\.itemId) == ["b", "c", "a"])
         #expect(MenuSummary.unknowns(s, excluding: ["b"]).map(\.itemId) == ["c", "a", "empty-catalog"])
+        #expect(MenuSummary.unknowns(s, excluding: ["b", "c", "a", "empty-catalog", "d"]).map(\.itemId) == ["soft", "in-window"],
+                "parts of an app are not unknown; VS Code window helpers are")
     }
 
     @Test func noneWhenEverythingIsKnown() {

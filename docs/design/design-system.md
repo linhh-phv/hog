@@ -71,7 +71,9 @@ HogCore lo).
 | `SuggestionCard` | verdict (chữ + hình + màu) · tên · số · lý do · một nút | nút "Dừng…" (chiến lược tự làm) hoặc "Cách đóng" (`manual`) · "Vì sao?" |
 | `StopSheet` | tiêu đề "Dừng X?", chủ sở hữu + PID, Vì sao / Tắt thì sao / hog sẽ, danh sách cổng (✓ đạt, ? cần đồng ý) | nút "Dừng" khi chỉ cần xác nhận; "Vẫn dừng" khi có cổng `?`; không có nút khi bị chặn (chỉ lý do) |
 | `GlossaryPopover` | tên · tên trong Activity Monitor (ghi "chưa đối chiếu" khi chưa kiểm) · nghĩa · đọc thế nào · nên làm gì | — |
-| `DetailPage` | trang con có "‹ Quay lại": "Vì sao?", "Đo chi tiết", "Cài đặt" | — |
+| `DetailPage` | trang con có "‹ Quay lại": trang item, "Mọi đề xuất", "Đo chi tiết", "Cài đặt" | — |
+| `ItemPage` (giai đoạn 2) | tên · là gì (danh mục, hoặc "hog chưa biết thứ này") · vì sao + độ tin · số đo có `?` (nhãn trái, số phải) · tắt thì sao · khu "Chép thông tin" | nút "✓ Đã chép" sau khi chép (tới lần mở menu sau) · "Dừng…"/"Cách đóng" khi có đề xuất |
+| `UnknownRow` (giai đoạn 2) | tên · RAM · `›`, chữ `small` | cả dòng bấm được → `ItemPage` |
 | `ScanBanner` | vòng quay nhỏ + "Đang quét… hiện bản lúc HH:MM" | chỉ khi đang quét |
 | `ResultToast` | "✓ Đã dừng X (323 MB). Ghi ở nhật ký." trên đầu menu | biến mất ở lần mở sau |
 | `Footer` | "Cập nhật HH:MM · hog dùng N MB" · Làm mới · Cài đặt | — |
@@ -79,8 +81,11 @@ HogCore lo).
 ## Luật dùng
 
 - Menu đóng: icon chỉ đổi màu theo áp lực (đọc mỗi 10 s). Mở menu: hiện bản quét gần nhất ngay + `ScanBanner`, quét đầy đủ rồi thay.
-- Đề xuất xếp `may-stop` → `ask` → `watch`; tối đa 3 thẻ, còn lại "+ N đề xuất khác". `info` không hiện trong menu (có trong
-  "Vì sao?" và `hog --json`).
+- Đề xuất xếp `may-stop` → `ask` → `watch`; tối đa 3 thẻ, còn lại "+ N đề xuất khác" (bấm → trang "Mọi đề xuất"). `info` không
+  hiện trong menu (có trong `hog --json`).
+- "Chưa rõ là gì" (giai đoạn 2): tối đa 3 `UnknownRow` sau Đề xuất — item ≥ 100 MB chưa có trong danh mục, không thuộc một app, không bị
+  bảo vệ `hard`; không có thì ẩn cả mục. Câu chú thích nói rõ để làm gì (chép thông tin hỏi Claude).
+- hog không gửi gì đi: "Chép thông tin" chỉ ghi vào clipboard; câu cạnh nút nói rõ điều đó.
 - Không có gì cần tắt: giữ mục "Đề xuất" với câu "Không có gì cần tắt. hog sẽ báo khi có." (không ẩn mục, để người dùng biết hog đã xem).
 - Cảm biến `unavailable`/`error`: mục "Chưa đo được" với lý do bằng lời ("Docker — engine đang tắt (không phải lỗi)").
 - Nút "Dừng…" luôn mở `StopSheet`; app không bao giờ dừng gì mà không qua hộp thoại này (cổng an toàn, mục 8 của thiết kế).

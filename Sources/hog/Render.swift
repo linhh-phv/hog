@@ -140,7 +140,7 @@ struct Render {
         if let o = item.ownerId.value, let owner = s.owners.first(where: { $0.id == o }) { out.append(t("Chủ sở hữu: ", "Owner: ") + owner.label) }
         if let f = s.findings.first(where: { $0.itemId == item.id }) {
             out.append("")
-            out.append(verdictLabel(f.verdict) + dim("  (\(t("độ tin", "confidence")): \(f.confidence.rawValue); \(t("quy tắc", "rules")): \(f.rules.joined(separator: ", ")))"))
+            out.append(verdictLabel(f.verdict) + dim("  (\(t("độ tin", "confidence")): \(Format.confidence(f.confidence, lang)); \(t("quy tắc", "rules")): \(f.rules.joined(separator: ", ")))"))
             out.append("  " + f.reason)
             if !f.unmeasured.isEmpty { out.append("  " + dim(t("Chưa đo: ", "Not measured: ") + f.unmeasured.joined(separator: ", "))) }
         }

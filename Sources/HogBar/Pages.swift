@@ -10,7 +10,8 @@ struct MenuView: View {
             Group {
                 switch model.page {
                 case .main: MainPage()
-                case .why(let id): WhyPage(itemId: id)
+                case .item(let id): ItemPage(itemId: id)
+                case .suggestions: SuggestionsPage()
                 case .system: SystemPage()
                 case .settings: SettingsPage()
                 }
@@ -78,7 +79,14 @@ struct MainPage: View {
             }
             ForEach(s.cards) { SuggestionCard(card: $0) }
             if s.moreCount > 0 {
-                Text(model.t("+ \(s.moreCount) đề xuất khác (hog trong terminal)", "+ \(s.moreCount) more (hog in a terminal)"))
+                Button(model.t("+ \(s.moreCount) đề xuất khác", "+ \(s.moreCount) more " + (s.moreCount == 1 ? "suggestion" : "suggestions"))) { model.page = .suggestions }
+                    .buttonStyle(.plain).foregroundStyle(Theme.accent).font(Theme.small)
+            }
+            if !s.unknowns.isEmpty {
+                SectionTitle(text: model.t("Chưa rõ là gì", "Not known yet")).padding(.top, 4)
+                VStack(spacing: 5) { ForEach(s.unknowns) { UnknownRow(unknown: $0) } }
+                Text(model.t("hog chưa có trong danh mục. Bấm để xem và chép thông tin hỏi Claude.",
+                             "Not in hog's catalog. Tap to see it and copy its info to ask Claude."))
                     .font(Theme.caption).foregroundStyle(Theme.text2)
             }
             if !s.notes.isEmpty {
@@ -90,7 +98,8 @@ struct MainPage: View {
     }
 }
 
-struct WhyPage: View {
+/// One item: what it is, why (if suggested), its numbers, what stopping costs, and "Copy info" to ask Claude elsewhere.
+struct ItemPage: View {
     @EnvironmentObject var model: HogModel
     let itemId: String
 
@@ -101,24 +110,28 @@ struct WhyPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.s2) {
                 BackButton()
-                Text(item?.label ?? itemId).font(Theme.title)
-                if let e = entry { Text(e.summary.text(model.lang) ?? "").font(Theme.small).foregroundStyle(Theme.text2) }
+                Text(item?.label ?? itemId).font(Theme.title).fixedSize(horizontal: false, vertical: true)
+                if let e = entry {
+                    Text(e.summary.text(model.lang) ?? "").font(Theme.small).foregroundStyle(Theme.text2).fixedSize(horizontal: false, vertical: true)
+                } else if item?.kind != .claudeSession {
+                    Text(model.t("hog chưa biết thứ này là gì (chưa có trong danh mục).", "hog does not know what this is yet (not in the catalog)."))
+                        .font(Theme.small).foregroundStyle(Theme.text2)
+                }
                 if let f = finding {
-                    SectionTitle(text: model.t("Vì sao · độ tin ", "Why · confidence ") + f.confidence.rawValue).padding(.top, 4)
+                    SectionTitle(text: model.t("Vì sao · độ tin ", "Why · confidence ") + Format.confidence(f.confidence, model.lang)).padding(.top, 4)
                     Text(f.reason).font(Theme.small)
                     if !f.unmeasured.isEmpty {
                         Text(model.t("Chưa đo: ", "Not measured: ") + f.unmeasured.joined(separator: ", ")).font(Theme.caption).foregroundStyle(Theme.text2)
                     }
                 }
                 if let item {
-                    Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 4) {
+                    VStack(spacing: 4) {
                         ForEach(MenuSummary.whyFacts.filter { item.facts[$0.fact].map { !$0.isNull } ?? false }, id: \.fact) { wf in
-                            GridRow {
-                                HStack(spacing: 4) {
-                                    Text(model.t(wf.vi, wf.en)).foregroundStyle(Theme.text2)
-                                    QuestionButton(glossaryId: wf.glossaryId)
-                                }
-                                Text(Format.fact(wf.fact, item.facts[wf.fact]!, model.lang)).monospacedDigit().gridColumnAlignment(.trailing)
+                            HStack(spacing: 4) {
+                                Text(model.t(wf.vi, wf.en)).foregroundStyle(Theme.text2)
+                                QuestionButton(glossaryId: wf.glossaryId)
+                                Spacer()
+                                Text(Format.fact(wf.fact, item.facts[wf.fact]!, model.lang)).monospacedDigit()
                             }
                         }
                     }
@@ -132,13 +145,44 @@ struct WhyPage: View {
                     SectionTitle(text: model.t("Tắt thì sao", "If stopped")).padding(.top, 4)
                     Text(e.stopEffect.text(model.lang) ?? "").font(Theme.small).foregroundStyle(Theme.text2).fixedSize(horizontal: false, vertical: true)
                 }
+                if item != nil {
+                    Divider().overlay(Theme.sep).padding(.vertical, 4)
+                    HStack(alignment: .center, spacing: Theme.s2) {
+                        Text(model.t("Muốn hỏi Claude? Chép thông tin (đã bỏ tên dự án, thư mục, mật khẩu) rồi dán vào chat. hog không gửi gì đi.",
+                                     "Want to ask Claude? Copy the info (project names, directories, secrets removed) and paste it into a chat. hog sends nothing."))
+                            .font(Theme.caption).foregroundStyle(Theme.text2).fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                        SmallButton(title: model.copiedItem == itemId ? model.t("✓ Đã chép", "✓ Copied") : model.t("Chép thông tin", "Copy info")) {
+                            model.copyShare(itemId)
+                        }
+                    }
+                }
                 if finding?.verdict == .mayStop || finding?.verdict == .ask {
-                    HStack { Spacer(); SmallButton(title: model.t("Dừng…", "Stop…"), role: .danger) { model.prepareStop(itemId) } }
+                    HStack {
+                        Spacer()
+                        SmallButton(title: finding?.stop.strategy == .manual ? model.t("Cách đóng", "How to") : model.t("Dừng…", "Stop…"),
+                                    role: finding?.stop.strategy == .manual ? .normal : .danger) { model.prepareStop(itemId) }
+                    }
                 }
             }
             .padding(Theme.s3)
         }
         .frame(maxHeight: 560)
+    }
+}
+
+struct SuggestionsPage: View {
+    @EnvironmentObject var model: HogModel
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.s2) {
+            BackButton()
+            Text(model.t("Mọi đề xuất", "All suggestions")).font(Theme.title)
+            ScrollView {
+                VStack(spacing: 6) { ForEach(model.summary?.allCards ?? []) { SuggestionCard(card: $0) } }
+            }
+            .frame(maxHeight: 520)
+        }
+        .padding(Theme.s3)
     }
 }
 

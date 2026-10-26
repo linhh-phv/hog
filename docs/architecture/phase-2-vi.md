@@ -52,7 +52,11 @@ Chỉ **một** item, dựng từ lần quét gần nhất. Văn bản gồm m�
 
 - **Không chép:** nhãn item (có thể chứa tên dự án, tiêu đề cửa sổ), `cwd`, `project`, nhãn chủ sở hữu, tên người dùng, thư mục, biến
   môi trường. Tham số qua `Privacy.scrubArgs` (che mật khẩu, token…), rồi mọi tham số chứa `/` chỉ giữ phần sau dấu `/` cuối cùng
-  (`~/work/acme/server.js` → `server.js`, `--dir=/x/y` → `--dir=y`).
+  (`~/work/acme/server.js` → `server.js`, `--dir=/x/y` → `--dir=y`). Ngoại lệ: tên gói ngay sau một thư mục gói
+  công khai (`extensions`, `node_modules`, `site-packages`, `dist-packages`, `gems`) được giữ — `…/extensions/markdown-language-features/dist/serverWorkerMain`
+  → `extensions/markdown-language-features/…/serverWorkerMain` — vì đó là manh mối chính (đo trên máy: một tiến trình extension của VS Code
+  chỉ còn `serverWorkerMain` nếu cắt hết). Rủi ro chấp nhận: một thư mục *của người dùng* tên `extensions/<x>` thì `<x>` lộ ra; người dùng
+  thấy nội dung trước khi dán.
 - `exe`, `parents`: chỉ tên file thực thi, không đường dẫn. `parents`: tối đa 4 tổ tiên, từ gần tới xa, dừng ở `launchd`.
 - `facts`: chỉ số và bool đo được (bỏ `null`), cộng `owner.kind`, `catalog.family`. Container: `item.image` thay cho `exe`/`args`.
 - Người dùng thấy đúng nội dung này trong clipboard / terminal trước khi dán: không có gì gửi đi ngầm.
@@ -75,7 +79,8 @@ Khi người dùng dán `hog.share/1` hay ảnh chụp:
 ## 5. Giao diện (trong design system đã duyệt)
 
 1. **"Chưa rõ là gì"** — mục mới trên trang chính, sau Đề xuất: tối đa 3 item lớn nhất (≥ 100 MB footprint) chưa có trong danh mục, không
-   bị bảo vệ `hard`. Mỗi dòng: tên file thực thi, RAM; bấm → trang item.
+   bị bảo vệ `hard`, không thuộc một app (`owner.kind` ≠ `app`: "Google Chrome Helper" đã được app của nó giải thích), không phải phiên
+   Claude, chưa hiện thành thẻ đề xuất. Mỗi dòng: tên file thực thi, RAM; bấm → trang item.
 2. **Trang item** (mở rộng trang "Vì sao?" của giai đoạn 1, dùng cho mọi item): là gì (mô tả danh mục, hoặc "hog chưa biết thứ này"),
    vì sao (nếu có đề xuất), số đo có "?", tắt thì sao, nút **"Chép thông tin"** (chép `hog.share/1`, báo "Đã chép — dán vào Claude để
    hỏi"), và nút Dừng… khi có đề xuất.
@@ -95,3 +100,7 @@ Khi người dùng dán `hog.share/1` hay ảnh chụp:
 
 | Ngày | Chỗ | Thực tế | Vì sao |
 | --- | --- | --- | --- |
+| 2026-10-26 | Ảnh `--render` | Chụp bằng `NSHostingView` trong cửa sổ AppKit ngoài màn hình thay cho `ImageRenderer` | `ImageRenderer` không vẽ nội dung `ScrollView`: trang item và "Mọi đề xuất" ra trắng (trang "Vì sao?" của giai đoạn 1 chưa từng được chụp vì vậy) |
+| 2026-10-26 | `hog explain` | Luôn phân tích đầy đủ (không giới hạn kích thước như `--json`) | id lấy từ `hog --json --full` không tra được — lỗi có từ giai đoạn 1 |
+| 2026-10-26 | Trang item | "Độ tin" dịch sang tiếng Việt (cao/vừa/thấp), cả ở CLI | trước đó in nguyên `high` |
+| 2026-10-26 | Ghi chú "Chưa đo được" | VS Code bị bộ ngắt `code --status` → câu riêng ("không trả lời lần trước; hog chờ VS Code khởi động lại") | trước đó báo nhầm "không tìm thấy lệnh `code`" |

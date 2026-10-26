@@ -128,6 +128,16 @@ public enum Format {
         }
     }
 
+    /// How sure a finding is, in words (the raw value is English).
+    public static func confidence(_ c: Confidence, _ lang: Lang) -> String {
+        switch (c, lang) {
+        case (.high, .vi): "cao"
+        case (.medium, .vi): "vừa"
+        case (.low, .vi): "thấp"
+        case (_, .en): c.rawValue
+        }
+    }
+
     /// Fills `{fact}` placeholders.
     public static func fill(_ template: String, facts: [String: FactValue], extra: [String: String] = [:], lang: Lang) -> String {
         var out = template

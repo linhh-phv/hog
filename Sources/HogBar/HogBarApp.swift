@@ -12,7 +12,7 @@ struct HogBarApp: App {
     var body: some Scene {
         MenuBarExtra {
             MenuView().environmentObject(model)
-                .onAppear { model.page = .main; model.toast = nil; model.refresh() }
+                .onAppear { model.page = .main; model.toast = nil; model.copiedItem = nil; model.refresh() }
         } label: {
             Image(nsImage: model.icon)
         }
@@ -61,18 +61,39 @@ enum Renderer {
                 }
             }
         }
+        model.expandedGroup = nil
+        // Phase 2 pages: an unknown item, then every suggestion.
+        if let unknown = model.summary?.unknowns.first {
+            model.page = .item(unknown.itemId)
+            write(model, dir, "menu-item-light")
+        }
+        if (model.summary?.moreCount ?? 0) > 0 {
+            model.page = .suggestions
+            write(model, dir, "menu-suggestions-light")
+        }
+        model.page = .main
         if let first = model.summary?.cards.first {
             model.prepareStopForRender(first.itemId)
-            let view = MenuView().environmentObject(model).environment(\.colorScheme, .light)
-            let renderer = ImageRenderer(content: view)
-            renderer.scale = 2
-            var image: NSImage?
-            NSAppearance(named: .aqua)!.performAsCurrentDrawingAppearance { image = renderer.nsImage }
-            if let tiff = image?.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff), let png = rep.representation(using: .png, properties: [:]) {
-                try? png.write(to: dir.appendingPathComponent("menu-stop-light.png"))
-            }
+            write(model, dir, "menu-stop-light")
         }
         print("rendered to \(dir.path)")
+    }
+
+    /// Lays the menu out in a real (off-screen) AppKit window, like the menu bar panel: unlike `ImageRenderer`, this draws
+    /// `ScrollView` content (the item and suggestions pages scroll).
+    static func write(_ model: HogModel, _ dir: URL, _ name: String) {
+        let host = NSHostingView(rootView: MenuView().environmentObject(model).environment(\.colorScheme, .light))
+        host.appearance = NSAppearance(named: .aqua)
+        let size = host.fittingSize
+        let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: .borderless, backing: .buffered, defer: false)
+        window.contentView = host
+        host.frame = NSRect(origin: .zero, size: size)
+        host.layoutSubtreeIfNeeded()
+        guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return }
+        host.cacheDisplay(in: host.bounds, to: rep)
+        if let png = rep.representation(using: .png, properties: [:]) {
+            try? png.write(to: dir.appendingPathComponent("\(name).png"))
+        }
     }
 
     /// Fake data shaped like a real run (no real names).
@@ -83,8 +104,15 @@ enum Renderer {
                                 "resident_ratio": .double(0.04), "launchd.restarts_after_stop": .bool(false), "owner.kind": .string("none")])
         let s1 = Item(id: "claude:91747", kind: .claudeSession, label: "Claude Code — hub", pids: [91747], footprintBytes: Measured(226_000_000))
         let s2 = Item(id: "claude:39806", kind: .claudeSession, label: "Claude Code — hub", pids: [39806], footprintBytes: Measured(161_000_000))
-        func f(_ id: String, _ reason: String, _ strategy: StopStrategy) -> Finding {
-            Finding(itemId: id, verdict: .mayStop, confidence: .high, rules: ["x"], reason: reason, evidence: [:], unmeasured: [],
+        let node = Item(id: "proc:52311:1", kind: .process, label: "node", pids: [52311], footprintBytes: Measured(412_000_000),
+                        residentRatio: Measured(0.3),
+                        facts: ["age_s": .int(172_800), "footprint_bytes": .int(412_000_000), "cpu.avg_pct": .double(0.1),
+                                "net.listen_count": .int(1), "net.established": .int(0), "orphan": .bool(false),
+                                "resident_ratio": .double(0.3), "owner.kind": .string("none")])
+        let python = Item(id: "proc:48820:1", kind: .process, label: "python3.12", pids: [48820], footprintBytes: Measured(268_000_000),
+                          facts: ["age_s": .int(86_400), "footprint_bytes": .int(268_000_000), "owner.kind": .string("none")])
+        func f(_ id: String, _ reason: String, _ strategy: StopStrategy, _ verdict: Verdict = .mayStop) -> Finding {
+            Finding(itemId: id, verdict: verdict, confidence: .high, rules: ["x"], reason: reason, evidence: [:], unmeasured: [],
                     stop: StopAdvice(strategy: strategy, respawns: .onDemand, effect: "Tắt không mất dữ liệu; lần sau Metro/Jest cần thì nó được bật lại."))
         }
         return Snapshot(
@@ -105,10 +133,11 @@ enum Renderer {
                 Owner(id: "app:google-chrome", kind: .app, label: "Google Chrome", totalFootprintBytes: 3_650_000_000),
                 Owner(id: "app:discord", kind: .app, label: "Discord", totalFootprintBytes: 899_000_000),
             ],
-            items: [item, s1, s2],
+            items: [item, s1, s2, node, python],
             findings: [f(item.id, "Watchman chạy 3 giờ, không công cụ nào đăng ký theo dõi.", .watchmanShutdown),
                        f(s1.id, "Phiên Claude rảnh 2 giờ, vẫn giữ 216 MB.", .manual),
-                       f(s2.id, "Phiên Claude rảnh 5 giờ, vẫn giữ 154 MB.", .manual)])
+                       f(s2.id, "Phiên Claude rảnh 5 giờ, vẫn giữ 154 MB.", .manual),
+                       f(node.id, "Chạy 2 ngày, giữ 393 MB, mở 1 cổng nhưng không ai kết nối.", .signal, .watch)])
     }
 }
 
