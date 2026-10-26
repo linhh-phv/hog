@@ -36,7 +36,7 @@ enum SampleSnapshot {
             memory: MemoryInfo(freeBytes: Measured(65_000_000), wiredBytes: Measured(2_731_000_000),
                                compressorBytes: Measured(5_720_000_000), compressedStoredBytes: Measured(11_130_000_000),
                                swapUsedBytes: Measured(3_292_000_000), swapTotalBytes: Measured(4_294_967_296),
-                               pressure: Measured(.normal), unreadableProcessCount: 200, systemDetail: nil),
+                               pressure: Measured(.normal), unreadableProcessCount: 200, measuredFootprintBytes: 19_050_000_000, systemDetail: nil),
             cpu: CPUInfo(userPct: Measured(8.5), sysPct: Measured(13.1), idlePct: Measured(78.4), load: Measured([1.6, 2.2, 2.7])),
             headline: Headline(level: .ok,
                                text: "Máy chưa thiếu RAM (áp lực: bình thường), nhưng đã nén 10,4 GB dữ liệu (chiếm 5,3 GB RAM) và đẩy 3,1 GB ra ổ đĩa. Có 1 thứ có thể tắt: watchman (giữ 1,3 GB, 11 ngày không ai dùng).",

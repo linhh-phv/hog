@@ -99,6 +99,7 @@
     "compressed_stored_bytes" : 11130000000,
     "compressor_bytes" : 5720000000,
     "free_bytes" : 65000000,
+    "measured_footprint_bytes" : 19050000000,
     "pressure" : "normal",
     "swap_total_bytes" : 4294967296,
     "swap_used_bytes" : 3292000000,

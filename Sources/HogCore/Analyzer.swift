@@ -101,7 +101,8 @@ public struct Analyzer: Sendable {
                                 compressedStoredBytes: Measured(scan.system.compressedStoredBytes),
                                 swapUsedBytes: Measured(scan.system.swapUsedBytes), swapTotalBytes: Measured(scan.system.swapTotalBytes),
                                 pressure: Measured(SystemReader.pressure(scan.system.pressureLevel)),
-                                unreadableProcessCount: scan.processes.values.filter { $0.footprintBytes == nil }.count)
+                                unreadableProcessCount: scan.processes.values.filter { $0.footprintBytes == nil }.count,
+                                measuredFootprintBytes: scan.processes.values.reduce(0) { $0 + ($1.footprintBytes ?? 0) })
         var snapshot = Snapshot(
             lang: lang, takenAt: scan.takenAt,
             hog: HogInfo(pid: scan.selfPid, ancestors: selfChain.chain, ancestorsComplete: selfChain.complete,

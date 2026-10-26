@@ -73,17 +73,21 @@ public struct MemoryInfo: Codable, Sendable, Equatable {
     public var pressure: Measured<Pressure>
     /// Processes whose memory could not be read (other users / root). No estimate is made (design 3.5).
     public var unreadableProcessCount: Int
+    /// Sum of `footprint` over every process that could be read. Footprints include compressed memory, so this can
+    /// exceed physical RAM; it is the base of the "who eats what" bar, never subtracted from RAM.
+    public var measuredFootprintBytes: Int64
     /// Filled only by "measure system detail" (one `top` run); `null` otherwise.
     public var systemDetail: Measured<[SystemProcess]>
 
     public init(freeBytes: Measured<Int64> = nil, wiredBytes: Measured<Int64> = nil, compressorBytes: Measured<Int64> = nil,
                 compressedStoredBytes: Measured<Int64> = nil, swapUsedBytes: Measured<Int64> = nil,
                 swapTotalBytes: Measured<Int64> = nil, pressure: Measured<Pressure> = nil, unreadableProcessCount: Int = 0,
-                systemDetail: Measured<[SystemProcess]> = nil) {
+                measuredFootprintBytes: Int64 = 0, systemDetail: Measured<[SystemProcess]> = nil) {
         self.freeBytes = freeBytes; self.wiredBytes = wiredBytes; self.compressorBytes = compressorBytes
         self.compressedStoredBytes = compressedStoredBytes; self.swapUsedBytes = swapUsedBytes
         self.swapTotalBytes = swapTotalBytes; self.pressure = pressure
-        self.unreadableProcessCount = unreadableProcessCount; self.systemDetail = systemDetail
+        self.unreadableProcessCount = unreadableProcessCount; self.measuredFootprintBytes = measuredFootprintBytes
+        self.systemDetail = systemDetail
     }
 }
 
