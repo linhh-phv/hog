@@ -155,4 +155,50 @@ import Testing
         let record = analyzer.analyze(scan).processes.first { $0.pid == 500 }
         #expect(record?.cpu.avgPct.value.map { $0 <= 100 } == true, "processes[] uses the same average (reviewer 2)")
     }
+
+    // Reviewer 3 + QA 3 (2026-10-27): the measurement itself, and boundaries mutations survived.
+    @Test func hogCPUPercentFromRusage() {
+        let t = Date()
+        #expect(Scanner.cpuPercent(from: (t, 1.0), to: (t.addingTimeInterval(2), 1.5)) == 25, "0.5 s of CPU in 2 s")
+        #expect(Scanner.cpuPercent(from: (t, 1.0), to: (t, 2.0)) == nil, "empty window")
+        #expect(Scanner.cpuPercent(from: (t, 2.0), to: (t.addingTimeInterval(1), 1.0)) == 0, "never negative")
+    }
+
+    @Test func ownCPUCountsFinishedChildren() throws {
+        let before = Scanner.ownCPUSeconds()
+        // A child that burns ~0.2 s of CPU and is waited for by Command.run.
+        _ = try #require(Command.run("/bin/sh", ["-c", "i=0; while [ $i -lt 40000 ]; do i=$((i+1)); done"], timeout: 20))
+        #expect(Scanner.ownCPUSeconds() - before > 0.05, "RUSAGE_CHILDREN is part of hog's own CPU")
+    }
+
+    @Test func busyBoundaryAndFastMode() {
+        #expect(!analyzer.analyze(scan(thermal: .nominal, idle: 20.5)).headline.text.contains("busy"), "79.5 %")
+        #expect(analyzer.analyze(scan(thermal: .nominal, idle: 20)).headline.text.contains("The CPU is busy"), "80 %")
+        #expect(!analyzer.analyze(scan(thermal: .nominal, idle: nil)).headline.text.contains("busy"), "not measured: not busy")
+        let half = MenuSummary.make(analyzer.analyze(scan(thermal: .nominal, idle: 50.5)))
+        #expect(!half.showCPU, "49.5 % is under the line")
+    }
+
+    @Test func atMostThreeLinesAndGroupedByProject() throws {
+        func proc(_ pid: Int32, _ exe: String, cwd: String) -> RawProcess {
+            var p = RawProcess(pid: pid); p.ppid = 1; p.uid = getuid(); p.footprintBytes = 10_000_000
+            p.exePath = exe; p.cwd = cwd; p.startSec = Int64(Date().timeIntervalSince1970) - 100
+            return p
+        }
+        let home = NSTemporaryDirectory() + "hog-cpu-\(UUID().uuidString)"
+        for proj in ["alpha", "beta"] {
+            try FileManager.default.createDirectory(atPath: home + "/w/\(proj)/.git", withIntermediateDirectories: true)
+        }
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        let procs = [proc(1, "/usr/local/bin/node", cwd: home + "/w/alpha"), proc(2, "/usr/local/bin/node", cwd: home + "/w/alpha"),
+                     proc(3, "/usr/local/bin/node", cwd: home + "/w/beta"), proc(4, "/usr/bin/a", cwd: "/"), proc(5, "/usr/bin/b", cwd: "/")]
+        let scan = Scan(home: home, system: RawSystem(memTotalBytes: 16 << 30, ncpu: 8, pageSize: 16384), cpu: CPUSplit(user: 10, sys: 0, idle: 90),
+                        processes: Dictionary(uniqueKeysWithValues: procs.map { ($0.pid, $0) }),
+                        cpuNowPct: [1: 10, 2: 10, 3: 15, 4: 5, 5: 4], launchd: [:])
+        let s = analyzer.analyze(scan)
+        let top = try #require(s.cpu.top.value)
+        #expect(top.contains { $0.label == "node — alpha (×2)" && $0.pct == 20 })
+        #expect(top.contains { $0.label == "node — beta" && $0.pct == 15 }, "another project is another line")
+        #expect(MenuSummary.cpuRows(s, max: MenuSummary.maxCPURows).count == 3)
+    }
 }

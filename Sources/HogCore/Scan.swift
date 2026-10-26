@@ -64,11 +64,11 @@ public struct Scanner: Sendable {
 
     public func scan() -> Scan {
         let started = Date()
-        let ticks0 = fast ? nil : SystemReader.cpuTicks()
-        let usage0 = (Date(), Self.ownCPUSeconds())
         let first = Self.readAll()
 
-        // External sensors in parallel with the CPU sampling interval.
+        // External sensors first, in parallel, then the CPU window: nothing of hog's runs while the machine is sampled.
+        // `code --status` starts a `Code --status` that is not hog's child, so its CPU would otherwise count as "system"
+        // (reviewer 2026-10-27: +200 points while VS Code ran).
         nonisolated(unsafe) var launchd: Sensed<[Int32: String]>?
         nonisolated(unsafe) var network: Sensed<ExternalSensors.Network>?
         nonisolated(unsafe) var vscode: Sensed<CodeStatusParser.Status>?
@@ -94,19 +94,34 @@ public struct Scanner: Sendable {
             }
             q.async(group: group) { watchman = ext.watchman() }
         }
-        if !fast { Thread.sleep(forTimeInterval: max(0, cpuInterval - Date().timeIntervalSince(started))) }
-        let second = fast ? first : Self.readAll(includeArgs: false)
-        let sampledAt = Date()
-        let ticks1 = fast ? nil : SystemReader.cpuTicks()
-        let usage1 = (Date(), Self.ownCPUSeconds())
         group.wait()
+
+        // The CPU window: machine ticks, every process's CPU time, sleep, again. hog only sleeps in between.
+        var ticks0: SystemReader.CPUTicks?, ticks1: SystemReader.CPUTicks?
+        var usage0 = (Date(), 0.0), usage1 = (Date(), 0.0)
+        var before: [Int32: RawProcess] = [:], second: [Int32: RawProcess] = [:]
+        var sampledAt = Date()
+        var elapsed = cpuInterval
+        if !fast {
+            ticks0 = SystemReader.cpuTicks()
+            usage0 = (Date(), Self.ownCPUSeconds())
+            before = Self.readAll(includeArgs: false)
+            let windowStart = Date()
+            Thread.sleep(forTimeInterval: cpuInterval)
+            second = Self.readAll(includeArgs: false)
+            sampledAt = Date()
+            elapsed = sampledAt.timeIntervalSince(windowStart)
+            ticks1 = SystemReader.cpuTicks()
+            usage1 = (Date(), Self.ownCPUSeconds())
+        }
 
         var processes = first
         var cpuNow: [Int32: Double] = [:]
         if !fast {
-            let elapsedNs = cpuInterval * 1_000_000_000
+            let elapsedNs = elapsed * 1_000_000_000
             for (pid, p) in second {
-                guard let a = first[pid]?.cpuTimeNs, let b = p.cpuTimeNs, b >= a, first[pid]?.startSec == p.startSec else { continue }
+                guard let a = before[pid]?.cpuTimeNs, let b = p.cpuTimeNs, b >= a, before[pid]?.startSec == p.startSec,
+                      first[pid]?.startSec == p.startSec else { continue }
                 cpuNow[pid] = Double(b - a) / elapsedNs * 100
                 processes[pid]?.cpuTimeNs = b
                 processes[pid]?.footprintBytes = p.footprintBytes
@@ -134,9 +149,14 @@ public struct Scanner: Sendable {
             .with {
                 guard !fast else { return }
                 $0.cpuSampledAt = sampledAt
-                let window = usage1.0.timeIntervalSince(usage0.0)
-                if window > 0 { $0.hogCpuPct = max(0, usage1.1 - usage0.1) / window * 100 }
+                $0.hogCpuPct = Self.cpuPercent(from: usage0, to: usage1)
             }
+    }
+
+    /// % of one core used between two `(time, CPU seconds)` readings; `nil` for an empty window.
+    static func cpuPercent(from a: (Date, Double), to b: (Date, Double)) -> Double? {
+        let window = b.0.timeIntervalSince(a.0)
+        return window > 0 ? max(0, b.1 - a.1) / window * 100 : nil
     }
 
     /// CPU seconds of this process and of its children that have been waited for (`Command.run` waits for each).
