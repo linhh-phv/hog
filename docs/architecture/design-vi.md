@@ -1,7 +1,7 @@
 # hog — thiết kế giai đoạn 1
 
-> Trạng thái: **đã duyệt** (2026-10-26), cả 10 câu ở mục 12 đã chốt. Chưa có dòng code nào. Trong lúc triển khai, chỗ nào thực
-> tế khác thiết kế thì sửa tài liệu cùng code (user: *"sau khi triển khai xong thì có gì update sau"*).
+> Trạng thái: **đã duyệt** (2026-10-26), cả 10 câu ở mục 12 đã chốt. **Đang triển khai** (lõi + CLI xong; app thanh menu chưa).
+> Chỗ thực tế khác thiết kế được sửa thẳng vào tài liệu và ghi ở mục 13 (user: *"sau khi triển khai xong thì có gì update sau"*).
 > Đổi so với bản 1 (2026-10-15): viết bằng **Swift** thay vì Go, có **app trên thanh menu macOS** ngay giai đoạn 1, và
 > thêm **tầng giải nghĩa số đo** (mục 5) — cả ba do chủ dự án chốt ngày 2026-10-26.
 > Ngôn ngữ: tiếng Việt, vì người duyệt là chủ dự án; README và code của repo vẫn là tiếng Anh.
@@ -368,7 +368,7 @@ Quy tắc là **dữ liệu** (`rules/<id>.json`). Ngôn ngữ cố ý nhỏ: kh
   `siblings.same_catalog_other_windows`, `container.restart_count`, `container.restart_policy`, `container.state`,
   `container.uptime_s`, `container.connections`, `watchman.subscriptions`, `catalog.detached`, `launchd.label`, `launchd.restarts_after_stop`,
   `session.busy`, `session.idle_s`, `self.ancestor`, `own` (uid của tiến trình = uid của
-  người chạy hog), `exe.name` (tên file thực thi), `exe.system` (đường dẫn thực thi dưới `/System`, `/bin`, `/sbin`, `/usr/bin`, `/usr/sbin`, `/usr/libexec`,
+  người chạy hog), `exe.name` (tên file thực thi), `exe.macos` (dưới `/System` hoặc `/Library/Apple`: chính macOS), `exe.system` (đường dẫn thực thi dưới `/System`, `/bin`, `/sbin`, `/usr/bin`, `/usr/sbin`, `/usr/libexec`,
   `/usr/lib`, `/usr/share`, `/Library/Apple`; **không** gồm `/usr/local` — nơi công cụ của user như `/usr/local/go/bin/go` hay Node cài
   bằng pkg nằm).
   Thêm fact = thêm code cảm biến; thêm quy tắc = thêm file.
@@ -401,7 +401,7 @@ Thứ tự hiển thị: `may-stop` / `ask` > `watch` > `info`. **Mọi** quy t�
 | Quy tắc | Lớp / verdict | Điều kiện (rút gọn) |
 | --- | --- | --- |
 | `protect-self` | protect, `hard` | item là hog, hoặc tổ tiên của hog (shell, phiên Claude đang gọi hog, cửa sổ chứa nó) |
-| `protect-foreign` | protect, `hard` | `own` = false **hoặc** `exe.system` = true **hoặc** `exe.name` ∈ {`launchd`, `WindowServer`, `kernel_task`}. Tiến trình hệ thống chạy bằng uid của user (Dock, cfprefsd… dưới `/System`) cũng được bảo vệ nhờ `exe.system` |
+| `protect-foreign` | protect, `hard` | `own` = false **hoặc** `exe.macos` = true **hoặc** `exe.name` ∈ {`launchd`, `WindowServer`, `kernel_task`} **hoặc** (`exe.system` = true **và** là job launchd). Tiến trình của macOS chạy bằng uid của user (Dock, cfprefsd… dưới `/System`) được bảo vệ nhờ `exe.macos`. Công cụ dưới `/usr/bin`, `/bin` mà user tự chạy từ shell (tunnel `ssh -N -L`, `python3 -m http.server`) **không** bị chặn cứng — khi chạy thật, bản đầu chặn cả `/bin/sleep` do user chạy, nên không dừng được đúng loại mồ côi cần bắt |
 | `protect-busy-owner` | protect, `soft` | (`applies_to`: `process`, `container`) có owner (`owner.kind` ≠ `none`) và (`owner.busy` là true **hoặc unknown**, hoặc `owner.idle_s` < 600). Mồ côi không owner → `owner.busy` = false. Cửa sổ VS Code chưa có số đo bận/rảnh → `unknown` → tiến trình con được bảo vệ mức `soft` |
 | `orphan-quiet` | advice, `may-stop` | mồ côi + **không** phải daemon cố ý tách (`catalog.detached` = false) + 0 kết nối + tuổi ≥ 1 giờ + CPU trung bình < 1 % |
 | `dormant-large` | advice, `watch` | `footprint_bytes` ≥ 500 MB và `resident_ratio` < 0,1 — "chiếm nhiều mà gần như không ai đụng tới" (bằng chứng độc lập, cộng thêm vào `confidence` của các đề xuất khác) |
@@ -411,7 +411,7 @@ Thứ tự hiển thị: `may-stop` / `ask` > `watch` > `info`. **Mọi** quy t�
 | `container-restart-high` | advice, `watch` | `restart_count` ≥ 10 — luôn hiện để người xem log, kể cả khi `connections` là `null` |
 | `container-no-clients` | advice, `watch` | đang chạy, `connections` = 0 (chưa đủ để kết luận khi chưa có lịch sử) |
 | `watchman-no-subscribers` | advice, `may-stop` | catalog `watchman`, `watchman.subscriptions` = 0, tuổi ≥ 1 giờ. **Không** đòi `orphan`: watchman là daemon, cha luôn là PID 1 và cwd `/` |
-| `launchd-restarts` | advice, `info` | `launchd.restarts_after_stop` = true và `footprint_bytes` ≥ 100 MB — "launchd sẽ bật lại nó nếu chỉ dừng". Việc **không gửi tín hiệu** cho job như vậy nằm trong code dựng kế hoạch dừng (mục 8), không trong quy tắc: kế hoạch tụt về hướng dẫn (ví dụ `launchctl bootout gui/<uid>/<label>`). Giai đoạn 1 hog **không** gỡ job launchd |
+| `launchd-restarts` | advice, `info` | `launchd.restarts_after_stop` = true, `footprint_bytes` ≥ 100 MB, `exe.system` = false (Finder, ControlCenter… không bao giờ bị dừng, dòng này với chúng là nhiễu) — "launchd sẽ bật lại nó nếu chỉ dừng". Việc **không gửi tín hiệu** cho job như vậy nằm trong code dựng kế hoạch dừng (mục 8), không trong quy tắc: kế hoạch tụt về hướng dẫn (ví dụ `launchctl bootout gui/<uid>/<label>`). Giai đoạn 1 hog **không** gỡ job launchd |
 | `duplicate-language-server` | advice, `info` | `catalog.family` = `language-server` và `siblings.same_catalog_other_windows` ≥ 1 |
 | `memory-heavy` | advice, `watch` | `footprint_bytes` ≥ 1 GiB |
 
@@ -454,7 +454,8 @@ Một mục = một file `catalog/<id>.json`: "đây là cái gì, tắt thì sa
 
 - `match`: **một** phần tử khớp là đủ; trong một phần tử **mọi** điều kiện phải đúng. Điều kiện: `exe` (so tên file từ đường dẫn thực thi đã resolve — `proc_pidpath`, không phải `argv[0]`: qa thấy `screen` có
   `argv[0]` = `/usr/bin/SCREEN` còn `proc_pidpath` = `/usr/bin/screen`), `exe_path_contains`,
-  `args_contains`, `parent_catalog`, `listens_port`, `container_image`. Nhiều mục cùng khớp → mục nhiều điều kiện hơn thắng.
+  `args_contains`, `parent_catalog`, `listens_port`, `container_image` (`""` = mọi container), `vscode_role` (vai trò trong `code --status`:
+  file watcher, pty host và shared process của VS Code có **tham số giống hệt nhau**, chỉ phân biệt được bằng vai trò). Nhiều mục cùng khớp → mục nhiều điều kiện hơn thắng.
 - `detached_by_design` (bool, mặc định `false`): thứ người dùng **cố ý** để chạy nền tách khỏi shell (tmux, screen, Gradle daemon). Cho
   fact `catalog.detached` = true, nên `orphan-quiet` không đề xuất dừng nó dù khớp định nghĩa mồ côi (mục 3.4).
 - `respawns`: `never` · `by-parent` · `on-demand` · `supervisor`. Dừng thứ `by-parent` là vô ích → hog gợi ý đóng cửa sổ.
@@ -587,8 +588,8 @@ Mã thoát CLI: `0` xong · `1` lỗi · `2` dùng sai · `3` cần người xá
    `orphan-quiet`; `procStart` đọc như UTC — test này **chạy với `TZ` khác UTC** (runner CI thường là UTC, sẽ không bắt được lỗi
    đọc nhầm giờ địa phương); đường dẫn `KERN_PROCARGS2` tương đối → `null`.
 8. **Hợp đồng JSON** — golden file; kiểm số nguyên byte, thời gian UTC, không có đường dẫn home tuyệt đối, không có biến môi trường.
-9. **`hog ports`** — danh sách cổng/PID/dự án khớp `lps` v0.1.0 trên cùng fixture; riêng nhãn `[orphan]` dùng định nghĩa mới ở mục 3.4
-   (cố ý khác `lps`), test ghi rõ các dòng khác vì lý do đó.
+9. **`hog ports`** — PID, cổng, lệnh, dự án khớp `lps` v0.1.0: test tích hợp chạy chính `legacy/lps` trên máy rồi so (chỉ so PID cả hai
+   cùng thấy, vì cổng có thể mở/đóng giữa hai lần chạy); cột CWD (`~`) và nhãn `[orphan]` (mục 3.4) cố ý khác.
 10. **Trên máy thật** (bạn chạy, chụp màn hình gửi lại): CLI < 4 s; app mở menu < 0,5 s với bản quét gần nhất; app ≤ 50 MB; nhận
    ra cửa sổ VS Code sở hữu tsserver; `idle_s` cho từng phiên Claude; watchman không ai đăng ký được đề xuất; docker `unavailable` khi engine
    tắt; cột "Activity Monitor" của bảng thuật ngữ được đối chiếu bằng mắt.
@@ -646,3 +647,16 @@ docs/architecture/design-vi.md  tài liệu này
 | 8 | Cài đặt giai đoạn 1 | Build từ nguồn; gỡ `lps.rb` khỏi tap khi hog có bản đầu |
 | 9 | Tiến trình hệ thống không đọc được | **Gộp một dòng + nút "Đo chi tiết" chạy `top` một lần** (mục 3.5). Dòng gộp không ghi số ước tính: phép trừ ra số âm — reviewer phát hiện ở mốc chốt 2026-10-26 |
 | 10 | App lấy mẫu | Icon mỗi 10 s chỉ đọc mức áp lực; quét đầy khi mở menu |
+
+## 13. Chỗ triển khai khác thiết kế
+
+Ghi khi code giai đoạn 1 (task `hog/phase-1`), theo lời user *"sau khi triển khai xong thì có gì update sau"*.
+
+| Ngày | Chỗ | Thực tế | Vì sao |
+| --- | --- | --- | --- |
+| 2026-10-26 | Danh mục, mục 7 | Thêm điều kiện khớp `vscode_role`; `container_image: ""` = mọi container | File watcher, pty host, shared process của VS Code có tham số giống hệt nhau (đo trên máy); `"x".contains("")` của Swift là false |
+| 2026-10-26 | Fact, mục 6 | Thêm `catalog.id`, `exe.macos` | Quy tắc watchman cần nhận ra mục danh mục; tách "chính macOS" khỏi "công cụ hệ thống user tự chạy" |
+| 2026-10-26 | `protect-foreign`, mục 6.2 | Không chặn cứng mọi thứ dưới `/usr/bin`, `/bin` | Chạy thật: chặn luôn `/bin/sleep` do user chạy, tức chặn đúng loại mồ côi cần bắt |
+| 2026-10-26 | Cảm biến launchd, mục 3.1 | `launchctl print` chỉ gọi cho ứng viên `may-stop`/`ask`, song song | Gọi cho mọi job lớn tốn 0,3 s (mỗi lần là một tiến trình); không ảnh hưởng kết luận vì fact này chỉ quyết định cách dừng |
+| 2026-10-26 | Thời gian, mục 3.1 | Đo bản release trên máy: `hog` ~3 s, `--fast` 0,28–0,30 s | Đạt mục tiêu 4 s và 0,5 s |
+| 2026-10-26 | Dữ liệu đi kèm | 22 mục danh mục, 14 quy tắc, 16 mục thuật ngữ | Bảng ở mục 5.2, 6.2, 7 |
