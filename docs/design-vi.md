@@ -509,7 +509,7 @@ docs/design-vi.md             tài liệu này
 
 - Swift 6 (máy có Swift 6.4), macOS 14 trở lên (`MenuBarExtra` cần 13), arm64. **Không phụ thuộc thư viện ngoài.**
 - Build bằng SwiftPM, không có project Xcode để duy trì; `scripts/build-app.sh` tự đóng gói `.app`.
-- **Cài đặt giai đoạn 1: build từ nguồn** — `scripts/install.sh` đặt CLI vào `~/.local/bin/hog` và app vào `~/Applications/Hog.app`.
+- **Cài đặt giai đoạn 1: build từ nguồn** — `scripts/install.sh` đặt CLI vào `~/.local/bin/hog` và app `Hog.app` vào thư mục Applications của người dùng.
   Build tại máy nên không bị Gatekeeper chặn như app tải về chưa notarize. Phát hành qua Release/tap để sau, khi đã ổn định.
 - Tap: khi hog có bản đầu, **gỡ `Formula/lps.rb`** (kèm đoạn formula tự xoá bản `lps` không-brew ở thư mục người dùng — hành vi xoá
   file ngoài quyền của một formula). Nếu sau này phát hành qua tap: dùng file đính kèm Release + `SHA256SUMS`, **không** dùng tarball
