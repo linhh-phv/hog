@@ -524,7 +524,7 @@ Resources/                    catalog/ · rules/ · explain/ (glossary, headline
 Tests/HogCoreTests/           Swift Testing
 testdata/                     fixture đã làm sạch
 scripts/                      build-app.sh (đóng gói Hog.app, Info.plist LSUIElement, ký ad-hoc) · install.sh
-docs/design-vi.md             tài liệu này
+docs/architecture/design-vi.md  tài liệu này
 ```
 
 - Swift 6 (máy có Swift 6.4), macOS 14 trở lên (`MenuBarExtra` cần 13), arm64. **Không phụ thuộc thư viện ngoài.**
