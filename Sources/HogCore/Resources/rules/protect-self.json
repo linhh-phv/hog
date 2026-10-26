@@ -1,0 +1,17 @@
+{
+  "id": "protect-self",
+  "applies_to": [
+    "process",
+    "claude-session"
+  ],
+  "class": "protect",
+  "level": "hard",
+  "when": {
+    "fact": "self.ancestor",
+    "eq": true
+  },
+  "reason": {
+    "vi": "Đây là hog hoặc thứ đang chạy hog (shell, phiên Claude, cửa sổ chứa nó) — không bao giờ dừng.",
+    "en": "This is hog or something running hog (shell, Claude session, its window) — never stopped."
+  }
+}

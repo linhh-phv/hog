@@ -1,0 +1,24 @@
+{
+  "id": "dormant-large",
+  "applies_to": [
+    "process"
+  ],
+  "class": "advice",
+  "verdict": "watch",
+  "when": {
+    "all": [
+      {
+        "fact": "footprint_bytes",
+        "gte": 524288000
+      },
+      {
+        "fact": "resident_ratio",
+        "lt": 0.1
+      }
+    ]
+  },
+  "reason": {
+    "vi": "Giữ {footprint_bytes} nhưng chỉ {resident_ratio} còn nằm trong RAM — lâu rồi không ai đụng tới.",
+    "en": "Holds {footprint_bytes} but only {resident_ratio} is still in RAM — untouched for a long time."
+  }
+}

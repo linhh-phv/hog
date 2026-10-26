@@ -1,0 +1,30 @@
+{
+  "id": "tsserver",
+  "name": {
+    "vi": "Máy chủ ngôn ngữ TypeScript",
+    "en": "TypeScript language server"
+  },
+  "family": "language-server",
+  "summary": {
+    "vi": "tsserver phân tích code TypeScript/JavaScript cho gợi ý, báo lỗi, đi tới định nghĩa. Dự án lớn có thể ngốn hàng GB.",
+    "en": "tsserver analyses TypeScript/JavaScript for completions, errors and go-to-definition. Large projects can take several GB."
+  },
+  "stop_effect": {
+    "vi": "VS Code bật lại ngay. Muốn giảm RAM: lệnh \"TypeScript: Restart TS Server\" trong VS Code, hoặc đóng cửa sổ không dùng.",
+    "en": "VS Code restarts it at once. To reduce memory: run \"TypeScript: Restart TS Server\" in VS Code, or close windows you are not using."
+  },
+  "respawns": "by-parent",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "args_contains": "tsserver.js"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

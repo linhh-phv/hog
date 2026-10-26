@@ -1,0 +1,54 @@
+{
+  "ok_clean": {
+    "text": {
+      "vi": "Máy đang đủ RAM (áp lực: bình thường). Nặng nhất: {top1}.",
+      "en": "The machine has enough memory (pressure: normal). Biggest: {top1}."
+    },
+    "glossary_ids": [
+      "memory-pressure",
+      "footprint"
+    ]
+  },
+  "ok_suggest": {
+    "text": {
+      "vi": "Máy chưa thiếu RAM (áp lực: bình thường), nhưng đã nén {compressed_stored} dữ liệu (chiếm {compressor} RAM) và đẩy {swap} ra ổ đĩa. Có {n} thứ có thể tắt: {list}.",
+      "en": "The machine is not short of memory (pressure: normal), but {compressed_stored} of data is compressed (taking {compressor} of RAM) and {swap} is swapped to disk. {n} thing(s) can be stopped: {list}."
+    },
+    "glossary_ids": [
+      "memory-pressure",
+      "compressed-stored",
+      "compressor-occupied",
+      "swap-used"
+    ]
+  },
+  "warn": {
+    "text": {
+      "vi": "Máy đang thiếu RAM: đã nén {compressed_stored} dữ liệu và đẩy {swap} ra ổ đĩa, nên chậm. Ăn nhiều nhất: {top3}.",
+      "en": "The machine is short of memory: {compressed_stored} of data compressed and {swap} swapped to disk, so it is slow. Biggest: {top3}."
+    },
+    "glossary_ids": [
+      "memory-pressure",
+      "compressed-stored",
+      "swap-used"
+    ]
+  },
+  "critical": {
+    "text": {
+      "vi": "Máy đang thiếu RAM nặng. Nên đóng bớt: {list}. Ăn nhiều nhất: {top3}.",
+      "en": "The machine is critically short of memory. Close some of: {list}. Biggest: {top3}."
+    },
+    "glossary_ids": [
+      "memory-pressure",
+      "swap-used"
+    ]
+  },
+  "unknown": {
+    "text": {
+      "vi": "Chưa đọc được áp lực bộ nhớ. Ăn nhiều nhất: {top3}.",
+      "en": "Memory pressure could not be read. Biggest: {top3}."
+    },
+    "glossary_ids": [
+      "footprint"
+    ]
+  }
+}

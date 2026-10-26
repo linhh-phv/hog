@@ -1,0 +1,25 @@
+{
+  "id": "wired",
+  "activity_monitor": "Wired Memory",
+  "name": {
+    "vi": "Bộ nhớ hệ thống cố định",
+    "en": "Wired memory"
+  },
+  "plain": {
+    "vi": "Bộ nhớ của nhân macOS, không nén được, không tắt được.",
+    "en": "Memory of the macOS kernel; cannot be compressed or stopped."
+  },
+  "how_to_read": {
+    "vi": "Thường vài GB; không cần quan tâm.",
+    "en": "Usually a few GB; nothing to worry about."
+  },
+  "act": {
+    "vi": "Không làm gì được và không cần làm gì.",
+    "en": "Nothing to do."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

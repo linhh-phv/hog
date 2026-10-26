@@ -1,0 +1,30 @@
+{
+  "id": "pylance",
+  "name": {
+    "vi": "Máy chủ ngôn ngữ Python (Pylance)",
+    "en": "Python language server (Pylance)"
+  },
+  "family": "language-server",
+  "summary": {
+    "vi": "Pylance phân tích code Python cho gợi ý và báo lỗi. Mỗi cửa sổ VS Code mở dự án Python có một bản riêng, có thể 1–2 GB mỗi bản.",
+    "en": "Pylance analyses Python code for completions and errors. Each VS Code window with a Python project runs its own copy, possibly 1–2 GB each."
+  },
+  "stop_effect": {
+    "vi": "VS Code bật lại ngay. Muốn giảm RAM: đóng cửa sổ Python không dùng.",
+    "en": "VS Code restarts it at once. To reduce memory: close Python windows you are not using."
+  },
+  "respawns": "by-parent",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "args_contains": "vscode-pylance"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

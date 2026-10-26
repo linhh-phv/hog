@@ -1,0 +1,25 @@
+{
+  "id": "compressor-occupied",
+  "activity_monitor": null,
+  "name": {
+    "vi": "RAM bộ nén chiếm",
+    "en": "RAM taken by compression"
+  },
+  "plain": {
+    "vi": "RAM thật mà phần dữ liệu đã nén đang chiếm, thường khoảng một nửa \"dữ liệu đã nén\".",
+    "en": "Real RAM taken by the compressed data, usually about half of \"data compressed\"."
+  },
+  "how_to_read": {
+    "vi": "Đây là phần RAM thật bị nén chiếm; khớp dòng compressor của `top`.",
+    "en": "This is the real RAM the compressor uses; matches `top`'s compressor line."
+  },
+  "act": {
+    "vi": "Như trên.",
+    "en": "As above."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

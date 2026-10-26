@@ -16,7 +16,8 @@ public struct Scan: Sendable {
     public var cpuNowPct: [Int32: Double]
     public var launchd: [Int32: String]?
     public var network: ExternalSensors.Network?
-    public var windows: [Int: CodeStatusParser.Window]?
+    public var vscode: CodeStatusParser.Status?
+    public var windows: [Int: CodeStatusParser.Window]? { vscode?.windows }
     public var sessions: [Int32: ClaudeSession]?
     public var watchman: ExternalSensors.Watchman?
     public var containers: [DockerClient.Container]?
@@ -25,12 +26,12 @@ public struct Scan: Sendable {
     public init(takenAt: Date = Date(), home: String = NSHomeDirectory(), selfPid: Int32 = getpid(), selfUid: UInt32 = getuid(),
                 system: RawSystem, cpu: CPUSplit? = nil, processes: [Int32: RawProcess],
                 cpuNowPct: [Int32: Double] = [:], launchd: [Int32: String]? = nil, network: ExternalSensors.Network? = nil,
-                windows: [Int: CodeStatusParser.Window]? = nil, sessions: [Int32: ClaudeSession]? = nil,
+                vscode: CodeStatusParser.Status? = nil, sessions: [Int32: ClaudeSession]? = nil,
                 watchman: ExternalSensors.Watchman? = nil, containers: [DockerClient.Container]? = nil,
                 sensors: [SensorStatus] = []) {
         self.takenAt = takenAt; self.home = home; self.selfPid = selfPid; self.selfUid = selfUid; self.system = system
         self.cpu = cpu; self.processes = processes; self.cpuNowPct = cpuNowPct; self.launchd = launchd
-        self.network = network; self.windows = windows; self.sessions = sessions; self.watchman = watchman
+        self.network = network; self.vscode = vscode; self.sessions = sessions; self.watchman = watchman
         self.containers = containers; self.sensors = sensors
     }
 }
@@ -64,7 +65,7 @@ public struct Scanner: Sendable {
         // External sensors in parallel with the CPU sampling interval.
         nonisolated(unsafe) var launchd: Sensed<[Int32: String]>?
         nonisolated(unsafe) var network: Sensed<ExternalSensors.Network>?
-        nonisolated(unsafe) var windows: Sensed<[Int: CodeStatusParser.Window]>?
+        nonisolated(unsafe) var vscode: Sensed<CodeStatusParser.Status>?
         nonisolated(unsafe) var sessions: Sensed<[Int32: ClaudeSession]>?
         nonisolated(unsafe) var watchman: Sensed<ExternalSensors.Watchman>?
         nonisolated(unsafe) var docker: Sensed<[DockerClient.Container]>?
@@ -78,7 +79,7 @@ public struct Scanner: Sendable {
         q.async(group: group) { docker = ext.docker() }
         if !fast {
             if vscodeRunning {
-                q.async(group: group) { windows = ext.vscodeWindows() }
+                q.async(group: group) { vscode = ext.vscode() }
             }
             q.async(group: group) { watchman = ext.watchman() }
         }
@@ -108,14 +109,14 @@ public struct Scanner: Sendable {
             sensors.append(SensorStatus(name: "vscode", status: .skipped, tookMs: 0, note: "--fast"))
             sensors.append(SensorStatus(name: "watchman", status: .skipped, tookMs: 0, note: "--fast"))
         } else {
-            sensors.append(windows?.status ?? SensorStatus(name: "vscode", status: .skipped, tookMs: 0, note: "VS Code is not running"))
+            sensors.append(vscode?.status ?? SensorStatus(name: "vscode", status: .skipped, tookMs: 0, note: "VS Code is not running"))
             if let w = watchman?.status { sensors.append(w) }
         }
 
         return Scan(takenAt: started, home: external.home, system: SystemReader.read(),
                     cpu: ticks0.flatMap { a in ticks1.flatMap { SystemReader.cpuPercent(from: a, to: $0) } }.map { CPUSplit(user: $0.user, sys: $0.sys, idle: $0.idle) },
                     processes: processes, cpuNowPct: cpuNow, launchd: launchd?.value, network: network?.value,
-                    windows: windows?.value, sessions: sessions?.value, watchman: watchman?.value,
+                    vscode: vscode?.value, sessions: sessions?.value, watchman: watchman?.value,
                     containers: docker?.value, sensors: sensors.sorted { $0.name < $1.name })
     }
 

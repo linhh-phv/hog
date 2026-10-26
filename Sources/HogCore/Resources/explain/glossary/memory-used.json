@@ -1,0 +1,25 @@
+{
+  "id": "memory-used",
+  "activity_monitor": "Memory Used",
+  "name": {
+    "vi": "RAM đang dùng",
+    "en": "Memory used"
+  },
+  "plain": {
+    "vi": "Tổng RAM đang được dùng. macOS cố ý dùng gần hết RAM để chạy nhanh.",
+    "en": "Total memory in use. macOS deliberately uses almost all of it to stay fast."
+  },
+  "how_to_read": {
+    "vi": "Cao không có nghĩa là thiếu RAM — xem áp lực bộ nhớ.",
+    "en": "High does not mean short of memory — look at memory pressure."
+  },
+  "act": {
+    "vi": "Không cần làm gì chỉ vì số này cao.",
+    "en": "Nothing to do just because this is high."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

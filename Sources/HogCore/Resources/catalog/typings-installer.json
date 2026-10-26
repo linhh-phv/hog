@@ -1,0 +1,30 @@
+{
+  "id": "typings-installer",
+  "name": {
+    "vi": "Bộ tải type cho TypeScript",
+    "en": "TypeScript typings installer"
+  },
+  "family": "language-server",
+  "summary": {
+    "vi": "Tải định nghĩa type cho tsserver.",
+    "en": "Downloads type definitions for tsserver."
+  },
+  "stop_effect": {
+    "vi": "VS Code bật lại khi cần; thường nhẹ.",
+    "en": "VS Code starts it again when needed; usually small."
+  },
+  "respawns": "by-parent",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "args_contains": "typingsInstaller.js"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

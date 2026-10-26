@@ -1,0 +1,32 @@
+{
+  "id": "protect-foreign",
+  "applies_to": [
+    "process"
+  ],
+  "class": "protect",
+  "level": "hard",
+  "when": {
+    "any": [
+      {
+        "fact": "own",
+        "eq": false
+      },
+      {
+        "fact": "exe.system",
+        "eq": true
+      },
+      {
+        "fact": "exe.name",
+        "in": [
+          "launchd",
+          "WindowServer",
+          "kernel_task"
+        ]
+      }
+    ]
+  },
+  "reason": {
+    "vi": "Thuộc macOS hoặc người dùng khác — hog không dừng.",
+    "en": "Belongs to macOS or another user — hog does not stop it."
+  }
+}

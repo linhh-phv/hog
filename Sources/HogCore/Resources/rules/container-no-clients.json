@@ -1,0 +1,24 @@
+{
+  "id": "container-no-clients",
+  "applies_to": [
+    "container"
+  ],
+  "class": "advice",
+  "verdict": "watch",
+  "when": {
+    "all": [
+      {
+        "fact": "container.state",
+        "eq": "running"
+      },
+      {
+        "fact": "container.connections",
+        "eq": 0
+      }
+    ]
+  },
+  "reason": {
+    "vi": "Container đang chạy nhưng lúc này không ai kết nối tới cổng đã publish.",
+    "en": "Container is running but nobody is connected to its published ports right now."
+  }
+}

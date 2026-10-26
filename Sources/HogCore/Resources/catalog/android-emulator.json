@@ -1,0 +1,30 @@
+{
+  "id": "android-emulator",
+  "name": {
+    "vi": "Emulator Android",
+    "en": "Android emulator"
+  },
+  "family": "mobile-tooling",
+  "summary": {
+    "vi": "Máy ảo Android (qemu) của Android Studio. Thường 2–4 GB.",
+    "en": "Android Studio's Android virtual device (qemu). Often 2–4 GB."
+  },
+  "stop_effect": {
+    "vi": "Đóng cửa sổ emulator để trả RAM; tắt ngang có thể làm hỏng trạng thái máy ảo.",
+    "en": "Close the emulator window to get the memory back; killing it can corrupt the virtual device state."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "exe_path_contains": "qemu-system"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

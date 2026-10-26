@@ -1,0 +1,35 @@
+{
+  "id": "adb-server",
+  "name": {
+    "vi": "adb server",
+    "en": "adb server"
+  },
+  "family": "mobile-tooling",
+  "summary": {
+    "vi": "Cầu nối Android Debug Bridge giữa máy và thiết bị/emulator Android.",
+    "en": "Android Debug Bridge server between this machine and Android devices/emulators."
+  },
+  "stop_effect": {
+    "vi": "Lệnh `adb` kế tiếp tự bật lại nó.",
+    "en": "The next `adb` command starts it again."
+  },
+  "respawns": "on-demand",
+  "stop": {
+    "strategy": "signal"
+  },
+  "match": [
+    {
+      "exe": "adb",
+      "args_contains": "fork-server"
+    },
+    {
+      "exe": "adb",
+      "listens_port": 5037
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

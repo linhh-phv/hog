@@ -1,0 +1,30 @@
+{
+  "id": "watchman",
+  "name": {
+    "vi": "Watchman",
+    "en": "Watchman"
+  },
+  "family": "file-watcher",
+  "summary": {
+    "vi": "Dịch vụ theo dõi thay đổi file của Meta; Metro/Jest dùng nó để biết file nào vừa sửa. Giao tiếp qua unix socket nên không có cổng TCP.",
+    "en": "Meta's file-watching service; Metro/Jest use it to learn which files changed. Talks over a unix socket, so it has no TCP port."
+  },
+  "stop_effect": {
+    "vi": "Tắt không mất dữ liệu: lần sau có công cụ cần, nó được bật lại và quét lại thư mục một lần. Trên macOS nó thường chạy như job launchd do chính nó tạo, chỉ được bật lại khi crash.",
+    "en": "Stopping loses no data: the next tool that needs it starts it again and re-crawls once. On macOS it usually runs as a launchd job it created itself, restarted only after a crash."
+  },
+  "respawns": "on-demand",
+  "stop": {
+    "strategy": "watchman-shutdown"
+  },
+  "match": [
+    {
+      "exe": "watchman"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

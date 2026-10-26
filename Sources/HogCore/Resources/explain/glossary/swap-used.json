@@ -1,0 +1,25 @@
+{
+  "id": "swap-used",
+  "activity_monitor": "Swap Used",
+  "name": {
+    "vi": "Đẩy ra ổ đĩa",
+    "en": "Swapped to disk"
+  },
+  "plain": {
+    "vi": "Phần RAM bị chuyển ra SSD vì không còn chỗ.",
+    "en": "Memory moved out to the SSD because there was no room."
+  },
+  "how_to_read": {
+    "vi": "Cao + áp lực vàng/đỏ = nguyên nhân máy ì. Cao mà áp lực xanh thì chỉ là phần cũ chưa cần lấy lại.",
+    "en": "High + yellow/red pressure = why the machine is slow. High with green pressure is just old data not needed yet."
+  },
+  "act": {
+    "vi": "Tắt thứ ăn nhiều nhất mà không dùng tới.",
+    "en": "Stop the biggest things you are not using."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

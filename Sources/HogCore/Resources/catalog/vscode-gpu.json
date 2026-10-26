@@ -1,0 +1,31 @@
+{
+  "id": "vscode-gpu",
+  "name": {
+    "vi": "Tiến trình GPU của VS Code",
+    "en": "VS Code GPU process"
+  },
+  "family": "editor",
+  "summary": {
+    "vi": "Vẽ đồ hoạ bằng GPU cho mọi cửa sổ VS Code.",
+    "en": "Does GPU drawing for every VS Code window."
+  },
+  "stop_effect": {
+    "vi": "VS Code bật lại ngay; tắt không lợi gì.",
+    "en": "VS Code restarts it at once; stopping it gains nothing."
+  },
+  "respawns": "by-parent",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "exe": "Code Helper",
+      "args_contains": "--type=gpu-process"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

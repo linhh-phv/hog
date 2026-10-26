@@ -1,0 +1,25 @@
+{
+  "id": "system-processes",
+  "activity_monitor": null,
+  "name": {
+    "vi": "macOS và dịch vụ hệ thống",
+    "en": "macOS and system services"
+  },
+  "plain": {
+    "vi": "Tiến trình của macOS và của người dùng khác; hog không có quyền đọc RAM của chúng (và không dùng sudo).",
+    "en": "Processes of macOS and other users; hog has no permission to read their memory (and never uses sudo)."
+  },
+  "how_to_read": {
+    "vi": "Bấm \"Đo chi tiết\" để chạy `top` một lần (~2 giây) và xem từng cái.",
+    "en": "Press \"Measure detail\" to run `top` once (~2 s) and see each one."
+  },
+  "act": {
+    "vi": "hog không dừng chúng.",
+    "en": "hog never stops them."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

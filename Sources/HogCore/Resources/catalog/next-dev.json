@@ -1,0 +1,34 @@
+{
+  "id": "next-dev",
+  "name": {
+    "vi": "next dev",
+    "en": "next dev"
+  },
+  "family": "dev-server",
+  "summary": {
+    "vi": "Dev server của Next.js.",
+    "en": "The Next.js development server."
+  },
+  "stop_effect": {
+    "vi": "Trang đang mở trên trình duyệt ngừng tải lại; chạy lại `next dev` khi cần.",
+    "en": "Pages open in the browser stop reloading; run `next dev` again when needed."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "signal"
+  },
+  "match": [
+    {
+      "exe": "node",
+      "args_contains": "next dev"
+    },
+    {
+      "args_contains": "next-server"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

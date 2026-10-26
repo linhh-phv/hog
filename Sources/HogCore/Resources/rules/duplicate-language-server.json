@@ -1,0 +1,24 @@
+{
+  "id": "duplicate-language-server",
+  "applies_to": [
+    "process"
+  ],
+  "class": "advice",
+  "verdict": "info",
+  "when": {
+    "all": [
+      {
+        "fact": "catalog.family",
+        "eq": "language-server"
+      },
+      {
+        "fact": "siblings.same_catalog_other_windows",
+        "gte": 1
+      }
+    ]
+  },
+  "reason": {
+    "vi": "Cũng đang chạy ở {siblings.same_catalog_other_windows} cửa sổ VS Code khác.",
+    "en": "Also running in {siblings.same_catalog_other_windows} other VS Code windows."
+  }
+}

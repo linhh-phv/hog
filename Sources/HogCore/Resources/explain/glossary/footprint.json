@@ -1,0 +1,25 @@
+{
+  "id": "footprint",
+  "activity_monitor": "Memory",
+  "name": {
+    "vi": "RAM của chương trình",
+    "en": "Program memory"
+  },
+  "plain": {
+    "vi": "RAM một chương trình thật sự chiếm, tính cả phần đã bị nén.",
+    "en": "Memory a program really takes, including what has been compressed."
+  },
+  "how_to_read": {
+    "vi": "Đây là số để so ai ăn nhiều nhất.",
+    "en": "This is the number to compare who takes the most."
+  },
+  "act": {
+    "vi": "Xem cùng \"phần còn nằm trong RAM\" để biết nó có đang được dùng không.",
+    "en": "Read it with \"share still in RAM\" to tell whether it is in use."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

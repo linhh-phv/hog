@@ -1,0 +1,25 @@
+{
+  "id": "compressed-stored",
+  "activity_monitor": null,
+  "name": {
+    "vi": "Dữ liệu đã nén",
+    "en": "Data compressed"
+  },
+  "plain": {
+    "vi": "Lượng dữ liệu của các chương trình mà macOS đã nén lại thay vì ghi ra ổ đĩa.",
+    "en": "How much program data macOS has compressed instead of writing it to disk."
+  },
+  "how_to_read": {
+    "vi": "Nhiều = máy đang chật, đang phải xoay xở. Cột Compressed của Activity Monitor là số này hay số bên cạnh thì chưa đối chiếu.",
+    "en": "A lot = the machine is tight and coping. Whether Activity Monitor's Compressed column shows this number or the next one is not checked yet."
+  },
+  "act": {
+    "vi": "Tắt thứ ít dùng mà giữ nhiều RAM sẽ giảm số này.",
+    "en": "Stopping rarely used things that hold a lot of memory lowers this."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "idle-session",
+  "activity_monitor": null,
+  "name": {
+    "vi": "Phiên Claude rảnh",
+    "en": "Idle Claude session"
+  },
+  "plain": {
+    "vi": "Phiên Claude không làm gì từ lần cuối nó trả lời.",
+    "en": "A Claude session that has done nothing since it last answered."
+  },
+  "how_to_read": {
+    "vi": "Phiên rảnh vẫn giữ RAM; rảnh nhiều giờ thường là bị bỏ quên.",
+    "en": "An idle session still holds memory; idle for hours usually means forgotten."
+  },
+  "act": {
+    "vi": "Đóng tab không dùng trong VS Code (lịch sử vẫn mở lại được).",
+    "en": "Close unused tabs in VS Code (history can be resumed)."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

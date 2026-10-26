@@ -1,0 +1,32 @@
+{
+  "id": "gradle-daemon",
+  "name": {
+    "vi": "Gradle daemon",
+    "en": "Gradle daemon"
+  },
+  "family": "build-daemon",
+  "summary": {
+    "vi": "Tiến trình nền của Gradle, giữ lại sau mỗi lần build Android để lần sau nhanh hơn. Thường 0,5–2 GB.",
+    "en": "Gradle background process kept after each Android build so the next one is faster. Often 0.5–2 GB."
+  },
+  "stop_effect": {
+    "vi": "Lần build sau chậm hơn một chút; `./gradlew --stop` là cách tắt chuẩn.",
+    "en": "The next build is a bit slower; `./gradlew --stop` is the standard way to stop it."
+  },
+  "respawns": "on-demand",
+  "stop": {
+    "strategy": "signal"
+  },
+  "match": [
+    {
+      "exe": "java",
+      "args_contains": "GradleDaemon"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  },
+  "detached_by_design": true
+}

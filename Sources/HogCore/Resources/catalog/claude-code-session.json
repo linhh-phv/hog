@@ -1,0 +1,34 @@
+{
+  "id": "claude-code-session",
+  "name": {
+    "vi": "Phiên Claude Code",
+    "en": "Claude Code session"
+  },
+  "family": "ai-session",
+  "summary": {
+    "vi": "Một phiên Claude Code (tab trong VS Code hoặc terminal). Phiên vẫn giữ RAM khi rảnh.",
+    "en": "One Claude Code session (a VS Code tab or a terminal). A session keeps its memory while idle."
+  },
+  "stop_effect": {
+    "vi": "Đóng tab/phiên là mất hội thoại đang mở trên màn hình (lịch sử vẫn còn để mở lại). hog không tự tắt phiên.",
+    "en": "Closing the tab/session drops the conversation from the screen (history stays and can be resumed). hog never stops sessions itself."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "exe": "claude",
+      "exe_path_contains": "native-binary/claude"
+    },
+    {
+      "exe": "claude"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

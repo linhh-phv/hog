@@ -1,0 +1,25 @@
+{
+  "id": "memory-pressure",
+  "activity_monitor": "Memory Pressure",
+  "name": {
+    "vi": "Áp lực bộ nhớ",
+    "en": "Memory pressure"
+  },
+  "plain": {
+    "vi": "Số duy nhất cho biết máy có thực sự thiếu RAM không: bình thường, cảnh báo hoặc nghiêm trọng.",
+    "en": "The one number that says whether the machine is really short of memory: normal, warning or critical."
+  },
+  "how_to_read": {
+    "vi": "Bình thường (xanh) là ổn, kể cả khi \"RAM đang dùng\" gần đầy. Cảnh báo/nghiêm trọng (vàng/đỏ) mới là lúc máy ì vì thiếu RAM.",
+    "en": "Normal (green) is fine even when \"memory used\" is near full. Warning/critical (yellow/red) is when the machine slows down for lack of memory."
+  },
+  "act": {
+    "vi": "Chỉ khi áp lực vàng/đỏ mới cần tắt bớt; xem danh sách \"ăn nhiều nhất\".",
+    "en": "Only at yellow/red do you need to close things; see the \"biggest\" list."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

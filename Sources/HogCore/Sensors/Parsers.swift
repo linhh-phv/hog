@@ -116,28 +116,47 @@ public enum CodeStatusParser {
         public var windowPid: Int32?
         public var extensionHostPid: Int32?
         public var fileWatcherPid: Int32?
+
+        public init(index: Int, title: String? = nil, windowPid: Int32? = nil, extensionHostPid: Int32? = nil, fileWatcherPid: Int32? = nil) {
+            self.index = index; self.title = title; self.windowPid = windowPid
+            self.extensionHostPid = extensionHostPid; self.fileWatcherPid = fileWatcherPid
+        }
     }
 
-    /// `code --status` → windows keyed by the `[N]` index. The `Mem MB` column is ignored: it prints garbage
-    /// (tens of billions of MB) on the measured machine.
-    public static func windows(_ text: String) -> [Int: Window] {
-        var result: [Int: Window] = [:]
+    public struct Status: Sendable, Equatable {
+        public var windows: [Int: Window]
+        /// Role of each VS Code process listed by name (`window`, `extension-host`, `file-watcher`, `pty-host`,
+        /// `shared-process`, `gpu-process`, …). Processes with identical arguments are only told apart by this.
+        public var roles: [Int32: String]
+    }
+
+    /// `code --status` → windows keyed by the `[N]` index plus a role per PID. The `Mem MB` column is ignored:
+    /// it prints garbage (tens of billions of MB) on the measured machine.
+    public static func parse(_ text: String) -> Status {
+        var windows: [Int: Window] = [:]
+        var roles: [Int32: String] = [:]
         for line in text.split(separator: "\n") {
             let cols = line.split(separator: "\t", omittingEmptySubsequences: false)
             guard cols.count >= 4, let pid = Int32(cols[2].trimmingCharacters(in: .whitespaces)) else { continue }
             let name = cols[3...].joined(separator: "\t").trimmingCharacters(in: .whitespaces)
-            guard let (kind, index, title) = parseName(name) else { continue }
-            var w = result[index] ?? Window(index: index)
-            switch kind {
-            case "window": w.windowPid = pid; w.title = title
-            case "extension-host": w.extensionHostPid = pid
-            case "file-watcher": w.fileWatcherPid = pid
-            default: continue
+            if let (kind, index, title) = parseName(name) {
+                roles[pid] = kind
+                var w = windows[index] ?? Window(index: index)
+                switch kind {
+                case "window": w.windowPid = pid; w.title = title
+                case "extension-host": w.extensionHostPid = pid
+                case "file-watcher": w.fileWatcherPid = pid
+                default: break
+                }
+                windows[index] = w
+            } else if !name.hasPrefix("/"), !name.contains(" "), name != "window" {
+                roles[pid] = name  // pty-host, shared-process, gpu-process, utility-network-service, agent-host, code…
             }
-            result[index] = w
         }
-        return result
+        return Status(windows: windows, roles: roles)
     }
+
+    public static func windows(_ text: String) -> [Int: Window] { parse(text).windows }
 
     /// `window [2] (title)` → ("window", 2, "title"); `extension-host [2]` → ("extension-host", 2, nil).
     static func parseName(_ name: String) -> (String, Int, String?)? {

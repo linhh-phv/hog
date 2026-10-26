@@ -1,0 +1,30 @@
+{
+  "id": "vscode-pty-host",
+  "name": {
+    "vi": "Terminal tích hợp của VS Code",
+    "en": "VS Code terminal host"
+  },
+  "family": "editor",
+  "summary": {
+    "vi": "Giữ mọi terminal tích hợp của VS Code.",
+    "en": "Holds every integrated terminal of VS Code."
+  },
+  "stop_effect": {
+    "vi": "Tắt là đóng mọi terminal trong VS Code, kể cả lệnh đang chạy trong đó.",
+    "en": "Stopping it closes every VS Code terminal, including commands running in them."
+  },
+  "respawns": "by-parent",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "vscode_role": "pty-host"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

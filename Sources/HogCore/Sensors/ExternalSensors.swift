@@ -70,13 +70,13 @@ public struct ExternalSensors: Sendable {
     // MARK: VS Code
 
     /// Only call when a VS Code main process is running (`code --status` may otherwise start things).
-    public func vscodeWindows() -> Sensed<[Int: CodeStatusParser.Window]> {
+    public func vscode() -> Sensed<CodeStatusParser.Status> {
         guard let code = locator.find("code") else { return Sensed(value: nil, status: missing("vscode", "code")) }
         guard let r = Command.run(code, ["--status"], timeout: 5) else {
             return Sensed(value: nil, status: SensorStatus(name: "vscode", status: .error, tookMs: 0, note: "could not start code"))
         }
         if r.timedOut || r.status != 0 { return Sensed(value: nil, status: failed("vscode", r)) }
-        return Sensed(value: CodeStatusParser.windows(r.stdout), status: SensorStatus(name: "vscode", status: .ok, tookMs: r.tookMs))
+        return Sensed(value: CodeStatusParser.parse(r.stdout), status: SensorStatus(name: "vscode", status: .ok, tookMs: r.tookMs))
     }
 
     // MARK: Claude sessions

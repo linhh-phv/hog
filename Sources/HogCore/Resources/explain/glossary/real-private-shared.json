@@ -1,0 +1,25 @@
+{
+  "id": "real-private-shared",
+  "activity_monitor": "Real Mem, Private Mem, Shared Mem, Purgeable",
+  "name": {
+    "vi": "Các cột chi tiết",
+    "en": "Detail columns"
+  },
+  "plain": {
+    "vi": "Các cột chi tiết của Activity Monitor về cách bộ nhớ được chia.",
+    "en": "Activity Monitor's detail columns about how memory is split."
+  },
+  "how_to_read": {
+    "vi": "hog không dùng chúng để quyết định: \"RAM của chương trình\" đã tính cả phần nén nên so sánh công bằng hơn.",
+    "en": "hog does not use them for decisions: \"program memory\" already counts compressed memory, which compares fairly."
+  },
+  "act": {
+    "vi": "Không cần đọc.",
+    "en": "No need to read them."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "app-memory",
+  "activity_monitor": "App Memory",
+  "name": {
+    "vi": "RAM của các app",
+    "en": "App memory"
+  },
+  "plain": {
+    "vi": "Tổng RAM các chương trình dùng.",
+    "en": "Total memory used by programs."
+  },
+  "how_to_read": {
+    "vi": "Xem danh sách \"ăn nhiều nhất\" để biết của ai.",
+    "en": "See the \"biggest\" list for who uses it."
+  },
+  "act": {
+    "vi": "Tắt thứ không dùng trong danh sách.",
+    "en": "Stop unused things from that list."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

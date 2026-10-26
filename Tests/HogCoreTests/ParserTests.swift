@@ -54,6 +54,14 @@ import Testing
         #expect(w[2]?.fileWatcherPid == 1202)
         #expect(w[7]?.extensionHostPid == 1301)
     }
+
+    @Test func rolesForProcessesWithIdenticalArguments() throws {
+        let s = CodeStatusParser.parse(try Fixtures.text("code-status/status.txt"))
+        #expect(s.roles[1202] == "file-watcher")
+        #expect(s.roles[1001] == "gpu-process")
+        #expect(s.roles[1300] == "window")
+        #expect(s.roles[1201] == nil, "command lines are not roles")
+    }
 }
 
 @Suite struct ClaudeSessionParserTests {

@@ -1,0 +1,25 @@
+{
+  "id": "cached-files",
+  "activity_monitor": "Cached Files",
+  "name": {
+    "vi": "Bộ đệm file",
+    "en": "Cached files"
+  },
+  "plain": {
+    "vi": "RAM tạm giữ nội dung file để mở lại nhanh.",
+    "en": "Memory holding file contents so they open faster next time."
+  },
+  "how_to_read": {
+    "vi": "macOS tự trả lại ngay khi cần. Không phải vấn đề.",
+    "en": "macOS gives it back immediately when needed. Not a problem."
+  },
+  "act": {
+    "vi": "Không cần làm gì.",
+    "en": "Nothing to do."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

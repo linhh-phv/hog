@@ -1,0 +1,33 @@
+{
+  "id": "protect-busy-owner",
+  "applies_to": [
+    "process",
+    "container"
+  ],
+  "class": "protect",
+  "level": "soft",
+  "when": {
+    "all": [
+      {
+        "fact": "owner.kind",
+        "ne": "none"
+      },
+      {
+        "any": [
+          {
+            "fact": "owner.busy",
+            "eq": true
+          },
+          {
+            "fact": "owner.idle_s",
+            "lt": 600
+          }
+        ]
+      }
+    ]
+  },
+  "reason": {
+    "vi": "Thuộc một cửa sổ/phiên có thể đang dùng — hỏi trước khi dừng.",
+    "en": "Belongs to a window/session that may be in use — ask before stopping."
+  }
+}

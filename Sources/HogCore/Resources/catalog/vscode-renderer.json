@@ -1,0 +1,30 @@
+{
+  "id": "vscode-renderer",
+  "name": {
+    "vi": "Cửa sổ VS Code (phần vẽ)",
+    "en": "VS Code window (renderer)"
+  },
+  "family": "editor",
+  "summary": {
+    "vi": "Tiến trình vẽ giao diện của một cửa sổ VS Code.",
+    "en": "Draws the interface of one VS Code window."
+  },
+  "stop_effect": {
+    "vi": "Tắt nó là đóng (hoặc làm hỏng) cửa sổ đó. Muốn trả RAM thì đóng cửa sổ VS Code không dùng tới.",
+    "en": "Stopping it closes (or crashes) that window. To get the memory back, close the VS Code window you are not using."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "exe": "Code Helper (Renderer)"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

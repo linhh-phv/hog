@@ -1,0 +1,31 @@
+{
+  "id": "screen",
+  "name": {
+    "vi": "GNU screen",
+    "en": "GNU screen"
+  },
+  "family": "terminal-multiplexer",
+  "summary": {
+    "vi": "Giữ các phiên terminal screen chạy nền — bạn cố ý để nó chạy.",
+    "en": "Keeps screen terminal sessions running in the background — on purpose."
+  },
+  "stop_effect": {
+    "vi": "Tắt là mất mọi phiên screen và lệnh đang chạy trong đó.",
+    "en": "Stopping it ends every screen session and the commands running in them."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "exe": "screen"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  },
+  "detached_by_design": true
+}

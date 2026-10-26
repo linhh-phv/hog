@@ -9,12 +9,14 @@ public struct CatalogEntry: Codable, Sendable, Equatable {
         public var parentCatalog: String?
         public var listensPort: Int?
         public var containerImage: String?
+        /// Role from `code --status` (`file-watcher`, `pty-host`…): VS Code helpers with identical arguments.
+        public var vscodeRole: String?
 
-        static let keys: Set<String> = ["exe", "exe_path_contains", "args_contains", "parent_catalog", "listens_port", "container_image"]
+        static let keys: Set<String> = ["exe", "exe_path_contains", "args_contains", "parent_catalog", "listens_port", "container_image", "vscode_role"]
 
         /// Number of conditions: the more specific clause wins when several entries match.
         var specificity: Int {
-            [exe != nil, exePathContains != nil, argsContains != nil, parentCatalog != nil, listensPort != nil, containerImage != nil]
+            [exe != nil, exePathContains != nil, argsContains != nil, parentCatalog != nil, listensPort != nil, containerImage != nil, vscodeRole != nil]
                 .filter { $0 }.count
         }
     }
@@ -51,11 +53,12 @@ public struct MatchSubject: Sendable {
     public var parentCatalog: String?
     public var listenPorts: [Int]
     public var containerImage: String?
+    public var vscodeRole: String?
 
     public init(exeName: String? = nil, exePath: String? = nil, args: String? = nil, parentCatalog: String? = nil,
-                listenPorts: [Int] = [], containerImage: String? = nil) {
+                listenPorts: [Int] = [], containerImage: String? = nil, vscodeRole: String? = nil) {
         self.exeName = exeName; self.exePath = exePath; self.args = args; self.parentCatalog = parentCatalog
-        self.listenPorts = listenPorts; self.containerImage = containerImage
+        self.listenPorts = listenPorts; self.containerImage = containerImage; self.vscodeRole = vscodeRole
     }
 }
 
@@ -126,7 +129,12 @@ public struct Catalog: Sendable {
         if let a = m.argsContains, !(s.args?.contains(a) ?? false) { return false }
         if let pc = m.parentCatalog, s.parentCatalog != pc { return false }
         if let port = m.listensPort, !s.listenPorts.contains(port) { return false }
-        if let img = m.containerImage, !(s.containerImage?.contains(img) ?? false) { return false }
+        if let img = m.containerImage {
+            // "" means any container (Swift's `contains("")` is false, so it is handled explicitly).
+            guard let image = s.containerImage else { return false }
+            if !img.isEmpty && !image.contains(img) { return false }
+        }
+        if let role = m.vscodeRole, s.vscodeRole != role { return false }
         return true
     }
 }

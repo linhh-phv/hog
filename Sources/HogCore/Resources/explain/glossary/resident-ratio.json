@@ -1,0 +1,25 @@
+{
+  "id": "resident-ratio",
+  "activity_monitor": null,
+  "name": {
+    "vi": "Phần còn nằm trong RAM",
+    "en": "Share still in RAM"
+  },
+  "plain": {
+    "vi": "Trong số RAM một chương trình đang giữ, bao nhiêu phần thật sự còn nằm trong RAM. Phần còn lại đã bị macOS nén hoặc đẩy ra ổ đĩa vì lâu không ai đụng tới.",
+    "en": "Of the memory a program holds, how much is actually still in RAM. The rest has been compressed or swapped out by macOS because nobody touched it for a while."
+  },
+  "how_to_read": {
+    "vi": "Gần 100%: chương trình đang được dùng. Dưới 10%: lâu rồi không ai đụng tới — dấu hiệu mạnh rằng tắt đi cũng không ai để ý.",
+    "en": "Near 100%: in use. Below 10%: untouched for a long time — a strong sign nobody would notice if it stopped."
+  },
+  "act": {
+    "vi": "Thấp + chiếm nhiều + không ai dùng → ứng viên tắt. Thấp mà thuộc app bạn đang mở thì chỉ là app đó đang nghỉ.",
+    "en": "Low + large + unused → candidate to stop. Low but part of an app you have open just means that app is idle."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

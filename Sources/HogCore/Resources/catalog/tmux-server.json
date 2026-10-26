@@ -1,0 +1,31 @@
+{
+  "id": "tmux-server",
+  "name": {
+    "vi": "Máy chủ tmux",
+    "en": "tmux server"
+  },
+  "family": "terminal-multiplexer",
+  "summary": {
+    "vi": "Giữ các phiên terminal tmux chạy nền — bạn cố ý để nó chạy.",
+    "en": "Keeps tmux terminal sessions running in the background — on purpose."
+  },
+  "stop_effect": {
+    "vi": "Tắt là mất mọi phiên tmux và lệnh đang chạy trong đó.",
+    "en": "Stopping it ends every tmux session and the commands running in them."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "exe": "tmux"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  },
+  "detached_by_design": true
+}

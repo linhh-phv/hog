@@ -1,0 +1,25 @@
+{
+  "id": "cpu-avg",
+  "activity_monitor": null,
+  "name": {
+    "vi": "CPU trung bình từ lúc chạy",
+    "en": "Average CPU since start"
+  },
+  "plain": {
+    "vi": "Tổng thời gian CPU chia cho thời gian đã chạy.",
+    "en": "Total CPU time divided by how long it has run."
+  },
+  "how_to_read": {
+    "vi": "Thấp suốt nhiều giờ = chương trình gần như không làm gì.",
+    "en": "Low for hours = the program does almost nothing."
+  },
+  "act": {
+    "vi": "Một bằng chứng của \"không dùng\".",
+    "en": "One piece of evidence for \"unused\"."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "container-restart-high",
+  "applies_to": [
+    "container"
+  ],
+  "class": "advice",
+  "verdict": "watch",
+  "when": {
+    "fact": "container.restart_count",
+    "gte": 10
+  },
+  "reason": {
+    "vi": "Container đã khởi động lại {container.restart_count} lần — nên xem log.",
+    "en": "Container restarted {container.restart_count} times — check its logs."
+  }
+}

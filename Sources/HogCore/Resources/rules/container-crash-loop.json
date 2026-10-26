@@ -1,0 +1,36 @@
+{
+  "id": "container-crash-loop",
+  "applies_to": [
+    "container"
+  ],
+  "class": "advice",
+  "verdict": "may-stop",
+  "when": {
+    "all": [
+      {
+        "fact": "container.restart_count",
+        "gte": 10
+      },
+      {
+        "any": [
+          {
+            "fact": "container.state",
+            "eq": "restarting"
+          },
+          {
+            "fact": "container.uptime_s",
+            "lt": 600
+          }
+        ]
+      },
+      {
+        "fact": "container.connections",
+        "eq": 0
+      }
+    ]
+  },
+  "reason": {
+    "vi": "Container chết đi sống lại ({container.restart_count} lần), không ai kết nối.",
+    "en": "Container keeps crashing and restarting ({container.restart_count} times), no connections."
+  }
+}

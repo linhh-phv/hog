@@ -1,0 +1,34 @@
+{
+  "id": "vscode-extension-host",
+  "name": {
+    "vi": "Nơi chạy extension của VS Code",
+    "en": "VS Code extension host"
+  },
+  "family": "editor",
+  "summary": {
+    "vi": "Chạy mọi extension của một cửa sổ VS Code (Claude Code, ESLint, Python…). Mỗi cửa sổ có một cái riêng.",
+    "en": "Runs every extension of one VS Code window (Claude Code, ESLint, Python…). Each window has its own."
+  },
+  "stop_effect": {
+    "vi": "VS Code bật lại ngay và mọi extension của cửa sổ đó khởi động lại. Muốn trả RAM thì đóng cửa sổ VS Code không dùng tới.",
+    "en": "VS Code restarts it at once and every extension of that window starts again. To get the memory back, close the VS Code window you are not using."
+  },
+  "respawns": "by-parent",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "exe": "Code Helper (Plugin)",
+      "args_contains": "--inspect-port=0"
+    },
+    {
+      "vscode_role": "extension-host"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

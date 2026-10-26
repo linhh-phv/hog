@@ -1,0 +1,33 @@
+{
+  "id": "spotlight-mdworker",
+  "name": {
+    "vi": "Spotlight (lập chỉ mục)",
+    "en": "Spotlight indexer"
+  },
+  "family": "indexer",
+  "summary": {
+    "vi": "Tiến trình của macOS lập chỉ mục file cho Spotlight. Hay chạy nhiều sau khi cài/sinh nhiều file (node_modules, build).",
+    "en": "macOS process that indexes files for Spotlight. Busy after many files appear (node_modules, builds)."
+  },
+  "stop_effect": {
+    "vi": "Là của hệ thống; hog không tắt. Có thể loại thư mục build khỏi Spotlight trong Cài đặt hệ thống.",
+    "en": "Part of macOS; hog never stops it. You can exclude build folders from Spotlight in System Settings."
+  },
+  "respawns": "supervisor",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "exe": "mdworker_shared"
+    },
+    {
+      "exe": "mds_stores"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

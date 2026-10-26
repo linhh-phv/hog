@@ -1,0 +1,28 @@
+{
+  "id": "claude-session-abandoned",
+  "applies_to": [
+    "claude-session"
+  ],
+  "class": "advice",
+  "verdict": "may-stop",
+  "when": {
+    "all": [
+      {
+        "fact": "session.busy",
+        "eq": false
+      },
+      {
+        "fact": "session.idle_s",
+        "gte": 7200
+      },
+      {
+        "fact": "footprint_bytes",
+        "gte": 104857600
+      }
+    ]
+  },
+  "reason": {
+    "vi": "Phiên Claude rảnh {session.idle_s}, vẫn giữ {footprint_bytes}.",
+    "en": "Claude session idle for {session.idle_s}, still holding {footprint_bytes}."
+  }
+}

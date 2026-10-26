@@ -1,0 +1,24 @@
+{
+  "id": "launchd-restarts",
+  "applies_to": [
+    "process"
+  ],
+  "class": "advice",
+  "verdict": "info",
+  "when": {
+    "all": [
+      {
+        "fact": "launchd.restarts_after_stop",
+        "eq": true
+      },
+      {
+        "fact": "footprint_bytes",
+        "gte": 104857600
+      }
+    ]
+  },
+  "reason": {
+    "vi": "launchd sẽ bật lại nó nếu chỉ dừng.",
+    "en": "launchd will start it again if it is only stopped."
+  }
+}

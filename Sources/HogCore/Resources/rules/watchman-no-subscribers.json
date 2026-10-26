@@ -1,0 +1,28 @@
+{
+  "id": "watchman-no-subscribers",
+  "applies_to": [
+    "process"
+  ],
+  "class": "advice",
+  "verdict": "may-stop",
+  "when": {
+    "all": [
+      {
+        "fact": "catalog.id",
+        "eq": "watchman"
+      },
+      {
+        "fact": "watchman.subscriptions",
+        "eq": 0
+      },
+      {
+        "fact": "age_s",
+        "gte": 3600
+      }
+    ]
+  },
+  "reason": {
+    "vi": "Watchman chạy {age_s}, không công cụ nào đăng ký theo dõi.",
+    "en": "Watchman running for {age_s}, no tool subscribed to it."
+  }
+}

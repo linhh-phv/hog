@@ -1,0 +1,39 @@
+{
+  "id": "metro",
+  "name": {
+    "vi": "Metro (React Native)",
+    "en": "Metro (React Native)"
+  },
+  "family": "bundler",
+  "summary": {
+    "vi": "Bundler của React Native/Expo, phục vụ code JavaScript cho app đang chạy thử.",
+    "en": "React Native/Expo bundler that serves JavaScript to the app under development."
+  },
+  "stop_effect": {
+    "vi": "App đang chạy thử mất kết nối tới máy dev; chạy lại `npx expo start` / `react-native start` khi cần.",
+    "en": "The app under development loses its dev server; run `npx expo start` / `react-native start` again when needed."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "signal"
+  },
+  "match": [
+    {
+      "exe": "node",
+      "args_contains": "expo start"
+    },
+    {
+      "exe": "node",
+      "args_contains": "react-native start"
+    },
+    {
+      "exe": "node",
+      "args_contains": "metro"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "id": "orbstack-app",
+  "name": {
+    "vi": "OrbStack",
+    "en": "OrbStack"
+  },
+  "family": "container-runtime",
+  "summary": {
+    "vi": "Ứng dụng chạy Docker và máy ảo Linux. Engine Docker bật/tắt riêng được với ứng dụng.",
+    "en": "App that runs Docker and Linux machines. The Docker engine can be started/stopped separately from the app."
+  },
+  "stop_effect": {
+    "vi": "Tắt engine trong menu của OrbStack thì mọi container dừng (dữ liệu vẫn còn). hog không tự tắt OrbStack.",
+    "en": "Stopping the engine from the OrbStack menu stops every container (data is kept). hog never stops OrbStack itself."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "exe": "OrbStack"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "measured",
+    "verified": true
+  }
+}

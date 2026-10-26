@@ -45,7 +45,7 @@ import Testing
         return Scan(home: home, system: RawSystem(memTotalBytes: 0, ncpu: 8, pageSize: 16384),
                     processes: Dictionary(uniqueKeysWithValues: procs.map { ($0.pid, $0) }),
                     launchd: [400: "com.github.facebook.watchman"],
-                    windows: [2: CodeStatusParser.Window(index: 2, title: "web-app", windowPid: 150, extensionHostPid: 200, fileWatcherPid: nil)],
+                    vscode: CodeStatusParser.Status(windows: [2: CodeStatusParser.Window(index: 2, title: "web-app", windowPid: 150, extensionHostPid: 200)], roles: [150: "window", 200: "extension-host"]),
                     sessions: sessions)
     }
 

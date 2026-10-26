@@ -1,0 +1,31 @@
+{
+  "id": "vite-dev",
+  "name": {
+    "vi": "Vite dev server",
+    "en": "Vite dev server"
+  },
+  "family": "dev-server",
+  "summary": {
+    "vi": "Dev server của Vite.",
+    "en": "The Vite development server."
+  },
+  "stop_effect": {
+    "vi": "Trang đang mở ngừng tải lại; chạy lại khi cần.",
+    "en": "Pages open in the browser stop reloading; start it again when needed."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "signal"
+  },
+  "match": [
+    {
+      "exe": "node",
+      "args_contains": "vite"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

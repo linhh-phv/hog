@@ -1,0 +1,25 @@
+{
+  "id": "cpu-pct",
+  "activity_monitor": "% CPU",
+  "name": {
+    "vi": "CPU",
+    "en": "CPU"
+  },
+  "plain": {
+    "vi": "Phần trăm sức một nhân CPU mà chương trình đang dùng.",
+    "en": "Share of one CPU core the program is using."
+  },
+  "how_to_read": {
+    "vi": "100% = một nhân chạy hết sức; máy 8 nhân tối đa 800%.",
+    "en": "100% = one core fully busy; an 8-core machine goes up to 800%."
+  },
+  "act": {
+    "vi": "Cao kéo dài với thứ bạn không dùng → xem có nên tắt.",
+    "en": "Sustained high use by something you do not use → consider stopping it."
+  },
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

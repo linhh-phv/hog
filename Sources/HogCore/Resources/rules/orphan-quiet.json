@@ -1,0 +1,36 @@
+{
+  "id": "orphan-quiet",
+  "applies_to": [
+    "process"
+  ],
+  "class": "advice",
+  "verdict": "may-stop",
+  "when": {
+    "all": [
+      {
+        "fact": "orphan",
+        "eq": true
+      },
+      {
+        "fact": "catalog.detached",
+        "eq": false
+      },
+      {
+        "fact": "net.established",
+        "eq": 0
+      },
+      {
+        "fact": "age_s",
+        "gte": 3600
+      },
+      {
+        "fact": "cpu.avg_pct",
+        "lt": 1.0
+      }
+    ]
+  },
+  "reason": {
+    "vi": "Mồ côi (thứ đã mở nó đã tắt), không ai kết nối, gần như không dùng CPU suốt {age_s}.",
+    "en": "Orphaned (whatever started it has exited), no connections, almost no CPU for {age_s}."
+  }
+}

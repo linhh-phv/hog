@@ -1,0 +1,33 @@
+{
+  "id": "ios-simulator",
+  "name": {
+    "vi": "Simulator iOS",
+    "en": "iOS Simulator"
+  },
+  "family": "mobile-tooling",
+  "summary": {
+    "vi": "Các tiến trình của Simulator iOS (CoreSimulator).",
+    "en": "Processes of the iOS Simulator (CoreSimulator)."
+  },
+  "stop_effect": {
+    "vi": "Đóng app Simulator để trả RAM; hog không tự tắt.",
+    "en": "Quit the Simulator app to get the memory back; hog never stops it itself."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "exe": "launchd_sim"
+    },
+    {
+      "exe_path_contains": "CoreSimulator"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

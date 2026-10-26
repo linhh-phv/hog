@@ -1,0 +1,30 @@
+{
+  "id": "docker-container",
+  "name": {
+    "vi": "Container Docker",
+    "en": "Docker container"
+  },
+  "family": "container",
+  "summary": {
+    "vi": "Một container Docker/OrbStack.",
+    "en": "A Docker/OrbStack container."
+  },
+  "stop_effect": {
+    "vi": "Dừng container không xoá dữ liệu hay volume. Nếu container có restart policy, hog tắt policy trước rồi mới dừng.",
+    "en": "Stopping a container does not delete data or volumes. If it has a restart policy, hog turns the policy off first."
+  },
+  "respawns": "supervisor",
+  "stop": {
+    "strategy": "docker-container"
+  },
+  "match": [
+    {
+      "container_image": ""
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-26",
+    "source": "docs",
+    "verified": false
+  }
+}

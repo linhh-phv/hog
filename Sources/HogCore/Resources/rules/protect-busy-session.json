@@ -1,0 +1,24 @@
+{
+  "id": "protect-busy-session",
+  "applies_to": [
+    "claude-session"
+  ],
+  "class": "protect",
+  "level": "soft",
+  "when": {
+    "any": [
+      {
+        "fact": "session.busy",
+        "eq": true
+      },
+      {
+        "fact": "session.idle_s",
+        "lt": 600
+      }
+    ]
+  },
+  "reason": {
+    "vi": "Phiên Claude đang làm việc hoặc vừa làm việc — đừng đụng.",
+    "en": "This Claude session is working or just worked — leave it alone."
+  }
+}
