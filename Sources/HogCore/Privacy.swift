@@ -38,7 +38,7 @@ public enum Privacy {
                 if ["bearer", "basic", "token"].contains(lower) { out.append(arg); continue }
                 out.append("***"); maskAuth = false; continue
             }
-            if lower.hasSuffix("authorization:") || ["bearer", "basic"].contains(lower) {
+            if lower.hasSuffix("authorization:") || lower.hasSuffix("cookie:") || ["bearer", "basic"].contains(lower) {
                 out.append(arg); maskAuth = true; continue
             }
             if let flag = pwFlags.first(where: { arg.hasPrefix($0) }) {
@@ -77,7 +77,7 @@ public enum Privacy {
         if let re = try? NSRegularExpression(pattern: #"([a-zA-Z][a-zA-Z0-9+.-]*://[^/:@\s]+):[^@/\s]+@"#) {
             s = re.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "$1:***@")
         }
-        if let re = try? NSRegularExpression(pattern: #"(?i)(authorization:\s*)(bearer\s+|basic\s+|token\s+)?\S+"#) {
+        if let re = try? NSRegularExpression(pattern: #"(?i)((?:authorization|cookie|set-cookie):\s*)(bearer\s+|basic\s+|token\s+)?\S+"#) {
             s = re.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "$1$2***")
         }
         if let re = try? NSRegularExpression(pattern: #"(?i)([?&](?:[a-z_]*token|[a-z_]*key|secret|password|pass|pwd|auth)=)[^&\s]+"#) {

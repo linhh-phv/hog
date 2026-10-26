@@ -70,8 +70,19 @@ public enum Ownership {
         if launchd[p.pid] != nil { return false }
         guard let exe = p.exePath else { return nil }
         if exe.contains(".appex/") || exe.contains(".xpc/") || exe.hasPrefix("/System/") { return false }
+        if isAppMainExecutable(exe, home: home) { return false }
         guard let cwd = p.cwd else { return nil }
         return cwd.hasPrefix(home + "/")
+    }
+
+    /// The main binary of an installed app (`/Applications/X.app/Contents/MacOS/X`): a GUI app started from a terminal
+    /// that was then closed is the user's app, not an orphan (QA 2026-10-26). A `Python.app` inside a framework or
+    /// inside another app (what `python3` runs) does not count.
+    static func isAppMainExecutable(_ exe: String, home: String) -> Bool {
+        guard ["/Applications/", home + "/Applications/"].contains(where: exe.hasPrefix),
+              exe.components(separatedBy: ".app/").count == 2, !exe.contains(".framework/") else { return false }
+        let parts = exe.split(separator: "/")
+        return parts.count >= 4 && parts[parts.count - 2] == "MacOS" && parts[parts.count - 3] == "Contents"
     }
 
     /// `exe.system` (design section 6): system locations, excluding `/usr/local` where user tools live.

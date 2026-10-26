@@ -69,7 +69,7 @@ struct CLI {
         if let g = explanations.glossary[target] { out(r.glossary(g)); return .ok }
         if target == "system" { return systemDetail() }
         if target == "terms" {
-            out(explanations.glossary.values.sorted { $0.id < $1.id }.map { "  " + r.pad($0.id, 22) + ($0.name.text(args.lang) ?? "") }.joined(separator: "\n"))
+            out(explanations.glossary.values.sorted { $0.id < $1.id }.map { "  " + r.pad($0.id, 24) + ($0.name.text(args.lang) ?? "") }.joined(separator: "\n"))
             return .ok
         }
         let (scan, snapshot) = world()

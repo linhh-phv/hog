@@ -178,6 +178,28 @@ import Testing
         }
     }
 
+    // QA3: a GUI app's main binary left behind by a closed terminal is not an orphan; python3's Python.app still is.
+    @Test func appMainBinaryIsNotAnOrphan() {
+        let home = "/Users/me"
+        #expect(Ownership.isAppMainExecutable("/Applications/Visual Studio Code.app/Contents/MacOS/Electron", home: home))
+        #expect(Ownership.isAppMainExecutable("/Users/me/Applications/Foo.app/Contents/MacOS/Foo", home: home))
+        #expect(!Ownership.isAppMainExecutable("/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python", home: home))
+        #expect(!Ownership.isAppMainExecutable("/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python", home: home))
+        #expect(!Ownership.isAppMainExecutable("/Applications/Foo.app/Contents/Resources/bin/node", home: home))
+    }
+
+    // QA3: Cookie headers are masked like Authorization.
+    @Test func cookieHeaderIsMasked() {
+        #expect(Privacy.scrubArgs(["curl", "-H", "Cookie: sid=abc123", "https://x"], home: "/Users/me") == "curl -H Cookie: *** https://x")
+        #expect(Privacy.scrubArgs(["curl", "-H", "Cookie:", "sid=abc123"], home: "/Users/me") == "curl -H Cookie: ***")
+    }
+
+    // QA3: stderr past the cap is reported too.
+    @Test func stderrOverflowIsReported() throws {
+        let r = try #require(Command.run("/bin/sh", ["-c", "exec /usr/bin/yes >&2"], timeout: 20))
+        #expect(r.status != 0 && r.stderr.contains("output over"))
+    }
+
     let analyzer: Analyzer = {
         let b = { (k: String) in DataSource(bundledDirectory: DataSource.standard(k).bundledDirectory, localDirectory: nil) }
         return Analyzer(catalog: .load(b("catalog")), rules: .load(b("rules")), explain: .load(b("explain")), lang: .en)

@@ -94,12 +94,17 @@ public enum Command {
             }
             usleep(10_000)
         }
-        // Readers finish once every writer in the group is gone; do not wait forever on a stray holder.
-        _ = group.wait(timeout: .now() + 1)
+        // Readers finish once every writer in the group is gone; a stray holder in another group may keep the pipe
+        // open, so after 1 s they are told to stop, and the fds are closed only once they have (a reader still blocked
+        // on a closed fd number could read the next command's pipe).
+        if group.wait(timeout: .now() + 1) == .timedOut {
+            out.cancel(); err.cancel()
+            group.wait()
+        }
         close(outFD); close(errFD)
         let exit: Int32 = (status & 0x7f) == 0 ? (status >> 8) & 0xff : 128 + (status & 0x7f)
         return Result(status: out.overflowed || err.overflowed ? 1 : exit, stdout: String(decoding: out.data, as: UTF8.self),
-                      stderr: String(decoding: err.data, as: UTF8.self) + (out.overflowed ? "\n(hog: output over \(maxOutput) bytes, stopped)" : ""),
+                      stderr: String(decoding: err.data, as: UTF8.self) + (out.overflowed || err.overflowed ? "\n(hog: output over \(maxOutput) bytes, stopped)" : ""),
                       timedOut: timedOut, tookMs: Int(Date().timeIntervalSince(started) * 1000), startedAt: started)
     }
 
@@ -111,12 +116,22 @@ public enum Command {
         private let lock = NSLock()
         private var bytes = Data()
         private(set) var overflowed = false
+        private var cancelled = false
 
         var data: Data { lock.lock(); defer { lock.unlock() }; return bytes }
 
+        func cancel() { lock.lock(); cancelled = true; lock.unlock() }
+
+        /// Reads until end of file, overflow or `cancel()`; polls so a cancel is seen within 100 ms.
         func drain(_ fd: Int32, onOverflow: () -> Void) {
             var buf = [UInt8](repeating: 0, count: 64 * 1024)
+            var pfd = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
             while true {
+                lock.lock(); let stop = cancelled; lock.unlock()
+                if stop { break }
+                let ready = poll(&pfd, 1, 100)
+                if ready == 0 || (ready < 0 && errno == EINTR) { continue }
+                guard ready > 0 else { break }
                 let n = read(fd, &buf, buf.count)
                 guard n > 0 else { break }
                 lock.lock()
