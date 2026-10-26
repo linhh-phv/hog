@@ -80,9 +80,12 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
             if ["-u", "--user"].contains(previous), w.contains(":"), !w.hasPrefix("-") { return "***" }
             if w.hasPrefix("--user="), w.contains(":") { return "--user=***" }
             if w.hasPrefix("-u"), !w.hasPrefix("--"), w.count > 2, w.contains(":") { return "-u***" }
-            if let flag = (Privacy.passwordShortFlags[program] ?? []).first(where: { Privacy.passwordFlag($0, matches: w) }) {
-                if w == flag { maskNext = true; return w }
-                return flag + (flag.hasPrefix("--") ? "=***" : "***")
+            if Privacy.credentialProgram(w) != nil { program = lastComponent(w) }
+            if let m = Privacy.credential(Privacy.passwordShortFlags[program] ?? [], w) {
+                switch m {
+                case .valueNext: maskNext = true; return w
+                case .attached(let masked): return masked
+                }
             }
             // A header whose name is secret-looking: `X-Api-Key: v` (value next), `x-api-key:v`, `--header=X-Auth:v`.
             let (prefix, value) = w.hasPrefix("-") && w.contains("=")
@@ -153,10 +156,10 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
     }
 
     /// `supabase@latest`, `vite@5.1.0` → kept; `@scope/pkg[@version]` → `@…/pkg[@version]` (the scope can be a company).
-    /// Only `latest` or a semantic version (at most three numbers) after `@` counts: `admin@localhost`, `deploy@10.0.1.20`,
+    /// Only `latest` or a version of at most three numbers (no pre-release part: `10-0-1-20` is a host) after `@` counts: `admin@localhost`, `deploy@10.0.1.20`,
     /// `root@1.example.com`, `bob@next` are users at hosts (reviewer 2026-10-26).
     static func packageSpec(_ v: String) -> String? {
-        let pattern = #"^(@[A-Za-z0-9._-]+/)?([A-Za-z0-9._-]+)(@(latest|[\^~]?[0-9]+(\.[0-9]+){0,2}([-+][0-9A-Za-z.-]+)?))?$"#
+        let pattern = #"^(@[A-Za-z0-9._-]+/)?([A-Za-z0-9._-]+)(@(latest|[\^~]?[0-9]+(\.[0-9]+){0,2}))?$"#
         guard let m = try? NSRegularExpression(pattern: pattern).firstMatch(in: v, range: NSRange(v.startIndex..., in: v)) else { return nil }
         let scoped = m.range(at: 1).location != NSNotFound
         let versioned = m.range(at: 3).location != NSNotFound

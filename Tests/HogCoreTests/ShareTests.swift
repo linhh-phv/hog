@@ -151,6 +151,23 @@ import Testing
         #expect(Privacy.scrubArgs(["sshpass", "-p", "hunter2", "ssh", "h"], home: "/Users/me") == "sshpass -p *** ssh h")
     }
 
+    // Reviewer 4 (2026-10-26): hosts with dashes, combined flags, wrapped programs.
+    @Test func reviewer4Cases() {
+        func share(_ a: [String]) -> String { ShareInfo.shareArgs(a, home: "/Users/me") }
+        for host in ["deploy@10-0-1-20", "ubuntu@1-2-3-4.sslip.io", "web@1-prod.acme.com", "a@1.2.3-x.acme.com", "me@1.2.3+host.acme.com"] {
+            #expect(share(["ssh", host]) == "ssh …", "\(host)")
+        }
+        func scrub(_ a: [String]) -> String { Privacy.scrubArgs(a, home: "/Users/me") }
+        #expect(scrub(["curl", "-su", "admin:hunter2", "https://x"]) == "curl -su *** https://x")
+        #expect(scrub(["curl", "-sb", "sid=abc123", "-skE", "c.pem:pw", "-sU", "a:pw"]) == "curl -sb *** -skE *** -sU ***")
+        #expect(scrub(["docker", "exec", "-it", "db", "mysql", "-uroot", "-phunter2"]) == "docker exec -it db mysql -uroot -p***")
+        #expect(scrub(["sudo", "curl", "-b", "sid=x"]) == "sudo curl -b ***")
+        #expect(scrub(["env", "X=1", "curl", "-U", "a:b"]) == "env X=1 curl -U ***")
+        #expect(scrub(["sudo", "sshpass", "-p", "hunter2", "ssh", "h"]) == "sudo sshpass -p *** ssh h")
+        #expect(share(["sh", "-c", "ssh host mysql -phunter2 && nice redis-cli -a pw ping"]) == "sh -c ssh host mysql -p*** && nice redis-cli -a *** ping")
+        #expect(scrub(["vite", "-p", "3000"]) == "vite -p 3000", "no credential program: -p is a port")
+    }
+
     @Test func windowTitleWithoutAFileKeepsTheProject() {
         let w = CodeStatusParser.Window(index: 1, title: "web-app — Work")
         var s = scan([])

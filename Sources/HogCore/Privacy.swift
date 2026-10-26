@@ -40,8 +40,7 @@ public enum Privacy {
     static func scrubArgList(_ args: [String], home: String) -> [String] {
         var out: [String] = []
         var maskNext = false
-        let program = args.first.map { ($0 as NSString).lastPathComponent } ?? ""
-        let pwFlags = passwordShortFlags[program] ?? []
+        var pwFlags: Set<String> = []
         var maskAuth = false
         var budget = maxScannedLength
         let bounded = args.prefix { arg in defer { budget -= min(arg.count, maxArgLength) }; return budget > 0 }
@@ -56,9 +55,12 @@ public enum Privacy {
             if lower.hasSuffix("authorization:") || lower.hasSuffix("cookie:") || ["bearer", "basic"].contains(lower) {
                 out.append(arg); maskAuth = true; continue
             }
-            if let flag = pwFlags.first(where: { passwordFlag($0, matches: arg) }) {
-                out.append(arg == flag ? arg : flag + (flag.hasPrefix("--") ? "=***" : "***"))
-                maskNext = arg == flag
+            if !maskNext, let flags = credentialProgram(arg) { pwFlags = flags }
+            if !maskNext, let m = credential(pwFlags, arg) {
+                switch m {
+                case .valueNext: out.append(arg); maskNext = true
+                case .attached(let masked): out.append(masked)
+                }
                 continue
             }
             if maskNext {
@@ -107,9 +109,25 @@ public enum Privacy {
         return s
     }
 
-    /// `-p` matches `-p` and `-psecret`; a long flag only itself or `--user=…` (not `--user-agent`: reviewer 2026-10-26).
-    static func passwordFlag(_ flag: String, matches arg: String) -> Bool {
-        flag.hasPrefix("--") ? (arg == flag || arg.hasPrefix(flag + "=")) : arg.hasPrefix(flag)
+    /// The credential flags of a program named anywhere in the command (`docker exec db mysql -pX`, `sudo curl -b …`).
+    static func credentialProgram(_ word: String) -> Set<String>? {
+        word.hasPrefix("-") ? nil : passwordShortFlags[(word as NSString).lastPathComponent]
+    }
+
+    enum CredentialMatch: Equatable { case valueNext, attached(String) }
+
+    /// `-p` → the next word is the secret; `-psecret`, `--user=u:pw` → masked in place (a long flag only matches itself
+    /// or `flag=`: not `--user-agent`); combined short flags `-su`, `-skE` → the last one takes the next word.
+    static func credential(_ flags: Set<String>, _ w: String) -> CredentialMatch? {
+        guard !flags.isEmpty, w.hasPrefix("-") else { return nil }
+        if flags.contains(w) { return .valueNext }
+        for f in flags.sorted(by: { $0.count > $1.count }) {
+            if f.hasPrefix("--") { if w.hasPrefix(f + "=") { return .attached(f + "=***") } } else if w.hasPrefix(f) { return .attached(f + "***") }
+        }
+        if w.count > 2, !w.hasPrefix("--"), w.dropFirst().allSatisfy(\.isLetter), let last = w.last, flags.contains("-" + String(last)) {
+            return .valueNext
+        }
+        return nil
     }
 
     static func isSecret(_ flagName: String) -> Bool {
