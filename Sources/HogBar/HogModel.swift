@@ -139,8 +139,9 @@ final class HogModel: ObservableObject {
         }
     }
 
+    /// One group open at a time: opening a group closes the one open before (user 2026-10-27), so the list stays short.
     func toggle(_ group: String) {
-        if expanded.contains(group) { expanded.remove(group) } else { expanded.insert(group) }
+        expanded = expanded.contains(group) ? [] : [group]
     }
 
     // MARK: Stop
