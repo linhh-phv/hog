@@ -4,11 +4,12 @@ import Foundation
 /// entries each shown number links to, the CPU top, and which items count as "not known yet" candidates kept through the snapshot size cap.
 public enum Presentation {
     /// Glossary entries the menu's gauge and number chips open (Overview page). Tested to exist in both languages.
-    public static let tileGlossaryIds = ["memory-used", "cpu-machine", "swap-used", "thermal-state", "cpu-pct"]
+    public static let tileGlossaryIds = ["memory-used", "cpu-machine", "swap-used", "temperature", "thermal-state", "cpu-pct"]
 
     /// Every number the CLI prints, with its glossary entry.
     public static let cliGlossaryIds = ["memory-pressure", "memory-used", "compressed-stored", "compressor-occupied", "swap-used", "cpu-pct",
-                                        "load", "footprint", "ram-total", "cpu-machine", "thermal-state"]
+                                        "load", "footprint", "ram-total", "cpu-machine", "thermal-state",
+                                        "temperature", "fans"]
 
     /// Glossary entry for every measured fact (`hog explain <item>` prints it next to the number).
     /// Structural facts (what something *is*) are excluded: they are names, not numbers.

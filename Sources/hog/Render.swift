@@ -55,10 +55,17 @@ struct Render {
         if let used = o.ramUsed, o.ramTotal > 0 { head += " · RAM " + Format.percent(Double(used) / Double(o.ramTotal) * 100, lang) }
         head += " · CPU " + (o.cpuUsed.map { Format.percent($0, lang) } ?? dim(t("chưa đo", "not measured")))
         if let sw = o.swapUsed { head += " · " + t("tràn ra ổ đĩa ", "swapped ") + bytes(sw) }
-        if let th = o.thermal {
-            let word = Format.thermal(th, lang)
-            head += " · " + t("nhiệt ", "heat ") + (th >= .serious ? red(word) : (th == .fair ? yellow(word) : word))
+        // Degrees from the SMC when hog knows this chip's keys; macOS's own word either way (it decides the colour).
+        let word = o.thermal.map { th in
+            let w = Format.thermal(th, lang)
+            return th >= .serious ? red(w) : (th == .fair ? yellow(w) : w)
         }
+        if let c = o.heat.cpuAvgC.value {
+            head += " · " + t("nhiệt ", "heat ") + Format.celsius(c, lang) + (word.map { " (macOS: \($0))" } ?? "")
+        } else if let word {
+            head += " · " + t("nhiệt ", "heat ") + word
+        }
+        if let fans = Format.fans(o.heat.fans.value, lang) { head += " · " + fans }
         out.append(head)
         // The line under the state says why it is not fine, or that there is nothing to do ("Nên dọn" says the rest).
         if !o.status.detail.isEmpty, o.cleanups.isEmpty || o.status.tone != .ok { out.append(dim(o.status.detail)) }

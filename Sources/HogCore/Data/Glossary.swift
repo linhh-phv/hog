@@ -146,6 +146,58 @@ public enum Format {
         }
     }
 
+    /// "53 °C": whole degrees, sensors of one chip already differ by more than that.
+    public static func celsius(_ c: Double, _ lang: Lang) -> String { number(c, 0, lang) + " °C" }
+
+    public static func rpm(_ r: Int, _ lang: Lang) -> String { lang == .vi ? "\(r) vòng/phút" : "\(r) rpm" }
+
+    /// The fans in a few words: none, all stopped, or the fastest; `nil` when not measured.
+    public static func fans(_ fans: [HeatInfo.Fan]?, _ lang: Lang) -> String? {
+        guard let fans else { return nil }
+        if fans.isEmpty { return lang == .vi ? "không có quạt" : "no fan" }
+        guard let fastest = fans.compactMap(\.rpm.value).max() else { return nil }
+        if fastest == 0 { return lang == .vi ? "quạt đứng" : (fans.count == 1 ? "fan stopped" : "fans stopped") }
+        return (lang == .vi ? "quạt " : (fans.count == 1 ? "fan " : "fans ")) + rpm(fastest, lang)
+    }
+
+    /// Everything hog knows about heat, one line each, for the "Nhiệt" explanation: CPU, GPU, each fan, macOS's own
+    /// word, and where the degrees come from (unofficial sensors) — or why there are none.
+    public static func heatDetail(_ h: HeatInfo, thermal: ThermalState?, _ lang: Lang) -> [String] {
+        func t(_ vi: String, _ en: String) -> String { lang == .vi ? vi : en }
+        var out: [String] = []
+        if let avg = h.cpuAvgC.value, let max = h.cpuMaxC.value {
+            out.append(t("CPU: trung bình \(celsius(avg, lang)), nóng nhất \(celsius(max, lang)) (\(h.cpuSensors) cảm biến)",
+                         "CPU: \(celsius(avg, lang)) on average, hottest \(celsius(max, lang)) (\(h.cpuSensors) sensors)"))
+        }
+        if let avg = h.gpuAvgC.value { out.append("GPU: " + celsius(avg, lang)) }
+        switch h.fans.value {
+        case nil: break
+        case let fans? where fans.isEmpty: out.append(t("Máy không có quạt", "This Mac has no fan"))
+        case let fans?:
+            for f in fans {
+                let name = t("Quạt \(f.index + 1)", "Fan \(f.index + 1)")
+                let now = f.rpm.value.map { $0 == 0 ? t("đứng", "stopped") : rpm($0, lang) } ?? t("chưa đo", "not measured")
+                let range = f.minRpm.value.flatMap { lo in f.maxRpm.value.map { t(" (chạy \(lo)–\($0))", " (runs \(lo)–\($0))") } } ?? ""
+                out.append("\(name): \(now)\(range)")
+            }
+        }
+        if let th = thermal { out.append(t("macOS đánh giá: ", "macOS's own word: ") + Format.thermal(th, lang)) }
+        let chip = h.chip.value ?? t("chip này", "this chip")
+        if h.cpuAvgC.value != nil {
+            out.append(h.keysVerified.value == true
+                ? t("Nguồn: cảm biến SMC không chính thức (Apple không công bố) — khoá của \(chip) đã kiểm trên máy thật.",
+                    "Source: unofficial SMC sensors (not published by Apple) — the \(chip) keys were checked on a real Mac.")
+                : t("Nguồn: cảm biến SMC không chính thức (Apple không công bố) — khoá của \(chip) chưa kiểm trên máy thật, số có thể lệch.",
+                    "Source: unofficial SMC sensors (not published by Apple) — the \(chip) keys are not checked on a real Mac yet; numbers may be off."))
+        } else if h.keyTable.value == nil {
+            out.append(t("Chưa đo được độ C: hog chưa biết khoá cảm biến của \(chip).",
+                         "Degrees not measured: hog does not know the sensor keys of \(chip) yet."))
+        } else {
+            out.append(t("Chưa đo được độ C: cảm biến không trả lời.", "Degrees not measured: the sensors did not answer."))
+        }
+        return out
+    }
+
     /// How sure a finding is, in words (the raw value is English).
     public static func confidence(_ c: Confidence, _ lang: Lang) -> String {
         switch (c, lang) {

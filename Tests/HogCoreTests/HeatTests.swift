@@ -142,3 +142,36 @@ import Testing
         if r.heat.keyTable.value == nil { #expect(r.heat.cpuAvgC.value == nil) }
     }
 }
+
+/// Task temperature-fans: words for degrees and fans (CLI and app share them).
+@Suite struct HeatFormatTests {
+    @Test func degreesAndFans() {
+        #expect(Format.celsius(52.8, .en) == "53 °C")
+        #expect(Format.fans(nil, .vi) == nil)
+        #expect(Format.fans([], .vi) == "không có quạt" && Format.fans([], .en) == "no fan")
+        let f = { (rpm: Int?) in HeatInfo.Fan(index: 0, rpm: Measured(rpm)) }
+        #expect(Format.fans([f(0), f(0)], .vi) == "quạt đứng" && Format.fans([f(0)], .en) == "fan stopped")
+        #expect(Format.fans([f(0), f(2512)], .vi) == "quạt 2512 vòng/phút")
+        #expect(Format.fans([f(nil)], .vi) == nil, "no fan speed read: say nothing, not \"stopped\"")
+    }
+
+    @Test func detailSaysWhereDegreesComeFrom() {
+        let fans = Measured([HeatInfo.Fan(index: 0, rpm: Measured(0), minRpm: Measured(1200), maxRpm: Measured(5779))])
+        let checked = Format.heatDetail(HeatInfo(chip: Measured("Apple M1 Pro"), keyTable: Measured("m1"), keysVerified: Measured(true),
+                                                 cpuAvgC: Measured(52.8), cpuMaxC: Measured(54.6), cpuSensors: 10,
+                                                 gpuAvgC: Measured(51.6), fans: fans), thermal: .nominal, .vi)
+        #expect(checked == [
+            "CPU: trung bình 53 °C, nóng nhất 55 °C (10 cảm biến)", "GPU: 52 °C", "Quạt 1: đứng (chạy 1200–5779)", "macOS đánh giá: mát",
+            "Nguồn: cảm biến SMC không chính thức (Apple không công bố) — khoá của Apple M1 Pro đã kiểm trên máy thật.",
+        ], "\(checked)")
+
+        let unchecked = Format.heatDetail(HeatInfo(chip: Measured("Apple M3"), keyTable: Measured("m3"), keysVerified: Measured(false),
+                                                   cpuAvgC: Measured(60), cpuMaxC: Measured(70), cpuSensors: 16), thermal: nil, .en)
+        #expect(unchecked.last?.contains("not checked on a real Mac yet") == true)
+
+        let unknown = Format.heatDetail(HeatInfo(chip: Measured("Apple M9"), fans: Measured([])), thermal: .fair, .vi)
+        #expect(unknown == ["Máy không có quạt", "macOS đánh giá: ấm", "Chưa đo được độ C: hog chưa biết khoá cảm biến của Apple M9."])
+        let silent = Format.heatDetail(HeatInfo(chip: Measured("Apple M1"), keyTable: Measured("m1")), thermal: nil, .vi)
+        #expect(silent == ["Chưa đo được độ C: cảm biến không trả lời."])
+    }
+}

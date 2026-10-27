@@ -57,6 +57,8 @@ struct MetricChip<Value: View>: View {
     @EnvironmentObject var model: HogModel
     let label: String
     let glossaryId: String
+    /// Measured detail under the explanation (the numbers behind the chip).
+    var extra: String? = nil
     @ViewBuilder let value: Value
     @State private var explain = false
 
@@ -72,7 +74,7 @@ struct MetricChip<Value: View>: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .popover(isPresented: $explain, arrowEdge: .bottom) { Explanation(id: glossaryId, extra: nil) }
+        .popover(isPresented: $explain, arrowEdge: .bottom) { Explanation(id: glossaryId, extra: extra) }
     }
 }
 

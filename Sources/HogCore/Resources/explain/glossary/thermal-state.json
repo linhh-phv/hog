@@ -6,8 +6,8 @@
     "en": "Heat"
   },
   "plain": {
-    "vi": "macOS tự đánh giá máy nóng tới đâu (từ cảm biến nhiệt bên trong): bình thường, ấm, nóng, rất nóng. Không phải số độ C.",
-    "en": "How hot macOS itself judges the machine to be (from its internal sensors): normal, warm, hot, very hot. Not degrees."
+    "vi": "macOS tự đánh giá máy nóng tới đâu (từ cảm biến nhiệt bên trong): mát, ấm, nóng, rất nóng. Đây là chữ; số độ C ở mục Nhiệt độ.",
+    "en": "How hot macOS itself judges the machine to be (from its internal sensors): cool, warm, hot, very hot. This is a word; degrees are under Temperature."
   },
   "how_to_read": {
     "vi": "Ấm là thường khi đang làm nặng. Nóng / rất nóng = macOS có thể giảm tốc CPU để hạ nhiệt, nên máy chậm đi.",

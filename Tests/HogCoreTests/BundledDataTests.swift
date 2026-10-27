@@ -40,7 +40,7 @@ import Testing
 
     @Test func explanationsLoadAndHeadlinesReferenceRealGlossary() throws {
         #expect(explain.warnings.isEmpty, "\(explain.warnings)")
-        #expect(explain.glossary.count == 28)
+        #expect(explain.glossary.count == 30)
         let h = try #require(explain.headlines)
         for t in [h.okClean, h.okSuggest, h.warn, h.critical, h.unknown, h.hot, h.busy] {
             #expect(t.text.missingLanguages.isEmpty)

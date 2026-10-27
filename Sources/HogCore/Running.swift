@@ -71,6 +71,8 @@ public struct Overview: Sendable, Equatable {
     public var swapUsed: Int64?
     public var compressed: Int64?
     public var thermal: ThermalState?
+    /// Degrees and fans (SMC); every value may be unmeasured.
+    public var heat: HeatInfo
     public var cleanups: [Cleanup]
     /// Sum of RAM of the cleanups (what "Dọn" would give back).
     public var reclaimable: Int64
@@ -244,7 +246,7 @@ public struct Overview: Sendable, Equatable {
         return Overview(status: status(s, cleanups: cleanups, reclaimable: reclaimable, groups: list),
                         ramUsed: s.memory.usedBytes.value, ramTotal: s.host.memTotalBytes, pressure: s.memory.pressure.value,
                         cpuUsed: s.cpu.usedPct, swapUsed: s.memory.swapUsedBytes.value, compressed: s.memory.compressedStoredBytes.value,
-                        thermal: s.cpu.thermal.value, cleanups: cleanups, reclaimable: reclaimable, groups: list,
+                        thermal: s.cpu.thermal.value, heat: s.heat, cleanups: cleanups, reclaimable: reclaimable, groups: list,
                         processCount: s.processes.count + s.memory.unreadableProcessCount, takenAt: s.takenAt,
                         selfBytes: s.hog.selfFootprintBytes.value, notes: notes(s))
     }

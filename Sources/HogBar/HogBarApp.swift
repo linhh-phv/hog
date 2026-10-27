@@ -157,6 +157,11 @@ enum Renderer {
                                pressure: Measured(hot ? .critical : .normal), unreadableProcessCount: 181, measuredFootprintBytes: 21_000_000_000),
             cpu: CPUInfo(idlePct: Measured(hot ? 22 : 88), thermal: Measured(hot ? .serious : .nominal),
                          top: Measured([CPUUser(id: "system", label: "macOS", pct: 34, count: 0)])),
+            heat: HeatInfo(chip: Measured("Apple M1 Pro"), keyTable: Measured("m1"), keysVerified: Measured(true),
+                           cpuAvgC: Measured(hot ? 88.4 : 52.8), cpuMaxC: Measured(hot ? 93.1 : 54.5), cpuSensors: 10,
+                           gpuAvgC: Measured(hot ? 74.0 : 51.6), gpuMaxC: Measured(hot ? 75.2 : 52.9), gpuSensors: 2,
+                           fans: Measured([HeatInfo.Fan(index: 0, rpm: Measured(hot ? 4_210 : 0), minRpm: Measured(1200), maxRpm: Measured(5779)),
+                                           HeatInfo.Fan(index: 1, rpm: Measured(hot ? 4_530 : 0), minRpm: Measured(1200), maxRpm: Measured(6241))])),
             headline: Headline(level: .ok, text: "", glossaryIds: []),
             sensors: [], owners: owners, processes: processes, items: calm ? [] : [watchman, node],
             findings: calm ? [] : [

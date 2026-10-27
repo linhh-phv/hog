@@ -1,0 +1,25 @@
+{
+  "id": "temperature",
+  "activity_monitor": null,
+  "name": {
+    "vi": "Nhiệt độ",
+    "en": "Temperature"
+  },
+  "plain": {
+    "vi": "Nhiệt độ CPU (trung bình các nhân), đọc từ cảm biến bên trong máy (SMC) — cảm biến không chính thức: Apple không công bố mã của chúng, hog dùng bảng mã theo đời chip. Chữ đi kèm (mát, ấm, nóng, rất nóng) là macOS tự đánh giá.",
+    "en": "CPU temperature (average of the cores), read from the machine's internal sensors (SMC) — unofficial sensors: Apple does not publish their codes, hog uses a table per chip generation. The word next to it (cool, warm, hot, very hot) is macOS's own assessment."
+  },
+  "how_to_read": {
+    "vi": "Con số lên xuống nhanh theo việc máy đang làm và khác nhau giữa các đời máy. Chữ của macOS mới cho biết máy có phải giảm tốc vì nóng hay không: nóng / rất nóng = có thể chậm đi.",
+    "en": "The number moves quickly with what the machine is doing and differs between models. macOS's word is what tells you whether it has to slow down: hot / very hot = it may get slower."
+  },
+  "act": {
+    "vi": "Nóng mà không làm gì nặng → xem \"Đang ăn CPU\" và tắt thứ không dùng; để máy chỗ thoáng.",
+    "en": "Hot while you are not doing anything heavy → check \"Using CPU\" and stop what you do not use; give the machine air."
+  },
+  "provenance": {
+    "added": "2026-10-27",
+    "source": "measured",
+    "verified": false
+  }
+}
