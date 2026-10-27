@@ -15,7 +15,7 @@ hog answers four questions, in this order:
 3. **Can I stop it, and what do I lose?** — suggestions backed by measurements, never guesses.
 4. **What does this number mean?** — every number has a plain-language explanation, with the Activity Monitor name.
 
-![hog menu](docs/design/menubar/app/menu-main-light.png)
+![hog menu](docs/design/compact/app/menu-main-light.png)
 
 hog started as `lps` (list processes by listening port); `hog ports` keeps that view.
 
@@ -35,7 +35,8 @@ open -a Hog               # start the menu bar app
 ## Use
 
 ```bash
-hog                          # headline, memory/CPU/heat, biggest consumers (RAM and CPU), suggestions
+hog                          # state, RAM/CPU/swap/heat, what to clean up, what is running by project
+hog --all                    # every group and every process (same-name processes on one line)
 hog --json                   # snapshot (compact; --pretty to read, --brief for Claude, --full for everything)
                              # --fast skips VS Code/watchman and the current CPU sample
 hog explain <item|pid|port>  # every measurement, which rules fired and why, what the safety gates say

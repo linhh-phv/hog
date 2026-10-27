@@ -136,11 +136,10 @@ import Testing
     // QA2 A: every measured fact `hog explain` prints has a glossary entry (structural facts are names, not numbers).
     @Test func everyMeasuredFactHasAGlossaryEntry() {
         for fact in FactNames.all.subtracting(FactNames.structural) {
-            let id = MenuSummary.factGlossary[fact]
+            let id = Presentation.factGlossary[fact]
             #expect(id != nil, "no glossary for \(fact)")
             #expect(id.flatMap { analyzer.explain.glossary[$0] } != nil || id == nil, "missing glossary entry \(id ?? "")")
         }
-        for wf in MenuSummary.whyFacts { #expect(MenuSummary.factGlossary[wf.fact] == wf.glossaryId, "\(wf.fact)") }
     }
 
     // QA2 B: a command that writes without end is cut off at the cap and killed, not read into memory.

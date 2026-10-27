@@ -141,7 +141,7 @@ public struct Analyzer: Sendable {
             // So do "not known yet" candidates (the app lists them; QA 2026-10-26: a 120 MB one fell below the cap).
             var unknowns = 0
             items = items.filter { withFinding.contains($0.id) || $0.kind == .container
-                || (MenuSummary.isUnknownCandidate($0) && { unknowns += 1; return unknowns <= MenuSummary.maxUnknowns + MenuSummary.maxCards }())
+                || (Presentation.isUnknownCandidate($0) && { unknowns += 1; return unknowns <= Presentation.maxUnknownCandidates }())
                 || { kept += 1; return kept <= Self.maxExtraItems }() }
             let keptIds = Set(items.map(\.id))
             itemOfPid = itemOfPid.filter { keptIds.contains($0.value) }
@@ -485,7 +485,7 @@ public struct Analyzer: Sendable {
         var finalLevel = level
         var ids = template.glossaryIds
         // CPU and heat (task cpu-thermal): a second sentence only when it matters.
-        let rows = MenuSummary.cpuRows(s, max: 3)
+        let rows = Presentation.cpuRows(s, max: 3)
         let cpuTopText: String = if s.cpu.top.value == nil {
             lang == .vi ? "chưa đo (--fast)" : "not measured (--fast)"
         } else if rows.isEmpty {

@@ -57,6 +57,8 @@ public struct Overview: Sendable, Equatable {
         public var cpu: Double?
         public var entries: [Entry]
         public var processCount: Int
+        /// The app bundle of an app group (`/Applications/Google Chrome.app`, `~` for home), for its icon.
+        public var appPath: String? = nil
     }
 
     public var status: Status
@@ -143,6 +145,9 @@ public struct Overview: Sendable, Equatable {
                 else { ("other", .other, t("Khác", "Other")) }
             var g = groups[gid] ?? Group(id: gid, kind: kind, name: gname, summary: "", bytes: 0, cpu: nil, entries: [], processCount: 0)
             g.bytes += p.footprintBytes.value ?? 0
+            if kind == .app, g.appPath == nil, let path = p.exePath.value, let r = path.range(of: ".app/") {
+                g.appPath = String(path[..<r.lowerBound]) + ".app"
+            }
             if let c = p.cpu.nowPct.value { g.cpu = (g.cpu ?? 0) + c }
             g.processCount += 1
             groups[gid] = g
@@ -278,5 +283,5 @@ public struct Overview: Sendable, Equatable {
 }
 
 extension String {
-    var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
+    public var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
 }

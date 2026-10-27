@@ -6,29 +6,36 @@ import SwiftUI
 /// App state. All sensing, rules and stopping go through HogCore (the CLI uses the very same code).
 @MainActor
 final class HogModel: ObservableObject {
-    enum Page: Equatable { case main, item(String), suggestions, system, settings }
+    /// Pages of the compact menu (docs/design/compact/screens.html).
+    enum Page: Equatable { case main, entry(group: String, entry: String), all, system, settings }
     enum LangSetting: String, CaseIterable { case system, vi, en }
 
     @Published var snapshot: Snapshot?
-    @Published var summary: MenuSummary?
+    @Published var overview: Overview?
     @Published var scanning = false
     @Published var pressure: Pressure? = SystemReader.pressureNow()
     @Published var thermal: ThermalState? = SystemReader.thermalNow()
     @Published var page: Page = .main {
         didSet {
-            if case .item = page { back = oldValue == .suggestions ? .suggestions : .main } else { back = .main }
+            if case .entry = page { back = oldValue == .all ? .all : .main } else if page != .main { back = .main }
         }
     }
-    /// Where "‹ Back" goes: the suggestions list when an item was opened from it.
+    /// Where "‹ Back" goes from an entry: the full list when it was opened from there.
     var back: Page = .main
-    @Published var expandedGroup: String?
+    @Published var expanded: Set<String> = []
+    /// "Nên dọn" check boxes. Pre-selected suggestions start checked; what the person changes stays across rescans.
+    @Published var selected: Set<String> = []
+    private var seenCleanups: Set<String> = []
+    @Published var search = ""
     @Published var stopPlan: StopPlan?
+    /// "Dọn N thứ": one plan per thing, confirmed together.
+    @Published var batch: [StopPlan]?
     @Published var stopRunning = false
     @Published var toast: String?
     @Published var systemRows: [SystemDetail.Row]?
     @Published var systemMeasuring = false
-    /// Item whose info was just copied (the button shows "Copied").
-    @Published var copiedItem: String?
+    /// Entry whose info was just copied (the button shows "Copied").
+    @Published var copied: String?
 
     @Published var langSetting: String = UserDefaults.standard.string(forKey: "lang") ?? LangSetting.system.rawValue {
         didSet { UserDefaults.standard.set(langSetting, forKey: "lang"); reloadData(); refresh() }
@@ -59,12 +66,12 @@ final class HogModel: ObservableObject {
     func t(_ vi: String, _ en: String) -> String { lang == .vi ? vi : en }
 
     init() {
-        analyzer = Analyzer.standard(lang: .en)
+        analyzer = Analyzer.standard(lang: .en, full: true)
         explanations = .load(.standard("explain"))
         catalog = .load(.standard("catalog"))
         reloadData()
-        // Menu closed: only the pressure level, every 10 s (design system, "Luật dùng").
-        // One scan right after launch, so the first menu opening already has numbers (criterion 10: < 0,5 s).
+        // Menu closed: only the pressure level and heat, every 10 s. One scan right after launch, so the first menu
+        // opening already has numbers.
         Task { @MainActor in self.refresh() }
         timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.pressure = SystemReader.pressureNow(); self?.thermal = SystemReader.thermalNow() }
@@ -77,14 +84,15 @@ final class HogModel: ObservableObject {
     }
 
     func reloadData() {
-        analyzer = Analyzer.standard(lang: lang)
+        // Full analysis: "Đang chạy" and "Tất cả" list every readable process (task ui-compact, criterion 4).
+        analyzer = Analyzer.standard(lang: lang, full: true)
         explanations = .load(.standard("explain"))
         catalog = .load(.standard("catalog"))
     }
 
     var icon: NSImage { PigIcon.image(pressure: pressure, thermal: thermal, colored: coloredIcon) }
 
-    /// Menu opened: show the last snapshot at once and scan in the background (~3 s).
+    /// Menu opened: show the last scan at once and scan again in the background.
     func refresh() {
         guard !scanning else { return }
         scanning = true
@@ -94,28 +102,52 @@ final class HogModel: ObservableObject {
             let snapshot = analyzer.analyze(scan)
             await MainActor.run {
                 self.scan = scan
-                self.snapshot = snapshot
-                self.summary = MenuSummary.make(snapshot)
-                self.pressure = snapshot.memory.pressure.value
-                self.thermal = snapshot.cpu.thermal.value
+                self.load(snapshot)
                 self.scanning = false
             }
         }
     }
 
+    /// Shows a snapshot (a scan, or the fixed sample of `--render`).
+    func load(_ snapshot: Snapshot) {
+        self.snapshot = snapshot
+        let o = Overview.make(snapshot, catalog: catalog)
+        overview = o
+        pressure = snapshot.memory.pressure.value
+        thermal = snapshot.cpu.thermal.value
+        // New suggestions start as hog proposes; the person's own ticks are kept; gone ones are dropped.
+        let ids = Set(o.cleanups.map(\.itemId))
+        let fresh = o.cleanups.filter { !seenCleanups.contains($0.itemId) && $0.preselected }.map(\.itemId)
+        selected = selected.intersection(ids).union(fresh)
+        seenCleanups = ids
+    }
+
     func glossary(_ id: String) -> GlossaryEntry? { explanations.glossary[id] }
+
+    func group(_ id: String) -> Overview.Group? { overview?.groups.first { $0.id == id } }
+
+    func entry(_ group: String, _ entry: String) -> Overview.Entry? { self.group(group)?.entries.first { $0.id == entry } }
+
+    func toggle(_ group: String) {
+        if expanded.contains(group) { expanded.remove(group) } else { expanded.insert(group) }
+    }
 
     // MARK: Stop
 
     var stopper: Stopper { Stopper(lang: lang) }
 
-    /// "Dừng…" / "Cách đóng": builds the plan (gates G1, G2, G6, G7) and shows the sheet. Nothing runs yet.
-    func prepareStop(_ itemId: String) {
+    /// A stop target for an entry: its item, else its first process.
+    func target(_ e: Overview.Entry) -> String { e.itemId ?? e.pids.first.map(String.init) ?? e.id }
+
+    func plan(_ target: String) -> StopPlan? {
         let analyzer = self.analyzer
         guard let scan, let snapshot,
-              let resolved = try? stopper.resolve(itemId, in: snapshot, scan: scan, itemFor: { analyzer.item(forPid: $0, in: scan) }) else { return }
-        stopPlan = stopper.plan(resolved.identity, item: resolved.item, snapshot: snapshot, scan: scan)
+              let resolved = try? stopper.resolve(target, in: snapshot, scan: scan, itemFor: { analyzer.item(forPid: $0, in: scan) }) else { return nil }
+        return stopper.plan(resolved.identity, item: resolved.item, snapshot: snapshot, scan: scan)
     }
+
+    /// "Dừng…" / "Cách đóng" for one thing: builds the plan (gates G1, G2, G6, G7) and shows the sheet. Nothing runs yet.
+    func prepareStop(_ target: String) { stopPlan = plan(target) }
 
     /// The person agreed in the sheet: execute (G3, G4, G5, G8 inside HogCore).
     func confirmStop() {
@@ -130,7 +162,6 @@ final class HogModel: ObservableObject {
                 case .done(let m): self.stopPlan = nil; self.toast = m; self.page = .main; self.refresh()
                 case .needsNewPlan(let k): self.stopPlan = k  // G4: a new plan, a new "yes"
                 case .manual: self.stopPlan = nil
-                // The result shows on the main page, wherever "Stop…" was pressed (the item page, all suggestions).
                 case .blocked(let g): self.toast = "\(g.gate): \(g.reason)"; self.stopPlan = nil; self.page = .main
                 case .failed(let m): self.toast = m; self.stopPlan = nil; self.page = .main
                 }
@@ -138,15 +169,55 @@ final class HogModel: ObservableObject {
         }
     }
 
+    /// "Dọn N thứ": a plan for each checked thing; one sheet confirms them together. Every plan still has its own gates.
+    func prepareBatch() {
+        guard let o = overview else { return }
+        batch = o.cleanups.filter { selected.contains($0.itemId) && !$0.manual }.compactMap { plan($0.itemId) }
+    }
+
+    /// Plans the batch would run: not blocked by a gate, not manual.
+    var batchRunnable: [StopPlan] { (batch ?? []).filter { $0.blocked == nil && $0.action != .manual } }
+
+    func confirmBatch() {
+        guard let scan else { return }
+        let plans = batchRunnable
+        guard !plans.isEmpty else { batch = nil; return }
+        stopRunning = true
+        let stopper = self.stopper
+        let lang = self.lang
+        Task.detached {
+            var done: [String] = [], other: [String] = []
+            for plan in plans {
+                switch stopper.execute(plan, scan: scan) {
+                case .done: done.append(plan.label)
+                // A forced stop needs its own plan and its own "yes" (G4): never inside a batch.
+                case .needsNewPlan: other.append(lang == .vi ? "\(plan.label) chưa tắt (cần buộc tắt — mở riêng)" : "\(plan.label) did not stop (needs a forced stop — open it)")
+                case .manual: other.append(plan.label)
+                case .blocked(let g): other.append("\(plan.label): \(g.reason)")
+                case .failed(let m): other.append("\(plan.label): \(m)")
+                }
+            }
+            await MainActor.run {
+                self.stopRunning = false
+                self.batch = nil
+                let head = done.isEmpty ? "" : (lang == .vi ? "Đã dọn: " : "Cleaned up: ") + done.joined(separator: ", ")
+                self.toast = ([head] + other).filter { !$0.isEmpty }.joined(separator: " · ")
+                self.page = .main
+                self.refresh()
+            }
+        }
+    }
+
     // MARK: Share
 
-    /// "Chép thông tin": `hog.share/1` to the clipboard, to paste into a chat with Claude. hog sends nothing (phase-2 design).
-    func copyShare(_ itemId: String) {
-        guard let scan, let item = snapshot?.items.first(where: { $0.id == itemId }) else { return }
-        let text = ShareInfo.make(item, scan: scan).text(lang)
+    /// "Chép thông tin": `hog.share/1` to the clipboard, to paste into a chat with Claude. hog sends nothing.
+    func copyShare(_ e: Overview.Entry) {
+        guard let scan else { return }
+        let item = e.itemId.flatMap { id in snapshot?.items.first { $0.id == id } } ?? e.pids.first.flatMap { analyzer.item(forPid: $0, in: scan) }
+        guard let item else { return }
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
-        copiedItem = itemId
+        NSPasteboard.general.setString(ShareInfo.make(item, scan: scan).text(lang), forType: .string)
+        copied = e.id
     }
 
     // MARK: System detail
@@ -171,13 +242,5 @@ final class HogModel: ObservableObject {
             catch { toast = t("Không đổi được \"mở cùng máy\": \(error.localizedDescription)", "Could not change \"open at login\": \(error.localizedDescription)") }
             objectWillChange.send()
         }
-    }
-
-    // For --render: a fixed snapshot without scanning.
-    func load(_ snapshot: Snapshot) {
-        self.snapshot = snapshot
-        self.summary = MenuSummary.make(snapshot)
-        self.pressure = snapshot.memory.pressure.value
-        self.thermal = snapshot.cpu.thermal.value
     }
 }

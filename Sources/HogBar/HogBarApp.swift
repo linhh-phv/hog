@@ -2,8 +2,8 @@ import AppKit
 import HogCore
 import SwiftUI
 
-/// Menu bar app. `HogBar --render <dir> [--sample]` writes PNGs of the menu (light + dark) for comparing with the
-/// approved mock (docs/design/menubar/) and exits.
+/// Menu bar app. `HogBar --render <dir> [--sample] [--lang vi|en]` writes PNGs of every page (light, and dark for the
+/// main page) for comparing with the approved mock (docs/design/compact/screens.html) and exits.
 @main
 struct HogBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
@@ -12,7 +12,7 @@ struct HogBarApp: App {
     var body: some Scene {
         MenuBarExtra {
             MenuView().environmentObject(model)
-                .onAppear { model.page = .main; model.toast = nil; model.copiedItem = nil; model.refresh() }
+                .onAppear { model.page = .main; model.toast = nil; model.copied = nil; model.refresh() }
         } label: {
             Image(nsImage: model.icon)
         }
@@ -41,57 +41,53 @@ enum Renderer {
         if let i = CommandLine.arguments.firstIndex(of: "--lang"), i + 1 < CommandLine.arguments.count {
             model.overrideLang = Lang(rawValue: CommandLine.arguments[i + 1])
         }
+        let snapshot: Snapshot
         if sample {
-            model.load(Self.sampleSnapshot())
+            snapshot = Self.sampleSnapshot(lang: model.lang)
         } else {
-            let analyzer = Analyzer.standard(lang: model.lang)
-            let snapshot = await Task.detached { analyzer.analyze(Scanner().scan()) }.value
-            model.load(snapshot)
+            let analyzer = Analyzer.standard(lang: model.lang, full: true)
+            snapshot = await Task.detached { analyzer.analyze(Scanner().scan()) }.value
         }
-        for (name, appearance) in [("light", NSAppearance(named: .aqua)!), ("dark", NSAppearance(named: .darkAqua)!)] {
-            for page in ["main", "expanded"] {
-                model.expandedGroup = page == "expanded" ? model.summary?.groups.first?.id : nil
-                let view = MenuView().environmentObject(model).environment(\.colorScheme, name == "dark" ? .dark : .light)
-                let renderer = ImageRenderer(content: view)
-                renderer.scale = 2
-                var image: NSImage?
-                appearance.performAsCurrentDrawingAppearance { image = renderer.nsImage }
-                if let tiff = image?.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff), let png = rep.representation(using: .png, properties: [:]) {
-                    try? png.write(to: dir.appendingPathComponent("menu-\(page)-\(name).png"))
-                }
+        model.load(snapshot)
+        model.scanning = false
+
+        write(model, dir, "menu-main-light")
+        write(model, dir, "menu-main-dark", dark: true)
+        if let g = model.overview?.groups.first(where: { $0.kind == .project }) {
+            model.expanded = [g.id]
+            write(model, dir, "menu-project-light")
+            model.expanded = []
+            if let e = g.entries.first(where: \.unknown) ?? g.entries.first {
+                model.page = .entry(group: g.id, entry: e.id)
+                write(model, dir, "menu-entry-light")
             }
         }
-        model.expandedGroup = nil
-        // Phase 2 pages: an unknown item, then every suggestion.
-        if let unknown = model.summary?.unknowns.first {
-            model.page = .item(unknown.itemId)
-            write(model, dir, "menu-item-light")
-        }
-        if (model.summary?.moreCount ?? 0) > 0 {
-            model.page = .suggestions
-            write(model, dir, "menu-suggestions-light")
-        }
+        model.page = .all
+        write(model, dir, "menu-all-light")
         model.page = .main
-        // CPU and heat (task cpu-thermal): the main page when the machine is hot.
         if sample {
-            model.load(Self.sampleSnapshot(hot: true))
+            model.batch = Self.samplePlans(model)
+            write(model, dir, "menu-clean-light")
+            model.batch = nil
+            model.load(Self.sampleSnapshot(lang: model.lang, hot: true))
             write(model, dir, "menu-hot-light")
-            model.load(Self.sampleSnapshot())
-        }
-        if let first = model.summary?.cards.first {
-            model.prepareStopForRender(first.itemId)
-            write(model, dir, "menu-stop-light")
+            model.load(Self.sampleSnapshot(lang: model.lang, calm: true))
+            write(model, dir, "menu-calm-light")
         }
         print("rendered to \(dir.path)")
     }
 
     /// Lays the menu out in a real (off-screen) AppKit window, like the menu bar panel: unlike `ImageRenderer`, this draws
-    /// `ScrollView` content (the item and suggestions pages scroll).
-    static func write(_ model: HogModel, _ dir: URL, _ name: String) {
-        let host = NSHostingView(rootView: MenuView().environmentObject(model).environment(\.colorScheme, .light))
-        host.appearance = NSAppearance(named: .aqua)
+    /// `ScrollView` content. The menu's material is drawn as the window background colour (materials need a screen).
+    static func write(_ model: HogModel, _ dir: URL, _ name: String, dark: Bool = false) {
+        let view = MenuView().environmentObject(model)
+            .background(Color(nsColor: .windowBackgroundColor))
+            .environment(\.colorScheme, dark ? .dark : .light)
+        let host = NSHostingView(rootView: view)
+        host.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         let size = host.fittingSize
         let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: .borderless, backing: .buffered, defer: false)
+        window.appearance = host.appearance
         window.contentView = host
         host.frame = NSRect(origin: .zero, size: size)
         host.layoutSubtreeIfNeeded()
@@ -102,66 +98,78 @@ enum Renderer {
         }
     }
 
-    /// Fake data shaped like a real run (no real names).
-    static func sampleSnapshot(hot: Bool = false) -> Snapshot {
-        let item = Item(id: "proc:69339:1", kind: .process, label: "Watchman", catalogId: "watchman", pids: [69339],
-                        footprintBytes: Measured(339_000_000), residentRatio: Measured(0.04),
-                        facts: ["age_s": .int(10_800), "watchman.subscriptions": .int(0), "footprint_bytes": .int(339_000_000),
-                                "resident_ratio": .double(0.04), "launchd.restarts_after_stop": .bool(false), "owner.kind": .string("none")])
-        let s1 = Item(id: "claude:91747", kind: .claudeSession, label: "Claude Code — hub", pids: [91747], footprintBytes: Measured(226_000_000))
-        let s2 = Item(id: "claude:39806", kind: .claudeSession, label: "Claude Code — hub", pids: [39806], footprintBytes: Measured(161_000_000))
-        let node = Item(id: "proc:52311:1", kind: .process, label: "node", pids: [52311], footprintBytes: Measured(412_000_000),
-                        residentRatio: Measured(0.3),
-                        facts: ["age_s": .int(172_800), "footprint_bytes": .int(412_000_000), "cpu.avg_pct": .double(0.1),
-                                "cpu.now_pct": .double(hot ? 88 : 0.2),
-                                "net.listen_count": .int(1), "net.established": .int(0), "orphan": .bool(false),
-                                "resident_ratio": .double(0.3), "owner.kind": .string("none")])
-        let python = Item(id: "proc:48820:1", kind: .process, label: "python3.12", pids: [48820], footprintBytes: Measured(268_000_000),
-                          facts: ["age_s": .int(86_400), "footprint_bytes": .int(268_000_000), "owner.kind": .string("none")])
-        func f(_ id: String, _ reason: String, _ strategy: StopStrategy, _ verdict: Verdict = .mayStop) -> Finding {
-            Finding(itemId: id, verdict: verdict, confidence: .high, rules: ["x"], reason: reason, evidence: [:], unmeasured: [],
-                    stop: StopAdvice(strategy: strategy, respawns: .onDemand, effect: "Tắt không mất dữ liệu; lần sau Metro/Jest cần thì nó được bật lại."))
+    /// Fake data shaped like a real run (no real names): two projects, two apps, a few small things.
+    static func sampleSnapshot(lang: Lang, hot: Bool = false, calm: Bool = false) -> Snapshot {
+        func proc(_ pid: Int32, _ exe: String, mb: Int64, cpu: Double, project: String? = nil, owner: String? = nil, item: String? = nil,
+                  catalogId: String? = nil, port: Int? = nil, age: Int64 = 86_400) -> ProcessRecord {
+            ProcessRecord(pid: pid, exe: Measured(exe), ageS: Measured(age), footprintBytes: Measured(mb * 1_000_000),
+                          cpu: ProcessCPU(nowPct: Measured(cpu)), project: Measured(project),
+                          net: ProcessNet(listen: port.map { [ListenSocket(addr: "*", port: $0)] } ?? []),
+                          catalogId: Measured(catalogId), ownerId: Measured(owner), itemId: Measured(item))
         }
+        let k = hot ? 1.0 : 0.0
+        var processes = [
+            proc(101, "Code Helper (Renderer)", mb: 3_100, cpu: 6 + 20 * k, owner: "vscode:1", catalogId: "vscode-renderer"),
+            proc(102, "Code Helper (Plugin)", mb: 612, cpu: 2, owner: "vscode:1", catalogId: "tsserver"),
+            proc(103, "node", mb: 484, cpu: 1, project: "web-app", owner: "vscode:1", port: 3000),
+            proc(104, "watchman", mb: 323, cpu: 0, owner: nil, item: "proc:104:1", catalogId: "watchman", age: 10_800),
+            proc(105, "claude", mb: 390, cpu: 0, project: "web-app", owner: "claude:105", catalogId: "claude-code-session"),
+            proc(106, "python3.12", mb: 256, cpu: 0, project: "web-app", owner: "vscode:1", port: 8000, age: 172_800),
+            proc(201, "Code Helper (Renderer)", mb: 1_100, cpu: 2, owner: "vscode:2", catalogId: "vscode-renderer"),
+            proc(202, "node", mb: 393, cpu: hot ? 310 : 88, project: "api", owner: "vscode:2", item: "proc:202:1", port: 4000),
+            proc(301, "Google Chrome Helper (Renderer)", mb: 2_900, cpu: 6, owner: "app:chrome"),
+            proc(302, "Google Chrome", mb: 500, cpu: 1, owner: "app:chrome"),
+            proc(401, "Discord Helper (Renderer)", mb: 857, cpu: 1, owner: "app:discord"),
+            proc(501, "zsh", mb: 4, cpu: 0, project: "web-app", owner: "vscode:1", catalogId: "shell"),
+            proc(601, "figma_agent", mb: 98, cpu: 0),
+        ]
+        if calm { processes.removeAll { $0.itemId.value != nil } }
+        let owners = [
+            Owner(id: "app:code", kind: .app, label: "Visual Studio Code"),
+            Owner(id: "vscode:1", kind: .vscodeWindow, label: "web-app", parent: "app:code", project: "web-app"),
+            Owner(id: "vscode:2", kind: .vscodeWindow, label: "api", parent: "app:code", project: "api"),
+            Owner(id: "claude:105", kind: .claudeSession, label: "Claude — web-app", parent: "vscode:1", project: "web-app"),
+            Owner(id: "app:chrome", kind: .app, label: "Google Chrome"),
+            Owner(id: "app:discord", kind: .app, label: "Discord"),
+        ]
+        let watchman = Item(id: "proc:104:1", kind: .process, label: "Watchman", catalogId: "watchman", pids: [104],
+                            footprintBytes: Measured(323_000_000), facts: ["age_s": .int(10_800)])
+        let node = Item(id: "proc:202:1", kind: .process, label: "node", pids: [202], ownerId: "vscode:2",
+                        footprintBytes: Measured(393_000_000), facts: ["cpu.now_pct": .double(hot ? 310 : 88)])
+        func finding(_ id: String, _ v: Verdict, _ rules: [String], _ reason: String, _ strategy: StopStrategy) -> Finding {
+            Finding(itemId: id, verdict: v, confidence: .high, rules: rules, reason: reason, evidence: [:], unmeasured: [],
+                    stop: StopAdvice(strategy: strategy, respawns: .onDemand,
+                                     effect: lang == .vi ? "Tắt không mất dữ liệu; cần thì nó tự bật lại." : "No data lost; it starts again when needed."))
+        }
+        let vi = lang == .vi
         return Snapshot(
-            lang: .vi, takenAt: Date(timeIntervalSince1970: 1_793_000_000),  // fixed: renders are reproducible
-            hog: HogInfo(pid: getpid(), ancestors: [], ancestorsComplete: true, selfFootprintBytes: Measured(31_000_000)),
+            lang: lang, takenAt: Date(timeIntervalSince1970: 1_793_000_000),  // fixed: renders are reproducible
+            hog: HogInfo(pid: getpid(), ancestors: [], ancestorsComplete: true, selfFootprintBytes: Measured(23_000_000)),
             host: HostInfo(arch: "arm64", ncpu: 8, memTotalBytes: 17_179_869_184, uptimeS: nil),
-            memory: MemoryInfo(compressorBytes: Measured(3_330_000_000), compressedStoredBytes: Measured(7_410_000_000),
-                               swapUsedBytes: Measured(6_010_000_000), pressure: Measured(.normal), unreadableProcessCount: 181,
-                               measuredFootprintBytes: 21_000_000_000),
+            memory: MemoryInfo(usedBytes: Measured(hot ? 16_400_000_000 : (calm ? 9_800_000_000 : 12_500_000_000)),
+                               compressorBytes: Measured(3_330_000_000), compressedStoredBytes: Measured(6_900_000_000),
+                               swapUsedBytes: Measured(hot ? 7_800_000_000 : (calm ? 0 : 5_600_000_000)),
+                               pressure: Measured(hot ? .critical : .normal), unreadableProcessCount: 181, measuredFootprintBytes: 21_000_000_000),
             cpu: CPUInfo(idlePct: Measured(hot ? 22 : 88), thermal: Measured(hot ? .serious : .nominal),
-                         top: Measured(hot ? [CPUUser(id: "app:visual-studio-code", label: "Visual Studio Code", pct: 310, count: 24),
-                                              CPUUser(id: "app:google-chrome", label: "Google Chrome", pct: 95, count: 12),
-                                              CPUUser(id: "exe:node", label: "node", pct: 88, count: 1)]
-                                        : [CPUUser(id: "app:visual-studio-code", label: "Visual Studio Code", pct: 14, count: 24)])),
-            headline: Headline(level: hot ? .warn : .ok, text: "Máy chưa thiếu RAM, nhưng đã nén 6,9 GB dữ liệu (chiếm 3,1 GB RAM) và đẩy 5,6 GB ra ổ đĩa. Có 3 thứ có thể tắt."
-                               + (hot ? " Máy đang nóng (macOS tự đánh giá) và có thể tự giảm tốc. Ăn CPU nhiều nhất: Visual Studio Code (310 %), Google Chrome (95 %), node (88 %)." : ""),
-                               glossaryIds: []),
-            sensors: [SensorStatus(name: "docker", status: .unavailable, tookMs: 0, note: "engine socket missing")],
-            owners: [
-                Owner(id: "app:visual-studio-code", kind: .app, label: "Visual Studio Code", selfFootprintBytes: 3_650_000_000, totalFootprintBytes: 11_600_000_000,
-                      totalCpuPct: Measured(hot ? 310 : 14)),
-                Owner(id: "vscode:1", kind: .vscodeWindow, label: "web-app (Workspace)", parent: "app:visual-studio-code", totalFootprintBytes: 4_720_000_000),
-                Owner(id: "vscode:2", kind: .vscodeWindow, label: "hog (Workspace)", parent: "app:visual-studio-code", totalFootprintBytes: 1_930_000_000),
-                Owner(id: "vscode:3", kind: .vscodeWindow, label: "api (Workspace)", parent: "app:visual-studio-code", totalFootprintBytes: 1_290_000_000),
-                Owner(id: "app:google-chrome", kind: .app, label: "Google Chrome", totalFootprintBytes: 3_650_000_000, totalCpuPct: Measured(hot ? 95 : 6)),
-                Owner(id: "app:discord", kind: .app, label: "Discord", totalFootprintBytes: 899_000_000),
-            ],
-            items: [item, s1, s2, node, python],
-            findings: [f(item.id, "Watchman chạy 3 giờ, không công cụ nào đăng ký theo dõi.", .watchmanShutdown),
-                       f(s1.id, "Phiên Claude rảnh 2 giờ, vẫn giữ 216 MB.", .manual),
-                       f(s2.id, "Phiên Claude rảnh 5 giờ, vẫn giữ 154 MB.", .manual),
-                       f(node.id, "Chạy 2 ngày, giữ 393 MB, mở 1 cổng nhưng không ai kết nối.", .signal, .watch)])
+                         top: Measured([CPUUser(id: "system", label: "macOS", pct: 34, count: 0)])),
+            headline: Headline(level: .ok, text: "", glossaryIds: []),
+            sensors: [], owners: owners, processes: processes, items: calm ? [] : [watchman, node],
+            findings: calm ? [] : [
+                finding(watchman.id, .mayStop, ["watchman-no-subscribers"],
+                        vi ? "Watchman chạy 3 giờ, không công cụ nào đăng ký theo dõi." : "Watchman ran 3 hours with no tool subscribed.", .watchmanShutdown),
+                finding(node.id, hot ? .mayStop : .watch, ["cpu-heavy"],
+                        vi ? "Đang dùng \(hot ? 310 : 88) % CPU — một lý do máy nóng." : "Using \(hot ? 310 : 88) % CPU — one reason the machine is hot.", .signal),
+            ])
     }
-}
 
-extension HogModel {
-    /// For --render: a stop sheet built from the snapshot alone (no live scan).
-    func prepareStopForRender(_ itemId: String) {
-        guard let s = snapshot, let item = s.items.first(where: { $0.id == itemId }) else { return }
+    /// Plans for the "Dọn" sheet without a live scan (the sample processes do not exist on this machine).
+    static func samplePlans(_ model: HogModel) -> [StopPlan] {
+        guard let s = model.snapshot else { return [] }
         let scan = Scan(system: RawSystem(memTotalBytes: 0, ncpu: 1, pageSize: 16384), processes: [:])
-        var plan = stopper.plan(.process(item.pids.first ?? 0, startSec: nil, startUsec: nil), item: item, snapshot: s, scan: scan)
-        plan.gates = plan.gates.filter { $0.gate != "G6" }  // the sample process does not exist on this machine
-        stopPlan = plan
+        return s.items.map { item in
+            var plan = model.stopper.plan(.process(item.pids.first ?? 0, startSec: nil, startUsec: nil), item: item, snapshot: s, scan: scan)
+            plan.gates = plan.gates.filter { $0.gate != "G6" }
+            return plan
+        }
     }
 }

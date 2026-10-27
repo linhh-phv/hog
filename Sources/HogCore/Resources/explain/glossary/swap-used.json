@@ -2,12 +2,12 @@
   "id": "swap-used",
   "activity_monitor": "Swap Used",
   "name": {
-    "vi": "Đẩy ra ổ đĩa",
+    "vi": "Tràn ra ổ đĩa",
     "en": "Swapped to disk"
   },
   "plain": {
-    "vi": "Phần RAM bị chuyển ra SSD vì không còn chỗ.",
-    "en": "Memory moved out to the SSD because there was no room."
+    "vi": "RAM hết chỗ nên máy tạm cất bớt dữ liệu ra ổ đĩa — chậm hơn RAM nhiều.",
+    "en": "RAM ran out of room, so the machine parked some data on the disk — much slower than RAM."
   },
   "how_to_read": {
     "vi": "Cao + áp lực vàng/đỏ = nguyên nhân máy ì. Cao mà áp lực xanh thì chỉ là phần cũ chưa cần lấy lại.",

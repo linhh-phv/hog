@@ -1,313 +1,269 @@
+import AppKit
 import HogCore
 import SwiftUI
 
-// Components from docs/design/design-system.md.
+// Components of the compact menu (docs/design/compact/screens.html), built from native macOS controls.
 
-struct QuestionButton: View {
+/// RAM gauge + state phrase + one line. Tapping the gauge explains RAM (and the compressed part).
+struct StatusHeader: View {
     @EnvironmentObject var model: HogModel
-    let glossaryId: String
-    @State private var shown = false
+    let o: Overview
+    @State private var explain = false
 
     var body: some View {
-        Button { shown.toggle() } label: {
-            Text("?").font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.text2)
-                .frame(width: 15, height: 15).overlay(Circle().strokeBorder(Theme.text2, lineWidth: 1))
+        HStack(spacing: Theme.s3) {
+            Button { explain.toggle() } label: {
+                Gauge(value: ramFraction) {
+                    Text("RAM")
+                } currentValueLabel: {
+                    VStack(spacing: -2) {
+                        Text(o.ramUsed.map { _ in Format.percent(ramFraction * 100, model.lang).replacingOccurrences(of: " ", with: "") } ?? "?")
+                        Text("RAM").font(.system(size: 7, weight: .semibold)).foregroundStyle(.secondary)
+                    }
+                }
+                .gaugeStyle(.accessoryCircularCapacity)
+                .tint(Theme.pressure(o.pressure))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(model.t("RAM đã dùng", "Memory used"))
+            .popover(isPresented: $explain, arrowEdge: .bottom) {
+                Explanation(id: "memory-used", extra: o.compressed.map {
+                    model.t("Trong đó \(Format.bytes($0, model.lang)) đã được nén để vừa RAM.",
+                            "Of it, \(Format.bytes($0, model.lang)) is compressed to fit.")
+                })
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    if o.status.tone != .ok { Image(systemName: "exclamationmark.triangle.fill") }
+                    Text(o.status.title)
+                }
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Theme.tone(o.status.tone))
+                Text(o.status.detail).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(model.t("Giải nghĩa", "Explain"))
-        .popover(isPresented: $shown, arrowEdge: .bottom) { GlossaryPopover(id: glossaryId).environmentObject(model) }
+    }
+
+    var ramFraction: Double {
+        guard let used = o.ramUsed, o.ramTotal > 0 else { return 0 }
+        return min(1, Double(used) / Double(o.ramTotal))
     }
 }
 
-struct GlossaryPopover: View {
+/// One plain number; tapping it explains it in plain words (replaces the old "?" buttons).
+struct MetricChip<Value: View>: View {
     @EnvironmentObject var model: HogModel
-    let id: String
+    let label: String
+    let glossaryId: String
+    @ViewBuilder let value: Value
+    @State private var explain = false
 
     var body: some View {
-        let lang = model.lang
+        Button { explain.toggle() } label: {
+            VStack(alignment: .leading, spacing: 1) {
+                value.font(.callout.weight(.semibold)).monospacedDigit().lineLimit(1)
+                Text(label).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Theme.s2).padding(.vertical, 6)
+            .module()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $explain, arrowEdge: .bottom) { Explanation(id: glossaryId, extra: nil) }
+    }
+}
+
+/// Glossary entry in plain words, for popovers.
+struct Explanation: View {
+    @EnvironmentObject var model: HogModel
+    let id: String
+    let extra: String?
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if let e = model.glossary(id) {
-                Text(e.name.text(lang) ?? id).font(.system(size: 13, weight: .semibold))
+                Text(e.name.text(model.lang) ?? id).font(.headline)
+                Text(e.plain.text(model.lang) ?? "")
+                Text(e.howToRead.text(model.lang) ?? "").foregroundStyle(.secondary)
+                if let extra { Text(extra).foregroundStyle(.secondary) }
                 if let am = e.activityMonitor {
-                    Text("Activity Monitor: \(am)" + (e.provenance.verified ? "" : model.t(" (chưa đối chiếu)", " (not checked yet)")))
-                        .font(Theme.caption).foregroundStyle(Theme.text2)
+                    Text(model.t("Activity Monitor gọi là \"\(am)\"", "Activity Monitor calls it \"\(am)\"")).font(.caption).foregroundStyle(.tertiary)
                 }
-                Text(e.plain.text(lang) ?? "").font(Theme.small)
-                (Text(model.t("Đọc thế nào: ", "How to read it: ")).bold() + Text(e.howToRead.text(lang) ?? "")).font(Theme.small)
-                (Text(model.t("Nên làm gì: ", "What to do: ")).bold() + Text(e.act.text(lang) ?? "")).font(Theme.small)
             }
         }
+        .font(.callout)
         .fixedSize(horizontal: false, vertical: true)
-        .frame(width: 300, alignment: .leading)
+        .frame(width: 280, alignment: .leading)
         .padding(Theme.s3)
     }
 }
 
-struct HeadlineCard: View {
-    let text: String
-    var body: some View {
-        Text(text).font(Theme.body).foregroundStyle(Theme.text)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(Theme.s3).tile()
-    }
-}
-
-struct MetricTile<Value: View>: View {
-    let label: String
-    let glossaryId: String
-    @ViewBuilder let value: Value
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) { Text(label).font(Theme.caption).foregroundStyle(Theme.text2).lineLimit(1).minimumScaleFactor(0.75); QuestionButton(glossaryId: glossaryId) }
-            value.font(Theme.metric).lineLimit(1).minimumScaleFactor(0.8)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, Theme.s2).padding(.horizontal, 10).tile()
-    }
-}
-
-struct PressureValue: View {
+/// A short reason in a capsule; tapping it says the whole reason.
+struct ReasonTag: View {
     @EnvironmentObject var model: HogModel
-    let pressure: Pressure?
-    var body: some View {
-        switch pressure {
-        case .normal?: Text("● " + model.t("Ổn", "Normal")).foregroundStyle(Theme.ok)
-        case .warn?: Text("◐ " + model.t("Cảnh báo", "Warning")).foregroundStyle(Theme.warn)
-        case .critical?: Text("▲ " + model.t("Nghiêm trọng", "Critical")).foregroundStyle(Theme.red)
-        case nil: Text("? " + model.t("Chưa đo", "Unknown")).foregroundStyle(Theme.text2)
-        }
-    }
-}
-
-struct RAMBar: View {
-    @EnvironmentObject var model: HogModel
-    let summary: MenuSummary
+    let c: Overview.Cleanup
+    @State private var explain = false
 
     var body: some View {
-        let total = Double(max(summary.barTotal, 1))
-        VStack(alignment: .leading, spacing: 6) {
-            GeometryReader { geo in
-                HStack(spacing: 0) {
-                    ForEach(Array(summary.groups.enumerated()), id: \.element.id) { i, g in
-                        Theme.bars[min(i, 2)].frame(width: geo.size.width * Double(g.bytes) / total)
-                    }
-                    Theme.bars[3]
-                }
-            }
-            .frame(height: 10).clipShape(RoundedRectangle(cornerRadius: 5))
-            .accessibilityElement().accessibilityLabel(model.t("RAM theo chủ sở hữu", "Memory by owner"))
-            legend
-        }
-    }
-
-    var legend: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            ForEach(Array(summary.groups.enumerated()), id: \.element.id) { i, g in
-                legendRow(color: Theme.bars[min(i, 2)], label: g.label + (g.children.count > 1 ? " · \(g.children.count - 1) \(model.t("cửa sổ", "windows"))" : ""),
-                          bytes: g.bytes, expandable: !g.children.isEmpty, expanded: model.expandedGroup == g.id) {
-                    model.expandedGroup = model.expandedGroup == g.id ? nil : g.id
-                }
-                if model.expandedGroup == g.id {
-                    ForEach(g.children) { c in
-                        HStack { Text(c.label).foregroundStyle(Theme.text2).lineLimit(1); Spacer(); Text(Format.bytes(c.bytes, model.lang)).foregroundStyle(Theme.text2) }
-                            .font(Theme.small).monospacedDigit().padding(.leading, 18)
-                    }
-                }
-            }
-            HStack(spacing: 6) {
-                RoundedRectangle(cornerRadius: 2).fill(Theme.bars[3]).frame(width: 9, height: 9)
-                Text(model.t("Chương trình khác", "Other programs")).foregroundStyle(Theme.text2)
-                if summary.unreadableCount > 0 {
-                    Text("·").foregroundStyle(Theme.text2)
-                    Button(model.t("Hệ thống: Đo chi tiết", "System: measure")) { model.measureSystem() }
-                        .buttonStyle(.plain).foregroundStyle(Theme.accent)
-                }
-                Spacer()
-                Text(Format.bytes(summary.othersBytes, model.lang)).foregroundStyle(Theme.text2)
-            }
-            .font(Theme.small).monospacedDigit()
-        }
-    }
-
-    func legendRow(color: Color, label: String, bytes: Int64, expandable: Bool, expanded: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 9, height: 9)
-                if expandable { Text(expanded ? "⌄" : "›").foregroundStyle(Theme.text2) }
-                Text(label).lineLimit(1)
-                Spacer()
-                Text(Format.bytes(bytes, model.lang)).monospacedDigit()
-            }
-            .font(Theme.small).foregroundStyle(Theme.text).contentShape(Rectangle())
+        Button { explain.toggle() } label: {
+            Text(c.why).font(.caption.weight(.medium)).monospacedDigit()
+                .foregroundStyle(c.whyKind == .idle ? Color.orange : Color.red)
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background((c.whyKind == .idle ? Color.orange : Color.red).opacity(0.12), in: Capsule())
         }
         .buttonStyle(.plain)
-        .allowsHitTesting(expandable)  // not `.disabled`: that dims the row
-    }
-}
-
-/// "CPU 23 % ? · Nhiệt ● bình thường ?": one line under the tiles (task cpu-thermal). Heat uses shape + colour + word.
-struct CPUHeatRow: View {
-    @EnvironmentObject var model: HogModel
-    let summary: MenuSummary
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Text("CPU").foregroundStyle(Theme.text2)
-            Text(summary.cpuUsedPct.map { Format.percent($0, model.lang) } ?? "?").monospacedDigit()
-            QuestionButton(glossaryId: "cpu-machine")
-            Text("·").foregroundStyle(Theme.text2).padding(.horizontal, 2)
-            Text(model.t("Nhiệt", "Heat")).foregroundStyle(Theme.text2)
-            ThermalValue(thermal: summary.thermal)
-            QuestionButton(glossaryId: "thermal-state")
-            Spacer()
-        }
-        .font(Theme.small)
-    }
-}
-
-struct ThermalValue: View {
-    @EnvironmentObject var model: HogModel
-    let thermal: ThermalState?
-    var body: some View {
-        switch thermal {
-        case .nominal?: Text("● " + Format.thermal(.nominal, model.lang)).foregroundStyle(Theme.ok)
-        case .fair?: Text("◐ " + Format.thermal(.fair, model.lang)).foregroundStyle(Theme.text)
-        case .serious?: Text("▲ " + Format.thermal(.serious, model.lang)).foregroundStyle(Theme.warn)
-        case .critical?: Text("▲ " + Format.thermal(.critical, model.lang)).foregroundStyle(Theme.red)
-        case nil: Text("? " + model.t("chưa đo", "unknown")).foregroundStyle(Theme.text2)
+        .popover(isPresented: $explain, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(c.name).font(.headline)
+                if let f = model.snapshot?.findings.first(where: { $0.itemId == c.itemId }) {
+                    Text(f.reason)
+                    Text(f.stop.effect).foregroundStyle(.secondary)
+                }
+            }
+            .font(.callout).fixedSize(horizontal: false, vertical: true).frame(width: 280, alignment: .leading).padding(Theme.s3)
         }
     }
 }
 
-/// "Đang ăn CPU": shown when warm or hotter, or the CPU at least half busy (`MenuSummary.showCPU`).
-struct CPUList: View {
+/// One line of "Nên dọn": check box · name · project · reason · RAM.
+struct CleanupRow: View {
     @EnvironmentObject var model: HogModel
-    let rows: [CPUUser]
+    let c: Overview.Cleanup
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        HStack(spacing: Theme.s2) {
+            if c.manual {
+                Image(systemName: "hand.raised").foregroundStyle(.secondary).frame(width: 16)
+            } else {
+                Toggle("", isOn: Binding(get: { model.selected.contains(c.itemId) },
+                                         set: { if $0 { model.selected.insert(c.itemId) } else { model.selected.remove(c.itemId) } }))
+                    .toggleStyle(.checkbox).labelsHidden()
+                    .accessibilityLabel(c.name)
+            }
+            (Text(c.name) + Text(c.project.map { " · \($0)" } ?? "").foregroundColor(.secondary))
+                .lineLimit(1).truncationMode(.tail)
+            Spacer(minLength: 4)
+            if c.manual {
+                Button(model.t("Cách đóng", "How to close")) { model.prepareStop(c.itemId) }.buttonStyle(.link).font(.caption)
+            } else {
+                ReasonTag(c: c)
+            }
+            Text(c.bytes.map { Format.bytes($0, model.lang) } ?? "–").font(.callout).monospacedDigit().foregroundStyle(.secondary)
+                .frame(minWidth: 52, alignment: .trailing)
+        }
+        .frame(minHeight: 26)
+    }
+}
+
+/// A group of "Đang chạy": icon · name · summary · RAM · CPU; tap opens it.
+struct GroupRow: View {
+    @EnvironmentObject var model: HogModel
+    let g: Overview.Group
+
+    var body: some View {
+        Button { if g.kind == .system { model.measureSystem() } else { withAnimation(.easeOut(duration: 0.15)) { model.toggle(g.id) } } } label: {
+            HStack(spacing: Theme.s2) {
+                Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(.tertiary)
+                    .rotationEffect(.degrees(model.expanded.contains(g.id) ? 90 : 0)).frame(width: 10)
+                GroupIcon(g: g)
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 5) {
+                        Text(g.name).lineLimit(1).truncationMode(.middle)
+                        if g.kind == .project {
+                            Text(model.t("dự án", "project")).font(.caption2.weight(.semibold)).foregroundStyle(.tint)
+                                .padding(.horizontal, 4).overlay(Capsule().stroke(.tint, lineWidth: 0.8))
+                        }
+                    }
+                    Text(g.summary).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+                Spacer(minLength: 4)
+                Text(g.kind == .system ? "—" : Format.bytes(g.bytes, model.lang)).monospacedDigit().frame(minWidth: 54, alignment: .trailing)
+                Text(g.cpu.map { Format.percent($0, model.lang) } ?? "–").monospacedDigit().foregroundStyle(cpuColor)
+                    .frame(minWidth: 40, alignment: .trailing)
+            }
+            .font(.callout)
+            .frame(minHeight: 32)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(model.t("Mở để xem từng thứ", "Opens to show each thing"))
+    }
+
+    var cpuColor: Color { (g.cpu ?? 0) >= 100 ? .red : .secondary }
+}
+
+/// The app's own icon, else a symbol for projects, "Other" and macOS.
+struct GroupIcon: View {
+    let g: Overview.Group
+    var body: some View {
+        Group {
+            if let path = g.appPath.map({ ($0 as NSString).expandingTildeInPath }), FileManager.default.fileExists(atPath: path) {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: path)).resizable()
+            } else {
+                Image(systemName: symbol)
+                .foregroundStyle(g.kind == .project ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+            }
+        }
+        .frame(width: 18, height: 18)
+    }
+
+    var symbol: String {
+        switch g.kind {
+        case .project: "folder.fill"
+        case .app: "app.dashed"
+        case .other: "square.grid.2x2"
+        case .system: "apple.logo"
+        }
+    }
+}
+
+/// A thing inside an open group: name · "?" when unknown · detail · RAM · CPU.
+struct EntryRow: View {
+    @EnvironmentObject var model: HogModel
+    let g: Overview.Group
+    let e: Overview.Entry
+
+    var body: some View {
+        Button { model.page = .entry(group: g.id, entry: e.id) } label: {
             HStack(spacing: 4) {
-                Text(model.t("Đang ăn CPU", "Using CPU")).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.text2)
-                QuestionButton(glossaryId: "cpu-pct")
+                Text(e.name).lineLimit(1).truncationMode(.middle)
+                if e.unknown { Image(systemName: "questionmark.circle").foregroundStyle(.orange).accessibilityLabel(model.t("chưa rõ", "unknown")) }
+                if !e.detail.isEmpty { Text("· " + e.detail).foregroundStyle(.secondary).lineLimit(1) }
+                if e.pids.count > 1 { Text("×\(e.pids.count)").foregroundStyle(.tertiary) }
+                Spacer(minLength: 4)
+                if let c = e.cleanup { Text(c.why).font(.caption).foregroundStyle(c.whyKind == .idle ? .orange : .red) }
+                Text(e.bytes.map { Format.bytes($0, model.lang) } ?? "–").monospacedDigit().frame(minWidth: 54, alignment: .trailing)
+                Text(e.cpu.map { Format.percent($0, model.lang) } ?? "–").monospacedDigit().foregroundStyle(.secondary)
+                    .frame(minWidth: 40, alignment: .trailing)
             }
-            ForEach(rows) { r in
-                HStack {
-                    Text(r.label).lineLimit(1)
-                    Spacer()
-                    Text(Format.percent(r.pct, model.lang)).monospacedDigit()
-                }
-                .font(Theme.small)
-            }
-        }
-    }
-}
-
-struct VerdictTag: View {
-    @EnvironmentObject var model: HogModel
-    let verdict: Verdict
-    var body: some View {
-        switch verdict {
-        case .mayStop: Text("● " + model.t("có thể tắt", "can stop")).foregroundStyle(Theme.red)
-        case .ask: Text("◐ " + model.t("hỏi trước", "ask first")).foregroundStyle(Theme.warn)
-        case .watch: Text("○ " + model.t("để ý", "watch")).foregroundStyle(Theme.text2)
-        case .info: Text("· " + model.t("thông tin", "info")).foregroundStyle(Theme.text2)
-        }
-    }
-}
-
-struct SuggestionCard: View {
-    @EnvironmentObject var model: HogModel
-    let card: MenuSummary.Card
-
-    var verdictText: Text {
-        switch card.verdict {
-        case .mayStop: Text("● " + model.t("có thể tắt", "can stop")).foregroundColor(Theme.red)
-        case .ask: Text("◐ " + model.t("hỏi trước", "ask first")).foregroundColor(Theme.warn)
-        case .watch: Text("○ " + model.t("để ý", "watch")).foregroundColor(Theme.text2)
-        case .info: Text("· " + model.t("thông tin", "info")).foregroundColor(Theme.text2)
-        }
-    }
-
-    var body: some View {
-        HStack(alignment: .center, spacing: Theme.s2) {
-            VStack(alignment: .leading, spacing: 2) {
-                // One Text so a long name wraps instead of being cut ("Phiên Cl…").
-                (verdictText.font(Theme.captionBold) + Text("  ") + Text(card.label)
-                 + Text(card.bytes.map { "  " + Format.bytes($0, model.lang) } ?? "").foregroundColor(Theme.text2))
-                    .font(Theme.body).monospacedDigit().fixedSize(horizontal: false, vertical: true)
-                Text(card.reason).font(Theme.caption).foregroundStyle(Theme.text2).fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 0)
-            switch card.action {
-            case .stop: SmallButton(title: model.t("Dừng…", "Stop…")) { model.prepareStop(card.itemId) }
-            case .howTo: SmallButton(title: model.t("Cách đóng", "How to")) { model.prepareStop(card.itemId) }
-            case .why: Button(model.t("Vì sao?", "Why?")) { model.page = .item(card.itemId) }.buttonStyle(.plain).foregroundStyle(Theme.accent).font(Theme.small)
-            }
-        }
-        .padding(.vertical, Theme.s2).padding(.horizontal, 10).tile()
-        .contentShape(Rectangle())
-        .onTapGesture { model.page = .item(card.itemId) }
-    }
-}
-
-/// "Chưa rõ là gì": a big item hog has no catalog entry for. Tap → item page (copy its info to ask Claude).
-struct UnknownRow: View {
-    @EnvironmentObject var model: HogModel
-    let unknown: MenuSummary.Unknown
-
-    var body: some View {
-        Button { model.page = .item(unknown.itemId) } label: {
-            HStack(spacing: 6) {
-                Text(unknown.label).lineLimit(1)
-                Spacer()
-                Text(Format.bytes(unknown.bytes, model.lang)).monospacedDigit().foregroundStyle(Theme.text2)
-                Text("›").foregroundStyle(Theme.text2)
-            }
-            .font(Theme.small).foregroundStyle(Theme.text).contentShape(Rectangle())
+            .font(.callout)
+            .padding(.leading, 30)
+            .frame(minHeight: 24)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
-}
-
-struct SmallButton: View {
-    let title: String
-    var role: Role = .normal
-    var height: CGFloat = 24
-    let action: () -> Void
-    enum Role { case normal, primary, danger }
-
-    var body: some View {
-        Button(action: action) {
-            Text(title).font(.system(size: 12, weight: .medium)).padding(.horizontal, 10).frame(minHeight: height)
-                .foregroundStyle(role == .normal ? Theme.text : .white)
-                .background(role == .danger ? Theme.redBg : (role == .primary ? Theme.accentBg : Theme.raised), in: RoundedRectangle(cornerRadius: Theme.rButton))
-                .overlay(RoundedRectangle(cornerRadius: Theme.rButton).strokeBorder(role == .normal ? Theme.sep : .clear, lineWidth: 0.5))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-struct SectionTitle: View {
-    let text: String
-    var body: some View { Text(text).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.text2).frame(maxWidth: .infinity, alignment: .leading) }
 }
 
 struct Footer: View {
     @EnvironmentObject var model: HogModel
     var body: some View {
         HStack(spacing: Theme.s2) {
-            if let s = model.summary {
-                Text(model.t("Cập nhật ", "Updated ") + s.takenAt.formatted(date: .omitted, time: .shortened)
-                     + (s.selfBytes.map { " · " + model.t("hog dùng ", "hog uses ") + Format.bytes($0, model.lang) } ?? ""))
+            if model.scanning { ProgressView().controlSize(.mini) }
+            if let o = model.overview {
+                Text(o.takenAt.formatted(date: .omitted, time: .shortened)
+                     + (o.selfBytes.map { " · hog " + Format.bytes($0, model.lang) } ?? ""))
                     .monospacedDigit()
             }
             Spacer()
-            Button(model.t("Làm mới", "Refresh")) { model.refresh() }.buttonStyle(.plain).foregroundStyle(Theme.accent)
-            Button(model.t("Cài đặt", "Settings")) { model.page = .settings }.buttonStyle(.plain).foregroundStyle(Theme.accent)
+            Button { model.refresh() } label: { Image(systemName: "arrow.clockwise") }
+                .buttonStyle(.borderless).help(model.t("Làm mới", "Refresh")).disabled(model.scanning)
+            Button { model.page = .settings } label: { Image(systemName: "gearshape") }
+                .buttonStyle(.borderless).help(model.t("Cài đặt", "Settings"))
         }
-        .font(Theme.caption).foregroundStyle(Theme.text2)
+        .font(.caption).foregroundStyle(.secondary)
         .padding(.horizontal, Theme.s3).padding(.vertical, Theme.s2)
     }
 }
@@ -315,7 +271,7 @@ struct Footer: View {
 struct BackButton: View {
     @EnvironmentObject var model: HogModel
     var body: some View {
-        Button("‹ " + model.t("Quay lại", "Back")) { model.page = model.back }
-            .buttonStyle(.plain).foregroundStyle(Theme.accent).font(Theme.small)
+        Button { model.page = model.back } label: { Label(model.t("Quay lại", "Back"), systemImage: "chevron.left") }
+            .buttonStyle(.borderless).font(.callout)
     }
 }

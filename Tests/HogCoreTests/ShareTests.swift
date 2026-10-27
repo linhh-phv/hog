@@ -305,24 +305,14 @@ import Testing
              protection: protection.map { Protection(level: $0, rules: ["r"]) }, facts: ["owner.kind": .string(ownerKind)])
     }
 
-    @Test func picksLargestUncataloguedUnprotected() {
-        var s = SampleSnapshot.make()
-        s.items += [
-            item("a", 300_000_000), item("b", 900_000_000), item("c", 500_000_000), item("d", 200_000_000),
-            item("small", 99_000_000), item("known", 2_000_000_000, catalog: "tsserver"),
+    @Test func unknownCandidates() {
+        let cands = [
+            item("a", 300_000_000), item("small", 99_000_000), item("known", 2_000_000_000, catalog: "tsserver"),
             item("macos", 3_000_000_000, protection: .hard), item("soft", 150_000_000, protection: .soft),
             item("empty-catalog", 250_000_000, catalog: ""), item("chrome-helper", 800_000_000, ownerKind: "app"),
             item("in-window", 120_000_000, ownerKind: "vscode-window"),
-        ]
-        let u = MenuSummary.make(s).unknowns
-        #expect(u.map(\.itemId) == ["b", "c", "a"])
-        #expect(MenuSummary.unknowns(s, excluding: ["b"]).map(\.itemId) == ["c", "a", "empty-catalog"])
-        #expect(MenuSummary.unknowns(s, excluding: ["b", "c", "a", "empty-catalog", "d"]).map(\.itemId) == ["soft", "in-window"],
-                "parts of an app are not unknown; VS Code window helpers are")
-    }
-
-    @Test func noneWhenEverythingIsKnown() {
-        #expect(MenuSummary.make(SampleSnapshot.make()).unknowns.isEmpty)
+        ].filter(Presentation.isUnknownCandidate).map(\.id)
+        #expect(cands == ["a", "soft", "empty-catalog", "in-window"], "parts of an app are not unknown; VS Code window helpers are")
     }
 
     @Test func candidatesSurviveTheSizeCap() {
@@ -335,8 +325,7 @@ import Testing
         var u = RawProcess(pid: 3000); u.ppid = 1; u.uid = getuid(); u.footprintBytes = 120_000_000
         u.exePath = "/usr/local/bin/mystery"; u.cwd = "/"; procs[3000] = u
         let s = analyzer.analyze(Scan(system: RawSystem(memTotalBytes: 0, ncpu: 8, pageSize: 16384), processes: procs, launchd: [:]))
-        #expect(s.items.contains { $0.pids == [3000] })
-        #expect(MenuSummary.make(s).unknowns.contains { $0.label.contains("mystery") })
+        #expect(s.items.contains { $0.pids == [3000] && Presentation.isUnknownCandidate($0) })
     }
 
     @Test func atMostSixCandidatesSurviveTheCap() {
@@ -350,22 +339,13 @@ import Testing
             u.exePath = "/usr/local/bin/mystery\(i)"; u.cwd = "/"; procs[u.pid] = u
         }
         let s = analyzer.analyze(Scan(system: RawSystem(memTotalBytes: 0, ncpu: 8, pageSize: 16384), processes: procs, launchd: [:]))
-        let kept = s.items.filter(MenuSummary.isUnknownCandidate)
-        #expect(kept.count == MenuSummary.maxUnknowns + MenuSummary.maxCards)
-        #expect(MenuSummary.make(s).unknowns.map(\.bytes) == [120_000_009, 120_000_008, 120_000_007], "the largest three")
+        let kept = s.items.filter(Presentation.isUnknownCandidate)
+        #expect(kept.count == Presentation.maxUnknownCandidates)
+        #expect(kept.compactMap(\.footprintBytes.value).min() == 120_000_004, "the largest ones")
     }
 
     let analyzer: Analyzer = {
         let b = { (k: String) in DataSource(bundledDirectory: DataSource.standard(k).bundledDirectory, localDirectory: nil) }
         return Analyzer(catalog: .load(b("catalog")), rules: .load(b("rules")), explain: .load(b("explain")), lang: .en)
     }()
-
-    @Test func allCardsListsEverySuggestion() {
-        var s = SampleSnapshot.make()
-        let base = s.findings[0]
-        s.findings = (0..<5).map { i in var f = base; f.itemId = "w\(i)"; f.verdict = .watch; return f } + [base]
-        let m = MenuSummary.make(s)
-        #expect(m.cards.count == MenuSummary.maxCards && m.allCards.count == 6 && m.moreCount == 3)
-        #expect(m.allCards.first?.itemId == base.itemId, "may-stop first")
-    }
 }

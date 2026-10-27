@@ -60,15 +60,7 @@ import Testing
     @Test func fastModeSaysNotMeasured() {
         let s = analyzer.analyze(scan(thermal: .serious, idle: nil))
         #expect(s.headline.text.contains("not measured (--fast)"))
-        #expect(MenuSummary.cpuRows(s, max: 3).isEmpty)
-    }
-
-    @Test func menuShowsCPUOnlyWhenItMatters() {
-        let hot = MenuSummary.make(analyzer.analyze(scan(thermal: .fair, idle: 90)))
-        #expect(hot.showCPU && hot.cpuRows.map(\.label) == ["Busy", "cruncher"])
-        let calm = MenuSummary.make(analyzer.analyze(scan(thermal: .nominal, idle: 90)))
-        #expect(!calm.showCPU)
-        #expect(MenuSummary.make(analyzer.analyze(scan(thermal: .nominal, idle: 40))).showCPU, "CPU at least half busy")
+        #expect(Presentation.cpuRows(s, max: 3).isEmpty)
     }
 
     @Test func cpuHeavyRule() {
@@ -199,8 +191,6 @@ import Testing
         #expect(!analyzer.analyze(scan(thermal: .nominal, idle: 20.5)).headline.text.contains("busy"), "79.5 %")
         #expect(analyzer.analyze(scan(thermal: .nominal, idle: 20)).headline.text.contains("The CPU is busy"), "80 %")
         #expect(!analyzer.analyze(scan(thermal: .nominal, idle: nil)).headline.text.contains("busy"), "not measured: not busy")
-        let half = MenuSummary.make(analyzer.analyze(scan(thermal: .nominal, idle: 50.5)))
-        #expect(!half.showCPU, "49.5 % is under the line")
     }
 
     @Test func atMostThreeLinesAndGroupedByProject() throws {
@@ -223,6 +213,6 @@ import Testing
         let top = try #require(s.cpu.top.value)
         #expect(top.contains { $0.label == "node — alpha (×2)" && $0.pct == 20 })
         #expect(top.contains { $0.label == "node — beta" && $0.pct == 15 }, "another project is another line")
-        #expect(MenuSummary.cpuRows(s, max: MenuSummary.maxCPURows).count == 3)
+        #expect(Presentation.cpuRows(s, max: Presentation.maxCPURows).count == 3)
     }
 }
