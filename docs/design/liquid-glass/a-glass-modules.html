@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hog — Liquid Glass, hướng A</title>
+<style>
+  /* Bản mẫu: kính được giả bằng backdrop-filter trên một nền giống hình nền macOS. App thật dùng kính của hệ thống
+     (glassEffect), nên độ trong, khúc xạ và viền sáng sẽ đẹp hơn ảnh này. */
+  :root { --accent: #0a84ff; --green: #30a14e; --orange: #e8890c; --red: #e5484d; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 13px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; color: #1d1d1f;
+         background: #e9e9ee; }
+  header.page { padding: 24px 32px 8px; }
+  header.page h1 { font-size: 22px; margin: 0 0 6px; }
+  header.page p { margin: 0; color: #555; max-width: 900px; }
+  .row { display: flex; gap: 32px; padding: 24px 32px 40px; flex-wrap: wrap; }
+  .stage { width: 420px; height: 760px; border-radius: 18px; position: relative; overflow: hidden; padding: 34px 40px 0;
+           background: radial-gradient(circle at 20% 20%, #7fb7ff, transparent 55%), radial-gradient(circle at 80% 30%, #ffb38a, transparent 50%),
+                       radial-gradient(circle at 50% 85%, #8fe3c4, transparent 55%), linear-gradient(160deg, #6a8fd8, #c78bd0); }
+  .stage.dark { background: radial-gradient(circle at 25% 20%, #1f4a8a, transparent 55%), radial-gradient(circle at 80% 35%, #6b2f52, transparent 50%),
+                       radial-gradient(circle at 45% 85%, #1e5b4c, transparent 55%), linear-gradient(160deg, #10172a, #2a1630); }
+  .menubar { position: absolute; top: 0; left: 0; right: 0; height: 26px; display: flex; justify-content: flex-end; align-items: center;
+             gap: 14px; padding: 0 14px; font-size: 12px; color: #fff; text-shadow: 0 0 2px rgba(0,0,0,.3); }
+  .menubar .pig { width: 18px; height: 18px; border-radius: 6px; background: rgba(255,255,255,.35); display: grid; place-items: center; font-size: 11px; }
+  .label { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-weight: 600; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.4); }
+
+  /* Kính của bảng menu */
+  .panel { width: 340px; border-radius: 26px; padding: 14px; position: relative;
+           background: rgba(246,246,248,.62); backdrop-filter: blur(28px) saturate(1.8); -webkit-backdrop-filter: blur(28px) saturate(1.8);
+           box-shadow: 0 0 0 .5px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.75), 0 18px 50px rgba(0,0,0,.28); }
+  .dark .panel { background: rgba(40,40,46,.55); color: #f5f5f7;
+                 box-shadow: 0 0 0 .5px rgba(255,255,255,.14), inset 0 1px 0 rgba(255,255,255,.14), 0 18px 50px rgba(0,0,0,.5); }
+  .muted { color: rgba(60,60,67,.62); }
+  .dark .muted { color: rgba(235,235,245,.6); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ===== Hướng A — Khối kính (Trung tâm điều khiển) ===== */
+  .A .platter { border-radius: 18px; padding: 12px; margin-top: 8px;
+                background: rgba(255,255,255,.5); box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 0 0 .5px rgba(0,0,0,.06); }
+  .dark .A .platter { background: rgba(255,255,255,.08); box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 .5px rgba(255,255,255,.06); }
+  .A .head { display: flex; gap: 12px; align-items: center; padding: 4px 2px 2px; }
+  .ring { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; flex: none;
+          background: conic-gradient(var(--green) 0 73%, rgba(120,120,128,.2) 73% 100%); }
+  .ring > div { width: 48px; height: 48px; border-radius: 50%; background: rgba(246,246,248,.95); display: grid; place-items: center;
+                font-weight: 700; font-size: 15px; line-height: 1; text-align: center; }
+  .dark .ring > div { background: #2a2a30; }
+  .ring small { display: block; font-size: 9px; font-weight: 500; opacity: .6; }
+  .A h2 { margin: 0; font-size: 17px; color: var(--green); }
+  .A .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .A .chip { border-radius: 16px; padding: 9px 10px; background: rgba(255,255,255,.5); box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 0 0 .5px rgba(0,0,0,.06); }
+  .dark .A .chip { background: rgba(255,255,255,.08); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+  .A .chip b { font-size: 15px; display: block; }
+  .A .chip span { font-size: 11px; }
+  .A .sec { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 6px; }
+  .A .line { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+  .box { width: 16px; height: 16px; border-radius: 5px; flex: none; border: 1px solid rgba(0,0,0,.25); background: #fff; }
+  .box.on { background: var(--accent); border-color: var(--accent); color: #fff; font-size: 11px; display: grid; place-items: center; }
+  .dark .box { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.3); }
+  .tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+  .tag.idle { color: var(--orange); background: rgba(232,137,12,.14); }
+  .tag.heavy { color: var(--red); background: rgba(229,72,77,.13); }
+  .grow { flex: 1; min-width: 0; }
+  .right { text-align: right; min-width: 52px; }
+  .btn { border-radius: 99px; padding: 5px 14px; font-weight: 500; font-size: 13px; display: inline-block;
+         background: rgba(255,255,255,.7); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 0 0 .5px rgba(0,0,0,.12), 0 1px 3px rgba(0,0,0,.08); }
+  .dark .btn { background: rgba(255,255,255,.14); box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 0 0 .5px rgba(255,255,255,.1); }
+  .btn.pro { background: var(--accent); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 1px 4px rgba(10,132,255,.4); }
+  .A .grp { display: flex; align-items: center; gap: 9px; padding: 6px 2px; }
+  .ico { width: 26px; height: 26px; border-radius: 7px; flex: none; display: grid; place-items: center; font-size: 13px; color: #fff; }
+  .ico.proj { background: linear-gradient(#5ac8fa, #0a84ff); }
+  .ico.chrome { background: conic-gradient(#ea4335 0 33%, #fbbc05 0 66%, #34a853 0); border-radius: 50%; }
+  .ico.discord { background: #5865f2; }
+  .pill { font-size: 10px; font-weight: 600; color: var(--accent); border: 1px solid rgba(10,132,255,.5); border-radius: 99px; padding: 0 5px; margin-left: 4px; }
+  .sub { font-size: 11px; }
+  .foot { display: flex; justify-content: space-between; align-items: center; padding: 10px 4px 0; font-size: 11px; }
+  .round { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; margin-left: 6px;
+           background: rgba(255,255,255,.55); box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 0 0 .5px rgba(0,0,0,.1); }
+  .dark .round { background: rgba(255,255,255,.12); box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
+
+  .notes { padding: 0 32px 40px; max-width: 1000px; }
+  .notes h3 { margin: 18px 0 6px; font-size: 15px; }
+  .notes ul { margin: 0; padding-left: 18px; }
+  .notes li { margin: 3px 0; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>hog — giao diện macOS 26/27 (Liquid Glass): hướng A — Khối kính (đã chọn 2026-10-27)</h1>
+  <p>Cùng nội dung với bản đang dùng (ui-compact), chỉ đổi chất liệu và cách xếp. Kính ở đây là giả bằng CSS; app thật dùng kính
+  của hệ thống nên trong và sáng hơn. Dữ liệu là mẫu (dự án <i>web-app</i>, <i>api</i>).</p>
+</header>
+
+<div class="row">
+  <!-- A sáng -->
+  <div class="stage">
+    <div class="menubar"><span>Wi-Fi</span><span class="pig">🐷</span><span>10:42</span></div>
+    <div class="panel A">
+      <div class="head">
+        <div class="ring"><div class="num">73%<small>RAM</small></div></div>
+        <div><h2>Máy ổn</h2><div class="muted">2 thứ nên dọn · lấy lại 683 MB</div></div>
+      </div>
+      <div class="chips">
+        <div class="chip"><b class="num">12 %</b><span class="muted">CPU đang bận</span></div>
+        <div class="chip"><b class="num">5,2 GB</b><span class="muted">Tràn ra ổ đĩa</span></div>
+        <div class="chip"><b style="color:var(--green)">Mát</b><span class="muted">Nhiệt</span></div>
+      </div>
+      <div class="platter">
+        <div class="sec"><span>Nên dọn</span><span class="muted num">683 MB</span></div>
+        <div class="line"><span class="box on">✓</span><span class="grow">Watchman</span><span class="tag idle">rảnh 3 giờ</span><span class="right num">308 MB</span></div>
+        <div class="line"><span class="box"></span><span class="grow">node <span class="muted">· api</span></span><span class="tag heavy">11 % CPU</span><span class="right num">375 MB</span></div>
+        <div class="line" style="justify-content:space-between;padding-top:8px"><span class="muted sub">Đã chọn 1</span><span class="btn pro">Dọn 1 thứ</span></div>
+      </div>
+      <div class="platter">
+        <div class="sec"><span>Đang chạy</span><span class="muted sub">RAM · CPU</span></div>
+        <div class="grp"><span class="ico proj">▤</span><div class="grow"><div>web-app<span class="pill">dự án</span></div><div class="muted sub">Cửa sổ VS Code, Máy chủ ngôn ngữ…</div></div><span class="num">4,5 GB</span><span class="right num muted">1,1 %</span></div>
+        <div class="grp"><span class="ico chrome"></span><div class="grow"><div>Google Chrome</div><div class="muted sub">2 tiến trình</div></div><span class="num">3,2 GB</span><span class="right num muted">0,9 %</span></div>
+        <div class="grp"><span class="ico proj">▤</span><div class="grow"><div>api<span class="pill">dự án</span></div><div class="muted sub">Cửa sổ VS Code, node</div></div><span class="num">1,4 GB</span><span class="right num muted">11 %</span></div>
+        <div class="grp"><span class="ico discord">◉</span><div class="grow"><div>Discord</div><div class="muted sub">1 tiến trình</div></div><span class="num">817 MB</span><span class="right num muted">0,1 %</span></div>
+        <div class="grp" style="color:var(--accent)"><span class="grow">Tất cả 194 tiến trình</span>›</div>
+      </div>
+      <div class="foot"><span class="muted">14:33 · hog 22 MB</span><span><span class="round">↻</span><span class="round">⚙︎</span></span></div>
+    </div>
+    <div class="label">A — Khối kính · sáng</div>
+  </div>
+
+  <!-- A tối -->
+  <div class="stage dark">
+    <div class="menubar"><span>Wi-Fi</span><span class="pig">🐷</span><span>10:42</span></div>
+    <div class="panel A">
+      <div class="head">
+        <div class="ring"><div class="num">73%<small>RAM</small></div></div>
+        <div><h2>Máy ổn</h2><div class="muted">2 thứ nên dọn · lấy lại 683 MB</div></div>
+      </div>
+      <div class="chips">
+        <div class="chip"><b class="num">12 %</b><span class="muted">CPU đang bận</span></div>
+        <div class="chip"><b class="num">5,2 GB</b><span class="muted">Tràn ra ổ đĩa</span></div>
+        <div class="chip"><b style="color:var(--green)">Mát</b><span class="muted">Nhiệt</span></div>
+      </div>
+      <div class="platter">
+        <div class="sec"><span>Nên dọn</span><span class="muted num">683 MB</span></div>
+        <div class="line"><span class="box on">✓</span><span class="grow">Watchman</span><span class="tag idle">rảnh 3 giờ</span><span class="right num">308 MB</span></div>
+        <div class="line"><span class="box"></span><span class="grow">node <span class="muted">· api</span></span><span class="tag heavy">11 % CPU</span><span class="right num">375 MB</span></div>
+        <div class="line" style="justify-content:space-between;padding-top:8px"><span class="muted sub">Đã chọn 1</span><span class="btn pro">Dọn 1 thứ</span></div>
+      </div>
+      <div class="platter">
+        <div class="sec"><span>Đang chạy</span><span class="muted sub">RAM · CPU</span></div>
+        <div class="grp"><span class="ico proj">▤</span><div class="grow"><div>web-app<span class="pill">dự án</span></div><div class="muted sub">Cửa sổ VS Code, Máy chủ ngôn ngữ…</div></div><span class="num">4,5 GB</span><span class="right num muted">1,1 %</span></div>
+        <div class="grp"><span class="ico chrome"></span><div class="grow"><div>Google Chrome</div><div class="muted sub">2 tiến trình</div></div><span class="num">3,2 GB</span><span class="right num muted">0,9 %</span></div>
+        <div class="grp"><span class="ico proj">▤</span><div class="grow"><div>api<span class="pill">dự án</span></div><div class="muted sub">Cửa sổ VS Code, node</div></div><span class="num">1,4 GB</span><span class="right num muted">11 %</span></div>
+        <div class="grp"><span class="ico discord">◉</span><div class="grow"><div>Discord</div><div class="muted sub">1 tiến trình</div></div><span class="num">817 MB</span><span class="right num muted">0,1 %</span></div>
+        <div class="grp" style="color:var(--accent)"><span class="grow">Tất cả 194 tiến trình</span>›</div>
+      </div>
+      <div class="foot"><span class="muted">14:33 · hog 22 MB</span><span><span class="round">↻</span><span class="round">⚙︎</span></span></div>
+    </div>
+    <div class="label">A — Khối kính · tối</div>
+  </div>
+
+</div>
+
+<section class="notes">
+  <h3>A — Khối kính (giống Trung tâm điều khiển)</h3>
+  <ul>
+    <li><b>Ý tưởng:</b> giữ bố cục bạn đã duyệt; mỗi phần là một khối kính bo tròn lớn nằm trên bảng kính, như các khối Wi-Fi /
+      Âm lượng của Trung tâm điều khiển. Nút bo tròn hoàn toàn (kính), nút chính tô màu nhấn.</li>
+    <li><b>Hợp vì:</b> ít thay đổi nhất so với bản bạn đã quen; các khối tách rõ "kết luận / nên dọn / đang chạy".</li>
+    <li><b>Đánh đổi:</b> nhiều lớp kính chồng nhau, cao hơn B một chút.</li>
+  </ul>
+</section>
+</body>
+</html>

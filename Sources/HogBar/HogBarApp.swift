@@ -37,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 enum Renderer {
     static func render(to dir: URL, sample: Bool) async {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        Theme.offscreen = true
         let model = HogModel()
         if let i = CommandLine.arguments.firstIndex(of: "--lang"), i + 1 < CommandLine.arguments.count {
             model.overrideLang = Lang(rawValue: CommandLine.arguments[i + 1])

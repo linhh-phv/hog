@@ -6,7 +6,9 @@ struct MenuView: View {
     @EnvironmentObject var model: HogModel
 
     var body: some View {
-        ZStack(alignment: .top) {
+        // One container: the modules of a page are glass of the same material, and blend as they move.
+        GlassEffectContainer(spacing: Theme.s2) {
+          ZStack(alignment: .top) {
             Group {
                 switch model.page {
                 case .main: MainPage()
@@ -18,23 +20,27 @@ struct MenuView: View {
             }
             if let plan = model.stopPlan { Sheet { StopSheet(plan: plan) } }
             if let plans = model.batch { Sheet { BatchSheet(plans: plans) } }
+          }
         }
         .frame(width: Theme.width)
     }
 }
 
-/// A confirmation over the menu: dimmed backdrop + a raised card.
+/// A confirmation over the menu: dimmed backdrop + a card of glass.
 struct Sheet<Content: View>: View {
     @ViewBuilder let content: Content
     var body: some View {
         ZStack(alignment: .top) {
             Color.black.opacity(0.25)
-            content
-                .padding(Theme.s4)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(.separator, lineWidth: 0.5))
-                .shadow(color: .black.opacity(0.25), radius: 14, y: 6)
-                .padding(Theme.s3).padding(.top, 48)
+            Group {
+                if Theme.offscreen {
+                    content.padding(Theme.s4).background(Color(nsColor: .windowBackgroundColor), in: .rect(cornerRadius: Theme.rSheet))
+                        .shadow(color: .black.opacity(0.25), radius: 14, y: 6)
+                } else {
+                    content.padding(Theme.s4).glassEffect(.regular, in: .rect(cornerRadius: Theme.rSheet))
+                }
+            }
+            .padding(Theme.s3).padding(.top, 48)
         }
     }
 }
@@ -96,8 +102,9 @@ struct MainPage: View {
             if o.cleanups.contains(where: { !$0.manual }) { HStack {
                 Text(model.t("Đã chọn \(n)", "\(n) selected")).font(.caption).foregroundStyle(.secondary)
                 Spacer()
+                // Opens the confirmation; the red "Dọn" that stops things is in there.
                 Button(model.t("Dọn \(n) thứ", n == 1 ? "Clean up 1" : "Clean up \(n)")) { model.prepareBatch() }
-                    .buttonStyle(.borderedProminent).tint(.red).controlSize(.small).disabled(n == 0)
+                    .glassButton(prominent: true).controlSize(.small).disabled(n == 0)
             }
             .padding(.top, 2) }
         }
@@ -127,8 +134,10 @@ struct MainPage: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain).foregroundStyle(.tint).font(.callout).padding(.vertical, 6)
+            .buttonStyle(.plain).foregroundStyle(.tint).font(.callout).padding(.vertical, 6).hoverRow()
         }
+        .padding(.horizontal, Theme.s3).padding(.top, Theme.s2)
+        .module()
         .padding(.horizontal, Theme.s3).padding(.bottom, Theme.s2)
     }
 }
@@ -220,16 +229,18 @@ struct EntryPage: View {
                 if e.unknown {
                     Button { model.copyShare(e) } label: { Label(copied ? model.t("Đã chép", "Copied") : model.t("Chép thông tin", "Copy info"),
                                                                  systemImage: copied ? "checkmark" : "doc.on.doc") }
-                        .buttonStyle(.borderedProminent)
+                        .glassButton(prominent: true)
                 } else {
                     Button { model.copyShare(e) } label: { Label(copied ? model.t("Đã chép", "Copied") : model.t("Chép thông tin", "Copy info"),
                                                                  systemImage: copied ? "checkmark" : "doc.on.doc") }
+                        .glassButton()
                 }
                 // A line of several processes (×N) is not one thing to stop: stop them from their own app or project.
                 if e.pids.count == 1 || e.itemId != nil {
                     Button(e.cleanup?.manual == true ? model.t("Cách đóng", "How to close") : model.t("Dừng…", "Stop…")) {
                         model.prepareStop(model.target(e))
                     }
+                    .glassButton()
                 }
             }
             .controlSize(.regular)
@@ -249,7 +260,7 @@ struct AllPage: View {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField(model.t("Tìm tiến trình…", "Search processes…"), text: $model.search).textFieldStyle(.plain)
             }
-            .padding(.horizontal, Theme.s2).padding(.vertical, 6).module()
+            .padding(.horizontal, Theme.s3).padding(.vertical, 7).searchField()
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(groups) { g in
@@ -345,7 +356,7 @@ struct SettingsPage: View {
                 }
             }
             Divider()
-            Button(model.t("Thoát hog", "Quit hog")) { NSApp.terminate(nil) }.buttonStyle(.link)
+            Button(model.t("Thoát hog", "Quit hog")) { NSApp.terminate(nil) }.glassButton()
         }
         .padding(Theme.s3)
     }
@@ -378,12 +389,12 @@ struct StopSheet: View {
                 Spacer()
                 if model.stopRunning { ProgressView().controlSize(.small) }
                 Button(plan.action == .manual || plan.blocked != nil ? model.t("Đóng", "Close") : model.t("Huỷ", "Cancel")) { model.stopPlan = nil }
-                    .keyboardShortcut(.cancelAction)
+                    .keyboardShortcut(.cancelAction).glassButton()
                 if plan.blocked == nil && plan.action != .manual {
                     let unsure = plan.gates.contains { $0.result == .confirm && ($0.gate == "G2" || $0.gate == "G4") }
                     Button(plan.action == .sigkill ? model.t("Buộc tắt", "Force stop")
                            : (unsure ? model.t("Vẫn dừng", "Stop anyway") : model.t("Dừng", "Stop"))) { model.confirmStop() }
-                        .buttonStyle(.borderedProminent).tint(.red).disabled(model.stopRunning)
+                        .glassButton(prominent: true).tint(.red).disabled(model.stopRunning)
                 }
             }
             .padding(.top, 4)
@@ -424,9 +435,9 @@ struct BatchSheet: View {
             HStack(spacing: Theme.s2) {
                 Spacer()
                 if model.stopRunning { ProgressView().controlSize(.small) }
-                Button(model.t("Huỷ", "Cancel")) { model.batch = nil }.keyboardShortcut(.cancelAction)
+                Button(model.t("Huỷ", "Cancel")) { model.batch = nil }.keyboardShortcut(.cancelAction).glassButton()
                 Button(model.t("Dọn", "Clean up")) { model.confirmBatch() }
-                    .buttonStyle(.borderedProminent).tint(.red).disabled(runnable.isEmpty || model.stopRunning)
+                    .glassButton(prominent: true).tint(.red).disabled(runnable.isEmpty || model.stopRunning)
             }
             .padding(.top, 4)
         }

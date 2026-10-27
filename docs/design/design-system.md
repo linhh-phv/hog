@@ -2,12 +2,14 @@
 
 Nguồn sự thật cho giao diện của hog (app thanh menu `HogBar`). Bố cục: **B — Kết luận trước, bản 2** (chủ dự án chọn và duyệt
 2026-10-27) · bản mẫu bố cục: [compact/screens.html](compact/screens.html) · ảnh app thật: [compact/app/](compact/app/).
-Thay cho hướng "Ô đo và thanh RAM" của giai đoạn 1 (2026-10-26).
+Thay cho hướng "Ô đo và thanh RAM" của giai đoạn 1 (2026-10-26). Chất liệu: **Liquid Glass của macOS 26+**, hướng **A — Khối kính**
+(chủ dự án chọn 2026-10-27; bản mẫu [liquid-glass/a-glass-modules.html](liquid-glass/a-glass-modules.html)). hog cần macOS 26 trở lên.
 
 Brief của chủ dự án, nguyên văn: *"nhìn vào thì sẽ xem được cái gì đang chạy và tiêu tốn tài nguyên máy như thế nào … sau đó có kết
 luận và gợi ý tắt những tiến trình nặng hoặc idle, giao diện phải tối ưu UI/UX thay vì hiển thị nhiều chữ lên màn hình, khi nào action
 vào thì mới show thông tin ra"* · *"mở hog sẽ biết được cái gì đang chạy (có thể nói rõ dự án nào đang chạy) … hog vẫn liệt kê đầy đủ
-các tiến trình"* · *"có thể làm UI giống với macos luôn được không"*.
+các tiến trình"* · *"có thể làm UI giống với macos luôn được không"* · *"mình thấy giao diện giống macos rồi mà có vẻ là macos cũ, mac mình đang là
+macos 27"*.
 
 ## Nguyên tắc
 
@@ -16,9 +18,10 @@ các tiến trình"* · *"có thể làm UI giống với macos luôn được k
 2. **Theo dự án.** "Đang chạy" gom theo dự án người dùng đang làm (mọi tiến trình của dự án đó), rồi tới app, rồi "Khác".
 3. **Lời thường.** Không thuật ngữ ở màn chính ("Tràn ra ổ đĩa", không "swap"; "CPU đang bận"); thuật ngữ và tên trong Activity Monitor nằm
    trong phần giải nghĩa.
-4. **Giao diện gốc macOS.** Thành phần của hệ thống, không tự vẽ: vật liệu mờ của `MenuBarExtra`, SF Symbols, `Gauge`, `Toggle(.checkbox)`,
-   `Button` (`.borderedProminent`, `.link`, `.borderless`), popover, icon thật của app (`NSWorkspace`). Màu ngữ nghĩa của hệ thống theo màu
-   nhấn, sáng/tối và "Tăng tương phản" của máy.
+4. **Giao diện gốc macOS 26+.** Thành phần của hệ thống, không tự vẽ: kính của `MenuBarExtra`, khối kính `glassEffect` trong một
+   `GlassEffectContainer`, nút kính (`.glass`, `.glassProminent`), góc bo đồng tâm (`ConcentricRectangle`), SF Symbols, `Gauge`,
+   `Toggle(.checkbox)`, popover, icon thật của app (`NSWorkspace`). Không giả kính bằng màu hay blur. Màu ngữ nghĩa của hệ thống theo màu
+   nhấn, sáng/tối, "Tăng tương phản" và "Giảm trong suốt" của máy.
 5. **Không truyền nghĩa chỉ bằng màu.** Trạng thái có chữ (+ biểu tượng ⚠ khi không ổn); lý do dọn có chữ; cổng an toàn có biểu tượng
    ✓ / ? / ✕ + chữ.
 6. **Đầy đủ nhưng không ồn.** Mọi tiến trình đọc được đều có trong "Tất cả" (tìm được); cùng tên trong một nhóm gộp một dòng `×N`; app
@@ -29,7 +32,11 @@ các tiến trình"* · *"có thể làm UI giống với macos luôn được k
 | Token | Giá trị | Dùng cho |
 | --- | --- | --- |
 | Khoảng cách | 4 · 8 · 12 · 16 | lề trong, khoảng giữa khối |
-| `rModule` | 10, góc liên tục | khối kiểu Control Center (`.module()`: nền `.quaternary` mờ) |
+| `rModule` | 18, đồng tâm với góc menu (`Theme.moduleShape`) | khối kính kiểu Trung tâm điều khiển (`.module()` = `glassEffect(.regular)`) |
+| `rSheet` | 24 | hộp xác nhận (kính) |
+| Nút | `.glassButton()` = `.glass`; `.glassButton(prominent: true)` = `.glassProminent` (màu nhấn, `.tint(.red)` khi dừng thật) | mọi nút; nút tròn ở chân (`buttonBorderShape(.circle)`) |
+| Ô tìm | `.searchField()` = viên kính | trang "Tất cả" |
+| Dòng | `.hoverRow()`: sáng lên khi rê chuột, góc 8 | `GroupRow`, `EntryRow`, "Tất cả N tiến trình" |
 | Rộng menu | 340 pt | |
 | Màu trạng thái | `.green` ổn · `.orange` hơi nặng / nóng · `.red` nặng | vòng RAM (theo **áp lực bộ nhớ**, không theo %), tiêu đề trạng thái, số đáng lo |
 | Lý do dọn | `.orange` rảnh · `.red` ăn nhiều / lỗi | nhãn tròn trong "Nên dọn" |
@@ -48,7 +55,7 @@ các tiến trình"* · *"có thể làm UI giống với macos luôn được k
 | `EntryRow` | tên · `?` nếu chưa rõ · cổng · `×N` · RAM · CPU | → `EntryPage` |
 | `EntryPage` | số đo, lý do (nếu có đề xuất), "Chép thông tin" (nút chính khi chưa rõ), "Dừng…"/"Cách đóng" (không có ở dòng `×N`) | |
 | `AllPage` | ô tìm + mọi nhóm, mọi thứ; "macOS và hệ thống" → Đo chi tiết | |
-| `BatchSheet` / `StopSheet` | hộp xác nhận trên nền tối mờ, vật liệu `.regularMaterial`; tiêu đề có RAM lấy lại; từng thứ: an toàn / hỏi trước (kèm lý do của cổng) / bị chặn | |
+| `BatchSheet` / `StopSheet` | hộp kính (`rSheet`) trên nền tối mờ; tiêu đề có RAM lấy lại; từng thứ: an toàn / hỏi trước (kèm lý do của cổng) / bị chặn | |
 | `Footer` | giờ quét · RAM của hog · `arrow.clockwise` · `gearshape` | |
 
 ## Luật dùng
@@ -67,4 +74,7 @@ các tiến trình"* · *"có thể làm UI giống với macos luôn được k
   tên nhóm + tên dòng ("chrome helper" vẫn ra).
 - CPU ở mọi dòng là **% của cả máy**, đỏ từ 50 % (cộng lại ra "CPU đang bận"), không phải % một nhân như Activity Monitor.
 - "Chưa đo được" (Docker tắt, VS Code không trả lời…) nằm trong Cài đặt, không ở màn chính của app; CLI in một dòng ở cuối.
+- "Dọn N thứ" ở màn chính là nút kính màu nhấn (chỉ mở hộp xác nhận); nút "Dọn"/"Dừng" trong hộp mới tô đỏ — đó mới là lúc dừng thật.
+- Ảnh `HogBar --render` (off-screen) **không vẽ được kính** — bộ ghép hình của macOS vẽ nó. Khi render, `Theme.offscreen` thay kính bằng
+  nền phẳng và nút kính bằng nút viền, nên ảnh trong [compact/app/](compact/app/) chỉ để xem **bố cục**; chất liệu thật xem trên app.
 - Chuỗi hiển thị lấy từ HogCore (`Overview`, đã theo `vi`/`en`); nhãn của app có đủ hai ngôn ngữ.

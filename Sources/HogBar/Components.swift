@@ -2,7 +2,7 @@ import AppKit
 import HogCore
 import SwiftUI
 
-// Components of the compact menu (docs/design/compact/screens.html), built from native macOS controls.
+// Components of the compact menu (docs/design/compact/screens.html), built from native macOS 26 controls and glass.
 
 /// RAM gauge + state phrase + one line. Tapping the gauge explains RAM (and the compressed part).
 struct StatusHeader: View {
@@ -143,7 +143,7 @@ struct CleanupRow: View {
                     .toggleStyle(.checkbox).labelsHidden()
                     .accessibilityLabel(c.name)
             }
-            (Text(c.name) + Text(c.project.map { " · \($0)" } ?? "").foregroundColor(.secondary))
+            Text("\(c.name)\(Text(c.project.map { " · \($0)" } ?? "").foregroundStyle(.secondary))")
                 .lineLimit(1).truncationMode(.tail)
             Spacer(minLength: 4)
             if c.manual {
@@ -185,10 +185,11 @@ struct GroupRow: View {
                     .frame(minWidth: 40, alignment: .trailing)
             }
             .font(.callout)
-            .frame(minHeight: 32)
+            .frame(minHeight: 34)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .hoverRow()
         .accessibilityHint(model.t("Mở để xem từng thứ", "Opens to show each thing"))
     }
 
@@ -207,7 +208,7 @@ struct GroupIcon: View {
                 .foregroundStyle(g.kind == .project ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
             }
         }
-        .frame(width: 18, height: 18)
+        .frame(width: 22, height: 22)
     }
 
     var symbol: String {
@@ -241,11 +242,12 @@ struct EntryRow: View {
                     .frame(minWidth: 40, alignment: .trailing)
             }
             .font(.callout)
-            .padding(.leading, 30)
-            .frame(minHeight: 24)
+            .padding(.leading, 34)
+            .frame(minHeight: 26)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .hoverRow()
     }
 }
 
@@ -261,10 +263,11 @@ struct Footer: View {
             }
             Spacer()
             Button { model.refresh() } label: { Image(systemName: "arrow.clockwise") }
-                .buttonStyle(.borderless).help(model.t("Làm mới", "Refresh")).disabled(model.scanning)
+                .help(model.t("Làm mới", "Refresh")).disabled(model.scanning)
             Button { model.page = .settings } label: { Image(systemName: "gearshape") }
-                .buttonStyle(.borderless).help(model.t("Cài đặt", "Settings"))
+                .help(model.t("Cài đặt", "Settings"))
         }
+        .glassButton().buttonBorderShape(.circle).controlSize(.small)
         .font(.caption).foregroundStyle(.secondary)
         .padding(.horizontal, Theme.s3).padding(.vertical, Theme.s2)
     }
@@ -274,6 +277,6 @@ struct BackButton: View {
     @EnvironmentObject var model: HogModel
     var body: some View {
         Button { model.page = model.back } label: { Label(model.t("Quay lại", "Back"), systemImage: "chevron.left") }
-            .buttonStyle(.borderless).font(.callout)
+            .glassButton().controlSize(.small)
     }
 }
