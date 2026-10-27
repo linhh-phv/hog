@@ -506,7 +506,8 @@ Ghi đè cục bộ: `~/.config/hog/catalog.d/*.json`, cùng quy tắc như mụ
 | 10 | `watchman` | theo dõi file, unix socket | ✔ | 20 | `android-emulator` | emulator Android (qemu) | ○ |
 | 21 | `tmux-server` | máy chủ tmux, `detached_by_design` | ○ | 22 | `screen` | GNU screen, `detached_by_design` | ✔ (qa) |
 
-Thêm sau bộ khởi đầu: `shell`; `pnpm`, `storybook-dev` (2026-10-27, từ "Chép thông tin": một `pnpm dev` mồ côi và Storybook nó mở;
+Thêm sau bộ khởi đầu: `shell`; `tsc` (2026-10-27, từ "Chép thông tin": `tsc --noEmit` một phiên Claude chạy; khớp `bin/tsc`, không
+khớp `tsserver.js`); `pnpm`, `storybook-dev` (2026-10-27, từ "Chép thông tin": một `pnpm dev` mồ côi và Storybook nó mở;
 `pnpm` khớp `bin/pnpm`, không khớp kho `.pnpm/` của node_modules); `jest-worker` (2026-10-27 — tiến trình phụ của Jest/Metro/Next.js, `exe: node` + `args_contains:
 "jest-worker/"`, `stop: manual`; từ thông tin "Chép thông tin" user dán vào. `respawns: by-parent` là suy luận — chưa thử tắt một worker để xem Jest có mở lại không).
 
