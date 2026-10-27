@@ -6,16 +6,16 @@
     "en": "Swapped to disk"
   },
   "plain": {
-    "vi": "RAM hết chỗ nên máy tạm cất bớt dữ liệu ra ổ đĩa — chậm hơn RAM nhiều.",
-    "en": "RAM ran out of room, so the machine parked some data on the disk — much slower than RAM."
+    "vi": "Khi RAM hết chỗ, macOS tạm cất bớt dữ liệu ra ổ đĩa — chậm hơn RAM nhiều.",
+    "en": "When memory runs out, macOS moves some data to disk for a while — much slower than RAM."
   },
   "how_to_read": {
-    "vi": "Cao + áp lực vàng/đỏ = nguyên nhân máy ì. Cao mà áp lực xanh thì chỉ là phần cũ chưa cần lấy lại.",
-    "en": "High + yellow/red pressure = why the machine is slow. High with green pressure is just old data not needed yet."
+    "vi": "Cao + áp lực vàng / đỏ = lý do máy ì.\nCao mà áp lực xanh: chỉ là dữ liệu cũ chưa cần lấy lại, không sao.",
+    "en": "High + yellow / red pressure = why the machine is slow.\nHigh with green pressure: just old data not needed back yet, no problem."
   },
   "act": {
-    "vi": "Tắt thứ ăn nhiều nhất mà không dùng tới.",
-    "en": "Stop the biggest things you are not using."
+    "vi": "Tắt thứ ăn nhiều RAM mà bạn không dùng.",
+    "en": "Stop big things you do not use."
   },
   "provenance": {
     "added": "2026-10-26",

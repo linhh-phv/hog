@@ -6,12 +6,12 @@
   },
   "family": "indexer",
   "summary": {
-    "vi": "Tiến trình của macOS lập chỉ mục file cho Spotlight. Hay chạy nhiều sau khi cài/sinh nhiều file (node_modules, build).",
-    "en": "macOS process that indexes files for Spotlight. Busy after many files appear (node_modules, builds)."
+    "vi": "Spotlight (tìm kiếm của macOS) đang đọc file để sau này tìm được chúng.\nHay chạy nhiều ngay sau khi có nhiều file mới (cài thư viện vào `node_modules`, build).",
+    "en": "Spotlight (macOS search) is reading files so it can find them later.\nOften busy right after many new files appear (installing into `node_modules`, builds)."
   },
   "stop_effect": {
-    "vi": "Là của hệ thống; hog không tắt. Có thể loại thư mục build khỏi Spotlight trong Cài đặt hệ thống.",
-    "en": "Part of macOS; hog never stops it. You can exclude build folders from Spotlight in System Settings."
+    "vi": "Là của macOS, hog không tắt.\nMuốn bớt: bỏ thư mục build ra khỏi Spotlight trong Cài đặt hệ thống.",
+    "en": "It belongs to macOS; hog does not stop it.\nTo reduce it: exclude build folders from Spotlight in System Settings."
   },
   "respawns": "supervisor",
   "stop": {

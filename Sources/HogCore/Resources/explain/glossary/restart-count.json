@@ -6,16 +6,16 @@
     "en": "Restarts"
   },
   "plain": {
-    "vi": "Số lần Docker đã khởi động lại container kể từ khi tạo ra.",
-    "en": "How many times Docker restarted the container since it was created."
+    "vi": "Docker đã khởi động lại container này bao nhiêu lần kể từ khi tạo.",
+    "en": "How many times Docker restarted this container since it was created."
   },
   "how_to_read": {
-    "vi": "Cộng dồn từ lúc tạo: số lớn mà container vẫn đang khởi động lại = chết đi sống lại liên tục.",
-    "en": "Counted since creation: a large number while it is still restarting = a crash loop."
+    "vi": "Số cộng dồn từ lúc tạo.\nSố lớn mà container vẫn đang khởi động lại = nó lỗi, chết đi sống lại liên tục.",
+    "en": "It adds up since creation.\nA big number while it is still restarting = it keeps crashing and coming back."
   },
   "act": {
-    "vi": "Xem log của container; tắt thì hog hạ restart policy trước.",
-    "en": "Check the container's logs; when stopping, hog turns the restart policy off first."
+    "vi": "Xem log của container.\nNếu dừng, hog tắt chế độ tự bật lại trước.",
+    "en": "Check the container's logs.\nIf you stop it, hog turns the restart setting off first."
   },
   "provenance": {
     "added": "2026-10-26",

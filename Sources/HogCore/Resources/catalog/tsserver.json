@@ -6,12 +6,12 @@
   },
   "family": "language-server",
   "summary": {
-    "vi": "tsserver phân tích code TypeScript/JavaScript cho gợi ý, báo lỗi, đi tới định nghĩa. Dự án lớn có thể ngốn hàng GB.",
-    "en": "tsserver analyses TypeScript/JavaScript for completions, errors and go-to-definition. Large projects can take several GB."
+    "vi": "Đọc code TypeScript/JavaScript để VS Code gợi ý, báo lỗi và nhảy tới chỗ định nghĩa.\nDự án lớn có thể chiếm vài GB.",
+    "en": "Reads TypeScript/JavaScript code so VS Code can suggest, show errors and jump to definitions.\nA big project can take several GB."
   },
   "stop_effect": {
-    "vi": "VS Code bật lại ngay. Muốn giảm RAM: lệnh \"TypeScript: Restart TS Server\" trong VS Code, hoặc đóng cửa sổ không dùng.",
-    "en": "VS Code restarts it at once. To reduce memory: run \"TypeScript: Restart TS Server\" in VS Code, or close windows you are not using."
+    "vi": "Tắt không có ích: VS Code bật lại ngay.\nMuốn bớt RAM: trong VS Code chạy lệnh \"TypeScript: Restart TS Server\", hoặc đóng cửa sổ không dùng.",
+    "en": "Stopping it does not help: VS Code starts it again at once.\nTo free memory: run \"TypeScript: Restart TS Server\" in VS Code, or close windows you do not use."
   },
   "respawns": "by-parent",
   "stop": {

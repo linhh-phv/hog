@@ -78,19 +78,54 @@ struct MetricChip<Value: View>: View {
     }
 }
 
-/// Glossary entry in plain words, for popovers.
+/// An explanation text: one point is a paragraph, several (one per line in the data) a bulleted list.
+struct Points: View {
+    let text: String
+
+    var body: some View {
+        let points = Format.points(text)
+        if points.count <= 1 {
+            Text(points.first ?? "").fixedSize(horizontal: false, vertical: true)
+        } else {
+            VStack(alignment: .leading, spacing: 3) {
+                ForEach(Array(points.enumerated()), id: \.offset) { _, p in
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("•").foregroundStyle(.secondary)
+                        Text(p).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// A titled part of an explanation ("Là gì", "Tắt thì sao"…).
+struct Part<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title).font(.subheadline.weight(.semibold))
+            content
+        }
+    }
+}
+
+/// Glossary entry in plain words, for popovers: what it is, how to read it, what to do, and what is measured now.
 struct Explanation: View {
     @EnvironmentObject var model: HogModel
     let id: String
     let extra: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Theme.s2) {
             if let e = model.glossary(id) {
                 Text(e.name.text(model.lang) ?? id).font(.headline)
-                Text(e.plain.text(model.lang) ?? "")
-                Text(e.howToRead.text(model.lang) ?? "").foregroundStyle(.secondary)
-                if let extra { Text(extra).foregroundStyle(.secondary) }
+                Points(text: e.plain.text(model.lang) ?? "")
+                Part(title: model.t("Đọc thế nào", "How to read it")) { Points(text: e.howToRead.text(model.lang) ?? "") }
+                Part(title: model.t("Nên làm gì", "What to do")) { Points(text: e.act.text(model.lang) ?? "") }
+                if let extra { Part(title: model.t("Lúc này", "Right now")) { Points(text: extra) } }
                 if let am = e.activityMonitor {
                     Text(model.t("Activity Monitor gọi là \"\(am)\"", "Activity Monitor calls it \"\(am)\"")).font(.caption).foregroundStyle(.tertiary)
                 }

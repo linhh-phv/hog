@@ -6,12 +6,12 @@
   },
   "family": "mobile-tooling",
   "summary": {
-    "vi": "Máy ảo Android (qemu) của Android Studio. Thường 2–4 GB.",
-    "en": "Android Studio's Android virtual device (qemu). Often 2–4 GB."
+    "vi": "Điện thoại Android ảo của Android Studio, để chạy thử app ngay trên máy tính.\nThường chiếm 2–4 GB RAM.",
+    "en": "Android Studio's virtual Android phone, to test apps on the computer.\nUsually takes 2–4 GB of RAM."
   },
   "stop_effect": {
-    "vi": "Đóng cửa sổ emulator để trả RAM; tắt ngang có thể làm hỏng trạng thái máy ảo.",
-    "en": "Close the emulator window to get the memory back; killing it can corrupt the virtual device state."
+    "vi": "Nên đóng cửa sổ máy ảo thay vì tắt từ đây.\nTắt ngang có thể làm hỏng máy ảo, giống rút điện đột ngột.",
+    "en": "Close the emulator window instead of stopping it here.\nStopping it abruptly can break the virtual phone, like pulling the plug."
   },
   "respawns": "never",
   "stop": {

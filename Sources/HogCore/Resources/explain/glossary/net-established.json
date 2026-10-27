@@ -6,16 +6,16 @@
     "en": "Open connections"
   },
   "plain": {
-    "vi": "Số kết nối mạng (TCP) chương trình đang giữ, kể cả tới chính máy này.",
-    "en": "How many network (TCP) connections the program holds, including to this machine."
+    "vi": "Số kết nối mạng chương trình đang mở, kể cả kết nối tới chính máy này.",
+    "en": "How many network connections the program has open, including ones to this machine."
   },
   "how_to_read": {
-    "vi": "0 = lúc này không ai nói chuyện với nó. Đo tại một thời điểm, không phải cả ngày.",
-    "en": "0 = nobody is talking to it right now. Measured at one moment, not over the day."
+    "vi": "0 = lúc này không ai đang nói chuyện với nó.\nĐo tại một thời điểm, không phải cả ngày.",
+    "en": "0 = nothing is talking to it right now.\nMeasured at one moment, not over the day."
   },
   "act": {
-    "vi": "0 kết nối + chạy lâu + CPU thấp → có thể là thứ bị bỏ quên.",
-    "en": "0 connections + long running + low CPU → may be forgotten."
+    "vi": "0 kết nối + chạy lâu + gần như không dùng CPU → có thể là thứ bị quên.",
+    "en": "0 connections + running for long + almost no CPU → maybe forgotten."
   },
   "provenance": {
     "added": "2026-10-26",

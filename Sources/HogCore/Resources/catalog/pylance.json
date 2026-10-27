@@ -6,12 +6,12 @@
   },
   "family": "language-server",
   "summary": {
-    "vi": "Pylance phân tích code Python cho gợi ý và báo lỗi. Mỗi cửa sổ VS Code mở dự án Python có một bản riêng, có thể 1–2 GB mỗi bản.",
-    "en": "Pylance analyses Python code for completions and errors. Each VS Code window with a Python project runs its own copy, possibly 1–2 GB each."
+    "vi": "Đọc code Python để VS Code gợi ý và báo lỗi.\nMỗi cửa sổ VS Code mở dự án Python có một bản riêng, mỗi bản có thể 1–2 GB.",
+    "en": "Reads Python code so VS Code can suggest and show errors.\nEach VS Code window with a Python project has its own copy, 1–2 GB each."
   },
   "stop_effect": {
-    "vi": "VS Code bật lại ngay. Muốn giảm RAM: đóng cửa sổ Python không dùng.",
-    "en": "VS Code restarts it at once. To reduce memory: close Python windows you are not using."
+    "vi": "Tắt không có ích: VS Code bật lại ngay.\nMuốn bớt RAM: đóng cửa sổ VS Code của dự án Python bạn không dùng.",
+    "en": "Stopping it does not help: VS Code starts it again at once.\nTo free memory: close the VS Code windows of Python projects you do not use."
   },
   "respawns": "by-parent",
   "stop": {

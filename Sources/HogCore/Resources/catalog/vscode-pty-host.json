@@ -6,12 +6,12 @@
   },
   "family": "editor",
   "summary": {
-    "vi": "Giữ mọi terminal tích hợp của VS Code.",
-    "en": "Holds every integrated terminal of VS Code."
+    "vi": "Giữ mọi terminal bên trong VS Code.",
+    "en": "Holds every terminal inside VS Code."
   },
   "stop_effect": {
     "vi": "Tắt là đóng mọi terminal trong VS Code, kể cả lệnh đang chạy trong đó.",
-    "en": "Stopping it closes every VS Code terminal, including commands running in them."
+    "en": "Stopping it closes every terminal in VS Code, with whatever runs in them."
   },
   "respawns": "by-parent",
   "stop": {

@@ -6,16 +6,16 @@
     "en": "CPU"
   },
   "plain": {
-    "vi": "Phần trăm sức một nhân CPU mà chương trình đang dùng.",
-    "en": "Share of one CPU core the program is using."
+    "vi": "Chương trình đang dùng bao nhiêu sức của một nhân CPU.",
+    "en": "How much of one CPU core the program is using."
   },
   "how_to_read": {
-    "vi": "100% = một nhân chạy hết sức; máy 8 nhân tối đa 800%.",
-    "en": "100% = one core fully busy; an 8-core machine goes up to 800%."
+    "vi": "100 % = một nhân chạy hết sức; máy 8 nhân tối đa 800 %.\nMàn hình của hog đổi ra % của cả máy cho dễ so.",
+    "en": "100 % = one core flat out; an 8-core machine goes up to 800 %.\nhog's screens show % of the whole machine instead, to compare easily."
   },
   "act": {
-    "vi": "Cao kéo dài với thứ bạn không dùng → xem có nên tắt. hog chỉ đo được tiến trình của bạn; phần còn lại của cả máy hiện là \"macOS và dịch vụ hệ thống\".",
-    "en": "Sustained high use by something you do not use → consider stopping it. hog only measures your own processes; the rest of the machine shows as \"macOS and system services\"."
+    "vi": "Cao kéo dài với thứ bạn không dùng → cân nhắc tắt.\nhog chỉ đo được chương trình của bạn; phần còn lại hiện là \"macOS và hệ thống\".",
+    "en": "High for a while on something you do not use → consider stopping it.\nhog can only measure your own programs; the rest shows as \"macOS and system\"."
   },
   "provenance": {
     "added": "2026-10-26",

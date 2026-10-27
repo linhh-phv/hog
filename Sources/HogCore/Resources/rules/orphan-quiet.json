@@ -30,7 +30,7 @@
     ]
   },
   "reason": {
-    "vi": "Mồ côi (thứ đã mở nó đã tắt), không ai kết nối, gần như không dùng CPU suốt {age_s}.",
-    "en": "Orphaned (whatever started it has exited), no connections, almost no CPU for {age_s}."
+    "vi": "Thứ đã mở nó (terminal, editor) đã tắt mà nó vẫn chạy {age_s}: không ai kết nối, gần như không dùng CPU.",
+    "en": "Whatever started it (terminal, editor) has closed, yet it has run for {age_s}: no connections, almost no CPU."
   }
 }

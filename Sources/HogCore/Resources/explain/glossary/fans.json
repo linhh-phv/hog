@@ -6,16 +6,16 @@
     "en": "Fans"
   },
   "plain": {
-    "vi": "Tốc độ quạt (vòng/phút), đọc từ SMC. Máy Apple Silicon thường để quạt đứng (0) khi còn mát; MacBook Air không có quạt.",
-    "en": "Fan speed (revolutions per minute), read from the SMC. Apple Silicon Macs often keep the fans stopped (0) while cool; a MacBook Air has no fan."
+    "vi": "Quạt đang quay nhanh cỡ nào (vòng/phút), và bằng bao nhiêu % tốc độ cao nhất của nó.\nMáy Apple Silicon thường để quạt đứng khi chưa nóng; MacBook Air không có quạt.",
+    "en": "How fast the fans spin (rpm), and what % of their top speed that is.\nApple Silicon Macs often keep the fans stopped until they get warm; a MacBook Air has no fan."
   },
   "how_to_read": {
-    "vi": "Quạt quay nhanh dần khi máy nóng lên; % là tốc độ so với mức cao nhất của chính quạt đó — gần 100 % = máy đang phải làm mát hết sức. hog chỉ đọc, không điều khiển quạt.",
-    "en": "Fans speed up as the machine heats up; % is the speed against that fan's own maximum — near 100 % = the machine is cooling as hard as it can. hog only reads them, it never controls the fans."
+    "vi": "Máy càng nóng quạt càng quay nhanh; gần 100 % = đang làm mát hết sức.\nhog chỉ đọc, không điều khiển quạt.",
+    "en": "The hotter the machine, the faster the fans; near 100 % = cooling as hard as it can.\nhog only reads them, it never controls the fans."
   },
   "act": {
-    "vi": "Quạt kêu to lâu mà không làm gì nặng → xem \"Đang ăn CPU\" và tắt thứ không dùng.",
-    "en": "Fans loud for a long time while you are not doing anything heavy → check \"Using CPU\" and stop what you do not use."
+    "vi": "Quạt kêu to lâu mà bạn không làm gì nặng → xem thứ ăn CPU nhiều nhất và tắt thứ không dùng.",
+    "en": "Fans loud for a while when you are not doing anything heavy → look at what uses the most CPU and stop what you do not use."
   },
   "provenance": {
     "added": "2026-10-27",

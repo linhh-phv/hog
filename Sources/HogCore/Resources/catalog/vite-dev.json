@@ -6,12 +6,12 @@
   },
   "family": "dev-server",
   "summary": {
-    "vi": "Dev server của Vite.",
-    "en": "The Vite development server."
+    "vi": "Chạy thử trang web bằng Vite trên máy bạn.",
+    "en": "Runs a website with Vite on your machine for testing."
   },
   "stop_effect": {
-    "vi": "Trang đang mở ngừng tải lại; chạy lại khi cần.",
-    "en": "Pages open in the browser stop reloading; start it again when needed."
+    "vi": "Trang web chạy thử ngừng hoạt động.\nCần lại thì chạy lại lệnh dev của dự án.",
+    "en": "The test site stops working.\nRun the project's dev command again when needed."
   },
   "respawns": "never",
   "stop": {

@@ -124,6 +124,13 @@ struct Render {
         return out.joined(separator: "\n")
     }
 
+    /// An explanation text as lines: one point stays one line, several become "• " lines under the title.
+    func points(_ text: String, title: String? = nil, indent: String = "") -> [String] {
+        let ps = Format.points(text)
+        if ps.count <= 1 { return [indent + (title.map { $0 + ": " } ?? "") + (ps.first ?? "")] }
+        return (title.map { [indent + $0 + ":"] } ?? []) + ps.map { indent + (title == nil ? "" : "  ") + "• " + $0 }
+    }
+
     func trunc(_ s: String, _ n: Int) -> String { s.count > n ? String(s.prefix(max(1, n - 1))) + "…" : s }
 
     // MARK: explain
@@ -131,8 +138,8 @@ struct Render {
     func explainItem(_ item: Item, _ s: Snapshot, catalog: Catalog, plan: StopPlan?) -> String {
         var out = [bold(item.label) + dim("  (\(item.id))")]
         if let cid = item.catalogId.value, let e = catalog.entries[cid] {
-            out.append(e.summary.text(lang) ?? "")
-            out.append(t("Tắt thì sao: ", "If stopped: ") + (e.stopEffect.text(lang) ?? ""))
+            out += points(e.summary.text(lang) ?? "")
+            out += points(e.stopEffect.text(lang) ?? "", title: t("Tắt thì sao", "If stopped"))
             if !e.provenance.verified { out.append(yellow("⚠ " + t("mục danh mục chưa kiểm trên máy thật", "catalog entry not verified on a real machine"))) }
         } else {
             out.append(dim(t("Chưa có trong danh mục.", "Not in the catalog yet.")))
@@ -141,7 +148,7 @@ struct Render {
         if let f = s.findings.first(where: { $0.itemId == item.id }) {
             out.append("")
             out.append(verdictLabel(f.verdict) + dim("  (\(t("độ tin", "confidence")): \(Format.confidence(f.confidence, lang)); \(t("quy tắc", "rules")): \(f.rules.joined(separator: ", ")))"))
-            out.append("  " + f.reason)
+            out += points(f.reason, indent: "  ")
             if !f.unmeasured.isEmpty { out.append("  " + dim(t("Chưa đo: ", "Not measured: ") + f.unmeasured.joined(separator: ", "))) }
         }
         if let p = item.protection.value {
@@ -167,9 +174,9 @@ struct Render {
         if let am = e.activityMonitor {
             out.append(dim("Activity Monitor: \(am)" + (e.provenance.verified ? "" : t(" (chưa đối chiếu)", " (not checked yet)"))))
         }
-        out.append(e.plain.text(lang) ?? "")
-        out.append(t("Đọc thế nào: ", "How to read it: ") + (e.howToRead.text(lang) ?? ""))
-        out.append(t("Nên làm gì: ", "What to do: ") + (e.act.text(lang) ?? ""))
+        out += points(e.plain.text(lang) ?? "")
+        out += points(e.howToRead.text(lang) ?? "", title: t("Đọc thế nào", "How to read it"))
+        out += points(e.act.text(lang) ?? "", title: t("Nên làm gì", "What to do"))
         return out.joined(separator: "\n")
     }
 
@@ -189,8 +196,8 @@ struct Render {
     func planLines(_ p: StopPlan) -> [String] {
         var out: [String] = []
         out.append("  " + bold(p.label) + (p.ownerLabel.map { dim("  — " + t("chủ", "owner") + ": \($0)") } ?? ""))
-        if let r = p.reason { out.append("  " + r) }
-        out.append("  " + t("Tắt thì sao: ", "If stopped: ") + p.effect)
+        if let r = p.reason { out += points(r, indent: "  ") }
+        out += points(p.effect, title: t("Tắt thì sao", "If stopped"), indent: "  ")
         for step in p.steps { out.append("  → " + step) }
         for g in p.gates {
             let mark = switch g.result {

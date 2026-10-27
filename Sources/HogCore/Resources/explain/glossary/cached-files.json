@@ -6,12 +6,12 @@
     "en": "Cached files"
   },
   "plain": {
-    "vi": "RAM tạm giữ nội dung file để mở lại nhanh.",
-    "en": "Memory holding file contents so they open faster next time."
+    "vi": "RAM macOS mượn để giữ sẵn file vừa mở, cho lần sau mở nhanh.",
+    "en": "Memory macOS borrows to keep recently opened files ready, so they open faster next time."
   },
   "how_to_read": {
-    "vi": "macOS tự trả lại ngay khi cần. Không phải vấn đề.",
-    "en": "macOS gives it back immediately when needed. Not a problem."
+    "vi": "Cần RAM là macOS trả lại ngay.\nKhông phải vấn đề.",
+    "en": "macOS gives it back as soon as memory is needed.\nNot a problem."
   },
   "act": {
     "vi": "Không cần làm gì.",

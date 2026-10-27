@@ -147,6 +147,11 @@ public enum Format {
         }
     }
 
+    /// The points of an explanation: data texts put one point per line (`\n`); blank lines are dropped.
+    public static func points(_ text: String) -> [String] {
+        text.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
     /// "53 °C": whole degrees, sensors of one chip already differ by more than that.
     public static func celsius(_ c: Double, _ lang: Lang) -> String { number(c, 0, lang) + " °C" }
 

@@ -6,12 +6,12 @@
   },
   "family": "editor",
   "summary": {
-    "vi": "Theo dõi file trong thư mục đang mở của một cửa sổ VS Code để cập nhật cây thư mục và tìm kiếm.",
-    "en": "Watches files in the folders open in one VS Code window to keep the explorer and search up to date."
+    "vi": "Theo dõi file trong thư mục một cửa sổ VS Code đang mở, để danh sách file và tìm kiếm luôn mới.",
+    "en": "Watches the files of the folder a VS Code window has open, so the file list and search stay up to date."
   },
   "stop_effect": {
-    "vi": "VS Code bật lại ngay. Muốn trả RAM thì đóng cửa sổ VS Code không dùng tới.",
-    "en": "VS Code restarts it at once. To get the memory back, close the VS Code window you are not using."
+    "vi": "Tắt không có ích: VS Code bật lại ngay.\nMuốn bớt RAM: đóng cửa sổ VS Code không dùng.",
+    "en": "Stopping it does not help: VS Code starts it again at once.\nTo free memory: close VS Code windows you do not use."
   },
   "respawns": "by-parent",
   "stop": {

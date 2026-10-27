@@ -6,12 +6,12 @@
   },
   "family": "container",
   "summary": {
-    "vi": "Một container Docker/OrbStack.",
-    "en": "A Docker/OrbStack container."
+    "vi": "Một container Docker/OrbStack: một chương trình chạy trong hộp riêng, thường là database hoặc server.",
+    "en": "A Docker/OrbStack container: a program running in its own box, often a database or a server."
   },
   "stop_effect": {
-    "vi": "Dừng container không xoá dữ liệu hay volume. Nếu container có restart policy, hog tắt policy trước rồi mới dừng.",
-    "en": "Stopping a container does not delete data or volumes. If it has a restart policy, hog turns the policy off first."
+    "vi": "Không xoá dữ liệu; bật lại được bất cứ lúc nào.\nNếu container được cài để tự bật lại, hog tắt chế độ đó trước, để nó không sống lại ngay.",
+    "en": "No data is deleted; you can start it again any time.\nIf the container is set to restart by itself, hog turns that off first so it does not come straight back."
   },
   "respawns": "supervisor",
   "stop": {

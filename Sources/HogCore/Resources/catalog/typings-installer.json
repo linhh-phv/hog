@@ -6,12 +6,12 @@
   },
   "family": "language-server",
   "summary": {
-    "vi": "Tải định nghĩa type cho tsserver.",
-    "en": "Downloads type definitions for tsserver."
+    "vi": "Tải thêm mô tả kiểu dữ liệu (type) để VS Code gợi ý code TypeScript đúng hơn.",
+    "en": "Downloads type descriptions so VS Code can suggest TypeScript code more accurately."
   },
   "stop_effect": {
-    "vi": "VS Code bật lại khi cần; thường nhẹ.",
-    "en": "VS Code starts it again when needed; usually small."
+    "vi": "VS Code bật lại khi cần.\nThường rất nhẹ, không cần tắt.",
+    "en": "VS Code starts it again when needed.\nUsually very light; no need to stop it."
   },
   "respawns": "by-parent",
   "stop": {

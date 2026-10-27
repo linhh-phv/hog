@@ -6,12 +6,12 @@
   },
   "family": "terminal-multiplexer",
   "summary": {
-    "vi": "Giữ các phiên terminal screen chạy nền — bạn cố ý để nó chạy.",
-    "en": "Keeps screen terminal sessions running in the background — on purpose."
+    "vi": "Giữ các phiên terminal của `screen` chạy nền — thường là bạn cố ý để vậy.",
+    "en": "Keeps `screen` terminal sessions running in the background — usually on purpose."
   },
   "stop_effect": {
-    "vi": "Tắt là mất mọi phiên screen và lệnh đang chạy trong đó.",
-    "en": "Stopping it ends every screen session and the commands running in them."
+    "vi": "Tắt là mất mọi phiên `screen` và lệnh đang chạy trong đó.",
+    "en": "Stopping it ends every `screen` session and everything running in it."
   },
   "respawns": "never",
   "stop": {

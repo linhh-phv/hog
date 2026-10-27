@@ -149,7 +149,7 @@ enum Renderer {
         func finding(_ id: String, _ v: Verdict, _ rules: [String], _ reason: String, _ strategy: StopStrategy) -> Finding {
             Finding(itemId: id, verdict: v, confidence: .high, rules: rules, reason: reason, evidence: [:], unmeasured: [],
                     stop: StopAdvice(strategy: strategy, respawns: .onDemand,
-                                     effect: lang == .vi ? "Tắt không mất dữ liệu; cần thì nó tự bật lại." : "No data lost; it starts again when needed."))
+                                     effect: lang == .vi ? "Không mất dữ liệu.\nCần thì nó tự bật lại." : "No data is lost.\nIt starts again when needed."))
         }
         let vi = lang == .vi
         return Snapshot(
@@ -171,7 +171,7 @@ enum Renderer {
             sensors: [], owners: owners, processes: processes, items: calm ? [] : [watchman, node],
             findings: calm ? [] : [
                 finding(watchman.id, .mayStop, ["watchman-no-subscribers"],
-                        vi ? "Watchman chạy 3 giờ, không công cụ nào đăng ký theo dõi." : "Watchman ran 3 hours with no tool subscribed.", .watchmanShutdown),
+                        vi ? "Watchman đã chạy 3 giờ mà không công cụ nào dùng tới nó." : "Watchman has been running for 3 hours and no tool is using it.", .watchmanShutdown),
                 finding(node.id, hot ? .mayStop : .watch, ["cpu-heavy"],
                         vi ? "Đang dùng \(hot ? 39 : 11) % CPU của cả máy — một lý do máy nóng." : "Using \(hot ? 39 : 11) % of the machine's CPU — one reason the machine is hot.", .signal),
             ])

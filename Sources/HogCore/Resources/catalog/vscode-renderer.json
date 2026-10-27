@@ -6,12 +6,12 @@
   },
   "family": "editor",
   "summary": {
-    "vi": "Tiến trình vẽ giao diện của một cửa sổ VS Code.",
-    "en": "Draws the interface of one VS Code window."
+    "vi": "Phần vẽ giao diện của một cửa sổ VS Code.",
+    "en": "The part that draws one VS Code window."
   },
   "stop_effect": {
-    "vi": "Tắt nó là đóng (hoặc làm hỏng) cửa sổ đó. Muốn trả RAM thì đóng cửa sổ VS Code không dùng tới.",
-    "en": "Stopping it closes (or crashes) that window. To get the memory back, close the VS Code window you are not using."
+    "vi": "Tắt là đóng (hoặc làm hỏng) cửa sổ đó.\nMuốn bớt RAM: đóng cửa sổ VS Code không dùng.",
+    "en": "Stopping it closes (or breaks) that window.\nTo free memory: close VS Code windows you do not use."
   },
   "respawns": "never",
   "stop": {

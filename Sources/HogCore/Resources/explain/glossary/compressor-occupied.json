@@ -6,16 +6,16 @@
     "en": "RAM taken by compression"
   },
   "plain": {
-    "vi": "RAM thật mà phần dữ liệu đã nén đang chiếm, thường khoảng một nửa \"dữ liệu đã nén\".",
-    "en": "Real RAM taken by the compressed data, usually about half of \"data compressed\"."
+    "vi": "RAM thật mà phần dữ liệu đã nén đang chiếm.\nThường khoảng một nửa \"Dữ liệu đã nén\".",
+    "en": "Real memory the compressed data takes.\nUsually about half of \"Data compressed\"."
   },
   "how_to_read": {
-    "vi": "Đây là phần RAM thật bị nén chiếm; khớp dòng compressor của `top`.",
-    "en": "This is the real RAM the compressor uses; matches `top`'s compressor line."
+    "vi": "Khớp con số compressor của lệnh `top`.",
+    "en": "Matches the compressor number of `top`."
   },
   "act": {
-    "vi": "Như trên.",
-    "en": "As above."
+    "vi": "Như \"Dữ liệu đã nén\": tắt bớt thứ ít dùng mà giữ nhiều RAM.",
+    "en": "As for \"Data compressed\": stop big things you rarely use."
   },
   "provenance": {
     "added": "2026-10-26",

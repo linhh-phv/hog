@@ -6,16 +6,16 @@
     "en": "Container state"
   },
   "plain": {
-    "vi": "Container đang chạy, đang khởi động lại hay đã dừng, và Docker có tự bật lại nó không (restart policy).",
-    "en": "Whether the container is running, restarting or stopped, and whether Docker starts it again by itself (restart policy)."
+    "vi": "Container đang chạy, đang tự khởi động lại, hay đã dừng — và Docker có tự bật lại nó không.",
+    "en": "Whether the container is running, restarting or stopped — and whether Docker starts it again by itself."
   },
   "how_to_read": {
-    "vi": "Policy always / unless-stopped = Docker bật lại khi máy hoặc Docker khởi động; dừng không thì chưa đủ.",
-    "en": "Policy always / unless-stopped = Docker starts it again when the machine or Docker starts; stopping alone is not enough."
+    "vi": "Được cài tự bật lại (always / unless-stopped): Docker bật lại nó mỗi khi máy hoặc Docker khởi động.\nVì vậy chỉ dừng thôi là chưa đủ.",
+    "en": "Set to restart (always / unless-stopped): Docker starts it again whenever the machine or Docker starts.\nSo stopping alone is not enough."
   },
   "act": {
-    "vi": "Khi dừng, hog đặt policy về \"no\" trước rồi mới dừng; không xoá gì.",
-    "en": "When stopping, hog sets the policy to \"no\" first, then stops; nothing is deleted."
+    "vi": "Khi dừng, hog tắt chế độ tự bật lại trước rồi mới dừng.\nKhông xoá gì.",
+    "en": "When stopping it, hog turns the restart setting off first.\nNothing is deleted."
   },
   "provenance": {
     "added": "2026-10-26",

@@ -184,7 +184,7 @@ struct EntryPage: View {
                     }
                     Text(subtitle(g, e)).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
-                if let what = e.summary { Text(what).font(.callout).fixedSize(horizontal: false, vertical: true) }
+                if let what = e.summary { Points(text: what).font(.callout) }
                 Grid(alignment: .leading, horizontalSpacing: Theme.s3, verticalSpacing: 4) {
                     row("RAM", e.bytes.map { Format.bytes($0, model.lang) } ?? "–")
                     row("CPU", e.cpu.map { Format.percent($0, model.lang) + model.t(" của cả máy", " of the machine") } ?? "–")
@@ -201,12 +201,13 @@ struct EntryPage: View {
                 .font(.callout)
                 .padding(Theme.s3).frame(maxWidth: .infinity, alignment: .leading).module()
                 if let f = e.itemId.flatMap({ id in model.snapshot?.findings.first { $0.itemId == id } }) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(e.cleanup != nil ? model.t("Vì sao nên dọn", "Why clean it up") : model.t("hog thấy", "hog noticed")).font(.headline)
-                        Text(f.reason)
-                        Text(model.t("Tắt thì sao: ", "If stopped: ") + f.stop.effect).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: Theme.s2) {
+                        Part(title: e.cleanup != nil ? model.t("Vì sao nên dọn", "Why clean it up") : model.t("hog thấy", "hog noticed")) {
+                            Points(text: f.reason)
+                        }
+                        Part(title: model.t("Tắt thì sao", "If stopped")) { Points(text: f.stop.effect) }
                     }
-                    .font(.callout).fixedSize(horizontal: false, vertical: true)
+                    .font(.callout)
                 }
                 actions(e)
             } else {
@@ -394,8 +395,8 @@ struct StopSheet: View {
             Text((plan.ownerLabel.map { model.t("Thuộc ", "Owned by ") + $0 } ?? model.t("Không thuộc phiên hay cửa sổ nào", "Not part of a session or window"))
                  + (plan.identity.pid.map { " · PID \($0)" } ?? ""))
                 .font(.caption).foregroundStyle(.secondary)
-            if let r = plan.reason { Text(r).font(.callout).fixedSize(horizontal: false, vertical: true) }
-            Text(plan.effect).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if let r = plan.reason { Points(text: r).font(.callout) }
+            Points(text: plan.effect).font(.callout).foregroundStyle(.secondary)
             if plan.action == .manual {
                 Text(plan.steps.joined(separator: "\n").replacingOccurrences(of: "`", with: "")).font(.callout).fixedSize(horizontal: false, vertical: true)
             } else {

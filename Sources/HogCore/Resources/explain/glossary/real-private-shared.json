@@ -6,12 +6,12 @@
     "en": "Detail columns"
   },
   "plain": {
-    "vi": "Các cột chi tiết của Activity Monitor về cách bộ nhớ được chia.",
-    "en": "Activity Monitor's detail columns about how memory is split."
+    "vi": "Các cột chi tiết của Activity Monitor về cách RAM được chia.",
+    "en": "Activity Monitor's detailed columns on how memory is split."
   },
   "how_to_read": {
-    "vi": "hog không dùng chúng để quyết định: \"RAM của chương trình\" đã tính cả phần nén nên so sánh công bằng hơn.",
-    "en": "hog does not use them for decisions: \"program memory\" already counts compressed memory, which compares fairly."
+    "vi": "hog không dùng chúng: \"RAM của chương trình\" đã tính cả phần nén nên so sánh công bằng hơn.",
+    "en": "hog does not use them: \"Program memory\" includes compressed data, so it compares more fairly."
   },
   "act": {
     "vi": "Không cần đọc.",

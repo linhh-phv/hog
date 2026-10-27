@@ -6,12 +6,12 @@
   },
   "family": "build-daemon",
   "summary": {
-    "vi": "Tiến trình nền của Gradle, giữ lại sau mỗi lần build Android để lần sau nhanh hơn. Thường 0,5–2 GB.",
-    "en": "Gradle background process kept after each Android build so the next one is faster. Often 0.5–2 GB."
+    "vi": "Gradle (công cụ build app Android) để chương trình này chạy nền sau mỗi lần build, cho lần build sau nhanh hơn.\nThường 0,5–2 GB RAM.",
+    "en": "Gradle (the Android build tool) leaves this running after each build so the next build is faster.\nUsually 0.5–2 GB of RAM."
   },
   "stop_effect": {
-    "vi": "Lần build sau chậm hơn một chút; `./gradlew --stop` là cách tắt chuẩn.",
-    "en": "The next build is a bit slower; `./gradlew --stop` is the standard way to stop it."
+    "vi": "Không mất gì; lần build sau chậm hơn một chút.\nCách tắt chuẩn: chạy `./gradlew --stop` trong dự án.",
+    "en": "Nothing is lost; the next build is a little slower.\nThe usual way to stop it: run `./gradlew --stop` in the project."
   },
   "respawns": "on-demand",
   "stop": {

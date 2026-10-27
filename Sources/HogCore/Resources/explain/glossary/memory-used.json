@@ -6,12 +6,12 @@
     "en": "Memory used"
   },
   "plain": {
-    "vi": "Phần RAM các chương trình và macOS đang giữ, tính như Activity Monitor (bộ nhớ của app + phần hệ thống giữ chặt + phần đã nén).",
-    "en": "Memory programs and macOS hold, counted like Activity Monitor (app memory + wired + compressed)."
+    "vi": "Phần RAM đang bị giữ bởi các chương trình và macOS, tính giống Activity Monitor.",
+    "en": "Memory held by programs and macOS, counted like Activity Monitor."
   },
   "how_to_read": {
-    "vi": "macOS cố ý dùng gần hết RAM để chạy nhanh, nên số cao là thường. Màu vòng mới nói máy có thiếu không: xanh là đủ, cam là bắt đầu thiếu, đỏ là thiếu nặng.",
-    "en": "macOS keeps RAM nearly full on purpose, so a high number is normal. The ring's colour says whether it is short: green enough, orange getting short, red short."
+    "vi": "macOS cố tình dùng gần hết RAM cho nhanh, nên số cao là bình thường.\nMàu vòng mới cho biết có thiếu không: xanh đủ, cam bắt đầu thiếu, đỏ thiếu nặng.",
+    "en": "macOS deliberately uses most of the memory to stay fast, so a high number is normal.\nThe ring's colour tells whether it is short: green enough, orange getting short, red very short."
   },
   "act": {
     "vi": "Không cần làm gì chỉ vì số này cao.",

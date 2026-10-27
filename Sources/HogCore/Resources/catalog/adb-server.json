@@ -6,12 +6,12 @@
   },
   "family": "mobile-tooling",
   "summary": {
-    "vi": "Cầu nối Android Debug Bridge giữa máy và thiết bị/emulator Android.",
-    "en": "Android Debug Bridge server between this machine and Android devices/emulators."
+    "vi": "Nối máy Mac với điện thoại hoặc máy ảo Android, để Android Studio cài và chạy thử app.",
+    "en": "Connects the Mac to an Android phone or emulator, so Android Studio can install and test apps."
   },
   "stop_effect": {
-    "vi": "Lệnh `adb` kế tiếp tự bật lại nó.",
-    "en": "The next `adb` command starts it again."
+    "vi": "Không mất gì.\nLần sau bạn dùng lệnh `adb` (hoặc Android Studio cần tới), nó tự bật lại.",
+    "en": "Nothing is lost.\nThe next `adb` command (or Android Studio) starts it again."
   },
   "respawns": "on-demand",
   "stop": {

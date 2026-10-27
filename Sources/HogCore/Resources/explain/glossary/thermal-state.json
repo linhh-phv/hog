@@ -6,16 +6,16 @@
     "en": "Heat"
   },
   "plain": {
-    "vi": "macOS tự đánh giá máy có phải giảm tốc vì nóng không: bình thường, ấm, nóng, rất nóng. Không phải số đo độ nóng: máy có thể 90 °C mà vẫn \"bình thường\". Số độ C ở mục Nhiệt độ.",
-    "en": "macOS's own judgement of whether heat makes it slow down: normal, warm, hot, very hot. Not a measure of how warm it is: the machine can be at 90 °C and still \"normal\". Degrees are under Temperature."
+    "vi": "macOS tự đánh giá máy có phải chậm lại vì nóng không: bình thường, ấm, nóng, rất nóng.\nKhông phải số đo độ nóng: máy 90 °C vẫn có thể là \"bình thường\".",
+    "en": "macOS's own judgement of whether heat makes it slow down: normal, warm, hot, very hot.\nNot a measure of how warm it is: at 90 °C it can still be \"normal\"."
   },
   "how_to_read": {
-    "vi": "Ấm là thường khi đang làm nặng. Nóng / rất nóng = macOS có thể giảm tốc CPU để hạ nhiệt, nên máy chậm đi.",
-    "en": "Warm is usual under load. Hot / very hot = macOS may slow the CPU down to cool off, so things get slower."
+    "vi": "Ấm là thường khi đang làm nặng.\nNóng / rất nóng = macOS có thể giảm tốc CPU để hạ nhiệt, máy sẽ chậm đi.",
+    "en": "Warm is usual under load.\nHot / very hot = macOS may slow the CPU down to cool off, so things get slower."
   },
   "act": {
-    "vi": "Nóng mà không làm gì nặng → xem \"Đang ăn CPU\" và tắt thứ không dùng; để máy chỗ thoáng.",
-    "en": "Hot while you are not doing anything heavy → check \"Using CPU\" and stop what you do not use; give the machine air."
+    "vi": "Nóng mà bạn không làm gì nặng → xem thứ ăn CPU nhiều nhất và tắt thứ không dùng.\nĐể máy chỗ thoáng.",
+    "en": "Hot while you are not doing anything heavy → look at what uses the most CPU and stop what you do not use.\nGive the machine air."
   },
   "provenance": {
     "added": "2026-10-27",

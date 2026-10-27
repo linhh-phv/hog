@@ -6,12 +6,12 @@
   },
   "family": "shell",
   "summary": {
-    "vi": "Chương trình nhận lệnh bạn gõ trong một tab terminal (zsh, bash, fish…). Rất nhẹ.",
-    "en": "The program that takes the commands you type in a terminal tab (zsh, bash, fish…). Very light."
+    "vi": "Chương trình nhận lệnh bạn gõ trong một tab terminal (zsh, bash, fish…).\nRất nhẹ.",
+    "en": "The program that takes the commands you type in a terminal tab (zsh, bash, fish…).\nVery light."
   },
   "stop_effect": {
-    "vi": "Tắt là đóng tab terminal đó và mọi lệnh đang chạy trong nó — đóng tab thay vì tắt từ đây.",
-    "en": "Stopping it closes that terminal tab and everything running in it — close the tab instead."
+    "vi": "Tắt là đóng tab terminal đó và mọi lệnh đang chạy trong nó.\nNên đóng tab thay vì tắt từ đây.",
+    "en": "Stopping it closes that terminal tab and everything running in it.\nClose the tab instead of stopping it here."
   },
   "respawns": "never",
   "stop": {

@@ -6,16 +6,16 @@
     "en": "Average CPU since start"
   },
   "plain": {
-    "vi": "Tổng thời gian CPU chia cho thời gian đã chạy.",
-    "en": "Total CPU time divided by how long it has run."
+    "vi": "Trung bình chương trình dùng bao nhiêu CPU kể từ lúc mở.",
+    "en": "How much CPU the program has used on average since it started."
   },
   "how_to_read": {
-    "vi": "Thấp suốt nhiều giờ = chương trình gần như không làm gì.",
-    "en": "Low for hours = the program does almost nothing."
+    "vi": "Thấp suốt nhiều giờ = gần như không làm gì.",
+    "en": "Low for hours = it is doing almost nothing."
   },
   "act": {
-    "vi": "Một bằng chứng của \"không dùng\".",
-    "en": "One piece of evidence for \"unused\"."
+    "vi": "Chỉ là một dấu hiệu của \"không dùng\".",
+    "en": "Only one sign of \"unused\"."
   },
   "provenance": {
     "added": "2026-10-26",

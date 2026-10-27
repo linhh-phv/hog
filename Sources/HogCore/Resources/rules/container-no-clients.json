@@ -18,7 +18,7 @@
     ]
   },
   "reason": {
-    "vi": "Container đang chạy nhưng lúc này không ai kết nối tới cổng đã publish.",
-    "en": "Container is running but nobody is connected to its published ports right now."
+    "vi": "Container đang chạy nhưng lúc này không có gì kết nối tới cổng của nó.",
+    "en": "The container is running but nothing is connected to its ports right now."
   }
 }

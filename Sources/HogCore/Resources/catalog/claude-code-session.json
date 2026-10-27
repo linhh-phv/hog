@@ -6,12 +6,12 @@
   },
   "family": "ai-session",
   "summary": {
-    "vi": "Một phiên Claude Code (tab trong VS Code hoặc terminal). Phiên vẫn giữ RAM khi rảnh.",
-    "en": "One Claude Code session (a VS Code tab or a terminal). A session keeps its memory while idle."
+    "vi": "Một phiên Claude Code đang mở (một tab trong VS Code hoặc terminal).\nPhiên vẫn giữ RAM kể cả khi không làm gì.",
+    "en": "An open Claude Code session (a tab in VS Code or a terminal).\nIt keeps its memory even when it is doing nothing."
   },
   "stop_effect": {
-    "vi": "Đóng tab/phiên là mất hội thoại đang mở trên màn hình (lịch sử vẫn còn để mở lại). hog không tự tắt phiên.",
-    "en": "Closing the tab/session drops the conversation from the screen (history stays and can be resumed). hog never stops sessions itself."
+    "vi": "Hội thoại trên màn hình đóng lại; lịch sử vẫn còn, mở lại được.\nhog không tự tắt phiên — bạn đóng tab đó.",
+    "en": "The conversation on screen closes; the history stays and can be reopened.\nhog never closes a session itself — close the tab."
   },
   "respawns": "never",
   "stop": {

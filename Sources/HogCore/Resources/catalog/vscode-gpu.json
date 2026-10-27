@@ -6,12 +6,12 @@
   },
   "family": "editor",
   "summary": {
-    "vi": "Vẽ đồ hoạ bằng GPU cho mọi cửa sổ VS Code.",
-    "en": "Does GPU drawing for every VS Code window."
+    "vi": "Vẽ giao diện của mọi cửa sổ VS Code bằng card đồ hoạ (GPU).",
+    "en": "Draws every VS Code window using the graphics chip (GPU)."
   },
   "stop_effect": {
-    "vi": "VS Code bật lại ngay; tắt không lợi gì.",
-    "en": "VS Code restarts it at once; stopping it gains nothing."
+    "vi": "Tắt không có ích: VS Code bật lại ngay.",
+    "en": "Stopping it does not help: VS Code starts it again at once."
   },
   "respawns": "by-parent",
   "stop": {

@@ -6,8 +6,8 @@
     "en": "Machine RAM"
   },
   "plain": {
-    "vi": "Tổng bộ nhớ vật lý của máy.",
-    "en": "The machine's total physical memory."
+    "vi": "Tổng RAM của máy.",
+    "en": "The machine's total memory."
   },
   "how_to_read": {
     "vi": "Không phải số cần lo; xem áp lực bộ nhớ.",

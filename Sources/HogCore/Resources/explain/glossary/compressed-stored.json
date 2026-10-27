@@ -6,16 +6,16 @@
     "en": "Data compressed"
   },
   "plain": {
-    "vi": "Lượng dữ liệu của các chương trình mà macOS đã nén lại thay vì ghi ra ổ đĩa.",
-    "en": "How much program data macOS has compressed instead of writing it to disk."
+    "vi": "Dữ liệu của các chương trình mà macOS đã ép nhỏ lại (nén) để đỡ tốn RAM, thay vì cất ra ổ đĩa.",
+    "en": "Program data macOS has squeezed (compressed) to save memory, instead of moving it to disk."
   },
   "how_to_read": {
-    "vi": "Nhiều = máy đang chật, đang phải xoay xở. Cột Compressed của Activity Monitor là số này hay số bên cạnh thì chưa đối chiếu.",
-    "en": "A lot = the machine is tight and coping. Whether Activity Monitor's Compressed column shows this number or the next one is not checked yet."
+    "vi": "Càng nhiều = máy càng chật RAM, đang phải xoay xở.\nChưa đối chiếu được đây có phải số trong cột Compressed của Activity Monitor không.",
+    "en": "The more, the tighter memory is and the harder macOS is working around it.\nNot yet checked whether this is the number in Activity Monitor's Compressed column."
   },
   "act": {
-    "vi": "Tắt thứ ít dùng mà giữ nhiều RAM sẽ giảm số này.",
-    "en": "Stopping rarely used things that hold a lot of memory lowers this."
+    "vi": "Tắt bớt thứ ít dùng mà giữ nhiều RAM thì số này giảm.",
+    "en": "Stopping big things you rarely use brings it down."
   },
   "provenance": {
     "added": "2026-10-26",

@@ -22,7 +22,7 @@
     ]
   },
   "reason": {
-    "vi": "launchd sẽ bật lại nó nếu chỉ dừng.",
-    "en": "launchd will start it again if it is only stopped."
+    "vi": "Nếu chỉ dừng, macOS sẽ tự bật lại nó.",
+    "en": "If it is only stopped, macOS starts it again."
   }
 }

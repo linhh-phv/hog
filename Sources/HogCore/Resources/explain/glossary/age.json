@@ -6,16 +6,16 @@
     "en": "Running for"
   },
   "plain": {
-    "vi": "Thời gian từ lúc chương trình khởi động tới giờ.",
-    "en": "Time since the program started."
+    "vi": "Chương trình đã chạy bao lâu kể từ lúc mở.",
+    "en": "How long the program has been running since it started."
   },
   "how_to_read": {
-    "vi": "Chạy lâu mà gần như không dùng CPU và không ai kết nối thường là thứ bị bỏ quên.",
-    "en": "Running for long with almost no CPU and no connections usually means forgotten."
+    "vi": "Chạy lâu mà gần như không dùng CPU và không ai kết nối → thường là thứ bị quên.",
+    "en": "Running for long with almost no CPU and no connections → often something forgotten."
   },
   "act": {
-    "vi": "Một bằng chứng của \"không dùng\", không đủ một mình.",
-    "en": "One piece of evidence for \"unused\"; not enough on its own."
+    "vi": "Chỉ là một dấu hiệu: hog không kết luận \"không dùng\" chỉ vì chạy lâu.",
+    "en": "Only one sign: hog never concludes \"unused\" from age alone."
   },
   "provenance": {
     "added": "2026-10-26",

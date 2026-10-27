@@ -6,16 +6,16 @@
     "en": "Load average"
   },
   "plain": {
-    "vi": "Số việc đang chạy hoặc chờ CPU, trung bình 1, 5 và 15 phút.",
+    "vi": "Số việc đang chạy hoặc đang chờ CPU, trung bình trong 1, 5 và 15 phút.",
     "en": "How many tasks are running or waiting for the CPU, averaged over 1, 5 and 15 minutes."
   },
   "how_to_read": {
-    "vi": "So với số nhân (máy 8 nhân: dưới 8 là CPU còn rảnh). Tải cao mà CPU rảnh thường là đang chờ ổ đĩa — hay gặp khi máy thiếu RAM và đẩy nhiều ra ổ đĩa.",
-    "en": "Compare with the number of cores (8 cores: below 8 means spare CPU). High load with an idle CPU usually means waiting for the disk — common when memory is short and swapping."
+    "vi": "So với số nhân CPU: máy 8 nhân mà dưới 8 là CPU còn rảnh.\nTải cao mà CPU rảnh thường là máy đang chờ ổ đĩa — hay gặp khi thiếu RAM.",
+    "en": "Compare it with the number of cores: under 8 on an 8-core machine means the CPU has room.\nHigh load with an idle CPU usually means waiting for the disk — common when memory is short."
   },
   "act": {
     "vi": "Đừng nhìn số này một mình; xem áp lực bộ nhớ và thứ ăn CPU nhiều nhất.",
-    "en": "Do not read it alone; look at memory pressure and the biggest CPU users."
+    "en": "Do not read it alone; look at memory pressure and what uses the most CPU."
   },
   "provenance": {
     "added": "2026-10-26",

@@ -13,6 +13,7 @@ implementation has to differ from it, update the design in the same change.
 - `Sources/HogBar/` — the menu bar app. Thin, like the CLI. UI tokens in `Theme.swift` mirror docs/design/design-system.md.
 - `scripts/` — `build-app.sh` (dist/Hog.app, ad-hoc signed) and `install.sh` (installs for the current user).
 - `Sources/HogCore/Resources/{catalog,rules,explain,smc}/` — data, one JSON file per entry. Never code-like: no commands.
+  Explanation texts are plain words, one point per line (`\n`, shown as bullets), ≤ 150 characters each (design 5.2).
 - `Tests/HogCoreTests/` — Swift Testing. Fixtures in `Tests/HogCoreTests/Fixtures/` are **sanitized** real outputs.
 
 ## Commands

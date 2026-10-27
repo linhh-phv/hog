@@ -6,12 +6,12 @@
     "en": "Orphaned"
   },
   "plain": {
-    "vi": "Chương trình mà thứ đã mở nó (terminal, editor) đã tắt, nhưng nó vẫn chạy — hay là dev server bị bỏ quên.",
-    "en": "A program whose starter (terminal, editor) has exited while it keeps running — often a forgotten dev server."
+    "vi": "Chương trình mà thứ đã mở nó (terminal, editor) đã tắt, nhưng nó vẫn chạy.\nHay gặp: server chạy thử bị quên sau khi đóng terminal.",
+    "en": "A program whose starter (terminal, editor) has closed, but it keeps running.\nTypical case: a test server forgotten after closing the terminal."
   },
   "how_to_read": {
-    "vi": "Không tính job của launchd, widget, dịch vụ hệ thống, và thứ bạn cố ý để chạy nền (tmux, screen…).",
-    "en": "launchd jobs, widgets, system services and things you keep running on purpose (tmux, screen…) do not count."
+    "vi": "Không tính dịch vụ nền của macOS, widget, và thứ bạn cố ý để chạy nền (tmux, screen…).",
+    "en": "Not counted: macOS background services, widgets, and things you keep running on purpose (tmux, screen…)."
   },
   "act": {
     "vi": "Mồ côi + không ai kết nối + im lâu → có thể tắt.",

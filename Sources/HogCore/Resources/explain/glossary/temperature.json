@@ -6,16 +6,16 @@
     "en": "Temperature"
   },
   "plain": {
-    "vi": "Nhiệt độ CPU (trung bình các nhân), đọc từ cảm biến bên trong máy (SMC) — cảm biến không chính thức: Apple không công bố mã của chúng, hog dùng bảng mã theo đời chip. Chữ đi kèm là quạt đang quay bao nhiêu % sức; khi macOS báo nóng thì là chữ của macOS (nóng, rất nóng: máy có thể giảm tốc).",
-    "en": "CPU temperature (average of the cores), read from the machine's internal sensors (SMC) — unofficial sensors: Apple does not publish their codes, hog uses a table per chip generation. The words next to it say how hard the fans work; when macOS reports heat they are macOS's word (hot, very hot: it may slow down)."
+    "vi": "Nhiệt độ CPU (trung bình các nhân), đọc từ cảm biến trong máy.\nCảm biến này không chính thức: Apple không công bố, hog dùng bảng riêng cho từng đời chip.",
+    "en": "CPU temperature (average of the cores), read from the machine's internal sensors.\nThese sensors are unofficial: Apple does not publish them, hog uses a table per chip generation."
   },
   "how_to_read": {
-    "vi": "Chip Apple chạy nặng có thể lên 85–95 °C mà macOS vẫn chưa phải giảm tốc (đã đo trên M1 Pro): số cao không có nghĩa máy hỏng. Quạt quay càng nhiều % sức = máy càng phải làm mát. Máy chỉ chậm đi khi macOS báo nóng.",
-    "en": "An Apple chip under load can reach 85–95 °C while macOS still has no need to slow down (measured on an M1 Pro): a high number does not mean something is wrong. The higher the fans' %, the harder the machine is cooling. It only gets slower when macOS reports heat."
+    "vi": "Chip Apple chạy nặng có thể lên 85–95 °C mà vẫn chưa phải chậm lại (đã đo trên M1 Pro) — số cao không có nghĩa là hỏng.\nChữ bên cạnh là quạt đang quay bao nhiêu % sức.\nMáy chỉ tự chậm lại khi macOS báo \"nóng\" hoặc \"rất nóng\".",
+    "en": "An Apple chip under load can reach 85–95 °C without having to slow down (measured on an M1 Pro) — a high number does not mean something is wrong.\nThe word next to it is how hard the fans work, in %.\nThe machine only slows itself down when macOS says \"hot\" or \"very hot\"."
   },
   "act": {
-    "vi": "Nóng mà không làm gì nặng → xem \"Đang ăn CPU\" và tắt thứ không dùng; để máy chỗ thoáng.",
-    "en": "Hot while you are not doing anything heavy → check \"Using CPU\" and stop what you do not use; give the machine air."
+    "vi": "Nóng mà bạn không làm gì nặng → xem thứ ăn CPU nhiều nhất và tắt thứ không dùng.\nĐể máy chỗ thoáng.",
+    "en": "Hot while you are not doing anything heavy → look at what uses the most CPU and stop what you do not use.\nGive the machine air."
   },
   "provenance": {
     "added": "2026-10-27",

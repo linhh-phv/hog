@@ -34,3 +34,19 @@ import HogCore
         #expect(head(HeatInfo(fans: Measured([]))).contains("không có quạt"))
     }
 }
+
+/// Explanations print one point per line under their title.
+@Suite struct PointsLineTests {
+    let r = Render(lang: .vi, noColor: true)
+
+    @Test func onePointStaysOneLine() {
+        #expect(r.points("Không mất gì.", title: "Tắt thì sao") == ["Tắt thì sao: Không mất gì."])
+        #expect(r.points("Chiếm 1 GB.", indent: "  ") == ["  Chiếm 1 GB."])
+    }
+
+    @Test func severalPointsAreBullets() {
+        #expect(r.points("Không mất dữ liệu.\nTự bật lại khi cần.", title: "Tắt thì sao", indent: "  ")
+                == ["  Tắt thì sao:", "    • Không mất dữ liệu.", "    • Tự bật lại khi cần."])
+        #expect(r.points("Ý một.\nÝ hai.") == ["• Ý một.", "• Ý hai."])
+    }
+}

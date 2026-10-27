@@ -6,12 +6,12 @@
   },
   "family": "mobile-tooling",
   "summary": {
-    "vi": "Các tiến trình của Simulator iOS (CoreSimulator).",
-    "en": "Processes of the iOS Simulator (CoreSimulator)."
+    "vi": "Các chương trình chạy iPhone ảo (Simulator) của Xcode.",
+    "en": "The programs behind Xcode's virtual iPhone (Simulator)."
   },
   "stop_effect": {
-    "vi": "Đóng app Simulator để trả RAM; hog không tự tắt.",
-    "en": "Quit the Simulator app to get the memory back; hog never stops it itself."
+    "vi": "Thoát app Simulator để trả RAM.\nhog không tự tắt.",
+    "en": "Quit the Simulator app to free the memory.\nhog does not stop it itself."
   },
   "respawns": "never",
   "stop": {

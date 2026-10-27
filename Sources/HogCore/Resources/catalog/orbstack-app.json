@@ -6,12 +6,12 @@
   },
   "family": "container-runtime",
   "summary": {
-    "vi": "Ứng dụng chạy Docker và máy ảo Linux. Engine Docker bật/tắt riêng được với ứng dụng.",
-    "en": "App that runs Docker and Linux machines. The Docker engine can be started/stopped separately from the app."
+    "vi": "Ứng dụng chạy Docker và máy ảo Linux trên Mac.\nPhần chạy Docker (engine) tắt riêng được, không cần thoát ứng dụng.",
+    "en": "The app that runs Docker and Linux machines on the Mac.\nIts Docker part (the engine) can be turned off without quitting the app."
   },
   "stop_effect": {
-    "vi": "Tắt engine trong menu của OrbStack thì mọi container dừng (dữ liệu vẫn còn). hog không tự tắt OrbStack.",
-    "en": "Stopping the engine from the OrbStack menu stops every container (data is kept). hog never stops OrbStack itself."
+    "vi": "Tắt engine trong menu của OrbStack thì mọi container dừng; dữ liệu vẫn còn.\nhog không tự tắt OrbStack.",
+    "en": "Turning the engine off in OrbStack's menu stops every container; data is kept.\nhog does not stop OrbStack itself."
   },
   "respawns": "never",
   "stop": {

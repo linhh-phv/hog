@@ -334,7 +334,7 @@ public struct Analyzer: Sendable {
             if let x = item.facts[k]?.number { machine[k.replacingOccurrences(of: "_pct", with: "_machine")] = Format.percent(x / Double(max(1, ncpu)), lang) }
         }
         let reason = outcome.fired.compactMap { $0.reason.text(lang) }.map { Format.fill($0, facts: item.facts, extra: machine, lang: lang) }
-            .joined(separator: " ")
+            .joined(separator: "\n")
         let used = Set(outcome.fired.flatMap(\.when.facts)).subtracting(FactNames.structural)
         let evidence = item.facts.filter { used.contains($0.key) && !$0.value.isNull }
         let entry = item.catalogId.value.flatMap { catalog.entries[$0] }
@@ -343,7 +343,7 @@ public struct Analyzer: Sendable {
                                                                  : "Not in the catalog yet: the effect of stopping it is unknown.")
         if item.facts["launchd.label"].map({ !$0.isNull }) == true, item.facts["launchd.restarts_after_stop"] != .bool(false) {
             strategy = .manual
-            effect += lang == .vi ? " launchd sẽ bật lại nó nếu chỉ dừng." : " launchd would start it again if it were only stopped."
+            effect += lang == .vi ? "\nNếu chỉ dừng, macOS sẽ tự bật lại nó." : "\nIf it is only stopped, macOS starts it again."
         }
         return Finding(itemId: item.id, verdict: verdict, confidence: outcome.confidence, rules: outcome.fired.map(\.id),
                        reason: reason, evidence: evidence, unmeasured: outcome.unmeasured,

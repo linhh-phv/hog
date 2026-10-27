@@ -6,12 +6,12 @@
   },
   "family": "dev-server",
   "summary": {
-    "vi": "Dev server của Next.js.",
-    "en": "The Next.js development server."
+    "vi": "Chạy thử trang web Next.js trên máy bạn (lệnh `next dev`).",
+    "en": "Runs a Next.js website on your machine for testing (`next dev`)."
   },
   "stop_effect": {
-    "vi": "Trang đang mở trên trình duyệt ngừng tải lại; chạy lại `next dev` khi cần.",
-    "en": "Pages open in the browser stop reloading; run `next dev` again when needed."
+    "vi": "Trang web chạy thử ngừng hoạt động và không tự tải lại khi sửa code.\nCần lại thì chạy `next dev`.",
+    "en": "The test site stops working and no longer reloads when you edit code.\nRun `next dev` again when needed."
   },
   "respawns": "never",
   "stop": {

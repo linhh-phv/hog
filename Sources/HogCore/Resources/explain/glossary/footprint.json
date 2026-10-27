@@ -7,15 +7,15 @@
   },
   "plain": {
     "vi": "RAM một chương trình thật sự chiếm, tính cả phần đã bị nén.",
-    "en": "Memory a program really takes, including what has been compressed."
+    "en": "The memory a program really takes, including what was compressed."
   },
   "how_to_read": {
-    "vi": "Đây là số để so ai ăn nhiều nhất.",
-    "en": "This is the number to compare who takes the most."
+    "vi": "Dùng số này để so ai ăn RAM nhiều nhất.",
+    "en": "Use this number to compare who uses the most memory."
   },
   "act": {
-    "vi": "Xem cùng \"phần còn nằm trong RAM\" để biết nó có đang được dùng không.",
-    "en": "Read it with \"share still in RAM\" to tell whether it is in use."
+    "vi": "Xem thêm \"Phần còn nằm trong RAM\" để biết nó có đang được dùng không.",
+    "en": "Look at \"Share still in RAM\" too, to see whether it is being used."
   },
   "provenance": {
     "added": "2026-10-26",

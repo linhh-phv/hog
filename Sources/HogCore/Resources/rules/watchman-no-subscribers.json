@@ -22,7 +22,7 @@
     ]
   },
   "reason": {
-    "vi": "Watchman chạy {age_s}, không công cụ nào đăng ký theo dõi.",
-    "en": "Watchman running for {age_s}, no tool subscribed to it."
+    "vi": "Watchman đã chạy {age_s} mà không công cụ nào dùng tới nó.",
+    "en": "Watchman has been running for {age_s} and no tool is using it."
   }
 }

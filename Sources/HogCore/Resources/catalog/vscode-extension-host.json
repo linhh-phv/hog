@@ -6,12 +6,12 @@
   },
   "family": "editor",
   "summary": {
-    "vi": "Chạy mọi extension của một cửa sổ VS Code (Claude Code, ESLint, Python…). Mỗi cửa sổ có một cái riêng.",
-    "en": "Runs every extension of one VS Code window (Claude Code, ESLint, Python…). Each window has its own."
+    "vi": "Nơi chạy mọi extension của một cửa sổ VS Code (Claude Code, ESLint, Python…).\nMỗi cửa sổ có một cái riêng.",
+    "en": "Where all extensions of one VS Code window run (Claude Code, ESLint, Python…).\nEach window has its own."
   },
   "stop_effect": {
-    "vi": "VS Code bật lại ngay và mọi extension của cửa sổ đó khởi động lại. Muốn trả RAM thì đóng cửa sổ VS Code không dùng tới.",
-    "en": "VS Code restarts it at once and every extension of that window starts again. To get the memory back, close the VS Code window you are not using."
+    "vi": "VS Code bật lại ngay, mọi extension của cửa sổ đó khởi động lại.\nMuốn bớt RAM: đóng cửa sổ VS Code không dùng.",
+    "en": "VS Code starts it again at once and every extension of that window restarts.\nTo free memory: close VS Code windows you do not use."
   },
   "respawns": "by-parent",
   "stop": {
