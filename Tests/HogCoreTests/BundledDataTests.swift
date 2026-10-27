@@ -66,6 +66,14 @@ import Testing
         #expect(catalog.match(MatchSubject(containerImage: "mongo:7")) == "docker-container")
         #expect(catalog.match(MatchSubject(exeName: "node", args: "node server.js")) == nil)
     }
+
+    @Test func reactNativeBundleIsNotTakenByMetro() {
+        // Measured 2026-10-27; `metro` also matches as soon as the path or a flag says "metro".
+        let args = "node node_modules/react-native/cli.js webpack-bundle --platform ios --dev false --entry-file index.js"
+        #expect(catalog.match(MatchSubject(exeName: "node", args: args)) == "react-native-bundle")
+        #expect(catalog.match(MatchSubject(exeName: "node", args: args + " --config metro.config.js")) == "react-native-bundle")
+        #expect(catalog.match(MatchSubject(exeName: "node", args: "node node_modules/.bin/react-native start")) == "metro")
+    }
 }
 
 @Suite struct ProtectForeignTests {

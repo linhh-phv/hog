@@ -19,6 +19,11 @@ public struct CatalogEntry: Codable, Sendable, Equatable {
             [exe != nil, exePathContains != nil, argsContains != nil, parentCatalog != nil, listensPort != nil, containerImage != nil, vscodeRole != nil]
                 .filter { $0 }.count
         }
+
+        /// Total length of the text conditions: breaks a specificity tie, so `react-native/cli.js webpack-bundle` beats `metro`.
+        var detail: Int {
+            (exePathContains?.count ?? 0) + (argsContains?.count ?? 0) + (containerImage?.count ?? 0)
+        }
     }
 
     public struct Stop: Codable, Sendable, Equatable { public var strategy: StopStrategy }
@@ -112,11 +117,12 @@ public struct Catalog: Sendable {
     /// The best-matching entry id: any clause may match (OR); inside a clause all conditions must hold (AND);
     /// the most specific clause wins; ties break by id for determinism.
     public func match(_ s: MatchSubject) -> String? {
-        var best: (spec: Int, id: String)?
+        var best: (spec: Int, detail: Int, id: String)?
         for (id, e) in entries {
             for m in e.match where Self.matches(m, s) {
-                if best == nil || m.specificity > best!.spec || (m.specificity == best!.spec && id < best!.id) {
-                    best = (m.specificity, id)
+                let key = (m.specificity, m.detail, id)
+                if best == nil || key.0 > best!.spec || (key.0 == best!.spec && (key.1 > best!.detail || (key.1 == best!.detail && id < best!.id))) {
+                    best = key
                 }
             }
         }

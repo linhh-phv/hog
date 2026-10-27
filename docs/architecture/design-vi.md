@@ -465,7 +465,7 @@ Một mục = một file `catalog/<id>.json`: "đây là cái gì, tắt thì sa
 - `match`: **một** phần tử khớp là đủ; trong một phần tử **mọi** điều kiện phải đúng. Điều kiện: `exe` (so tên file từ đường dẫn thực thi đã resolve — `proc_pidpath`, không phải `argv[0]`: qa thấy `screen` có
   `argv[0]` = `/usr/bin/SCREEN` còn `proc_pidpath` = `/usr/bin/screen`), `exe_path_contains`,
   `args_contains`, `parent_catalog`, `listens_port`, `container_image` (`""` = mọi container), `vscode_role` (vai trò trong `code --status`:
-  file watcher, pty host và shared process của VS Code có **tham số giống hệt nhau**, chỉ phân biệt được bằng vai trò). Nhiều mục cùng khớp → mục nhiều điều kiện hơn thắng.
+  file watcher, pty host và shared process của VS Code có **tham số giống hệt nhau**, chỉ phân biệt được bằng vai trò). Nhiều mục cùng khớp → mục nhiều điều kiện hơn thắng; bằng nhau thì mục có chuỗi khớp dài hơn (đặc thù hơn) thắng, rồi tới id.
 - `detached_by_design` (bool, mặc định `false`): thứ người dùng **cố ý** để chạy nền tách khỏi shell (tmux, screen, Gradle daemon). Cho
   fact `catalog.detached` = true, nên `orphan-quiet` không đề xuất dừng nó dù khớp định nghĩa mồ côi (mục 3.4).
 - `respawns`: `never` · `by-parent` · `on-demand` · `supervisor`. Dừng thứ `by-parent` là vô ích → hog gợi ý đóng cửa sổ.
