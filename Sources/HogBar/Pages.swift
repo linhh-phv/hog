@@ -241,15 +241,13 @@ struct EntryPage: View {
             }
             HStack {
                 Spacer()
-                let copied = model.copied == e.id
+                // Only for what hog does not know: something it knows is explained above, there is nothing to ask
+                // (chủ dự án 2026-10-27). `hog explain <item> --share` still copies anything.
                 if e.unknown {
+                    let copied = model.copied == e.id
                     Button { model.copyShare(e) } label: { Label(copied ? model.t("Đã chép", "Copied") : model.t("Chép thông tin", "Copy info"),
                                                                  systemImage: copied ? "checkmark" : "doc.on.doc") }
                         .glassButton(prominent: true)
-                } else {
-                    Button { model.copyShare(e) } label: { Label(copied ? model.t("Đã chép", "Copied") : model.t("Chép thông tin", "Copy info"),
-                                                                 systemImage: copied ? "checkmark" : "doc.on.doc") }
-                        .glassButton()
                 }
                 // A line of several processes (×N) is not one thing to stop: stop them from their own app or project.
                 if e.pids.count == 1 || e.itemId != nil {

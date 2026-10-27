@@ -67,6 +67,11 @@ enum Renderer {
             model.open(c)
             write(model, dir, "menu-cleanup-entry-light")
         }
+        // Something hog knows (catalog): explained, no "Chép thông tin".
+        if let c = model.overview?.cleanups.first(where: { $0.whyKind == .idle }) {
+            model.open(c)
+            write(model, dir, "menu-cleanup-known-light")
+        }
         model.page = .all
         write(model, dir, "menu-all-light")
         model.page = .main

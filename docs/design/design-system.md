@@ -53,7 +53,7 @@ macos 27"*.
 | Khối "Nên dọn" | `CleanupRow`: ô chọn (hoặc ✋ khi chỉ đóng tay) · tên · dự án · `ReasonTag` · RAM · ›; nút "Dọn N thứ" | cả dòng → `EntryPage` của thứ đó (container không có dòng → hộp dừng); "Dọn N thứ" → `BatchSheet` |
 | `GroupRow` | mũi tên · icon (app thật / `folder.fill` / hệ thống) · tên · tóm tắt · RAM · CPU | mở/gập từng thứ (`EntryRow`) |
 | `EntryRow` | tên · `?` nếu chưa rõ · cổng · `×N` · RAM · CPU | → `EntryPage` |
-| `EntryPage` | tên · thuộc đâu · **là gì** (câu của danh mục) · số đo + **Lệnh** (đã làm sạch như "Chép thông tin", chụp gửi được) · **Vì sao nên dọn** + "Tắt thì sao" · "Chép thông tin" (nút chính khi chưa rõ), "Dừng…"/"Cách đóng" (không có ở dòng `×N`) | |
+| `EntryPage` | tên · thuộc đâu · **là gì** (câu của danh mục) · số đo + **Lệnh** (đã làm sạch như "Chép thông tin", chụp gửi được) · **Vì sao nên dọn** + "Tắt thì sao" · "Chép thông tin" **chỉ khi hog chưa rõ** thứ đó (thứ đã biết thì câu "là gì" đã giải thích, không có gì để hỏi — chủ dự án 2026-10-27), "Dừng…"/"Cách đóng" (không có ở dòng `×N`) | |
 | `AllPage` | ô tìm + mọi nhóm, mọi thứ; "macOS và hệ thống" → Đo chi tiết | |
 | `BatchSheet` / `StopSheet` | hộp kính (`rSheet`) trên nền tối mờ; tiêu đề có RAM lấy lại; từng thứ: an toàn / hỏi trước (kèm lý do của cổng) / bị chặn | |
 | `Footer` | giờ quét · RAM của hog · `arrow.clockwise` · `gearshape` | |
