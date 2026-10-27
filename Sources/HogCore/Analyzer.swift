@@ -126,7 +126,7 @@ public struct Analyzer: Sendable {
             let outcome = RuleEngine.run(rules.rules, kind: items[i].kind, facts: items[i].facts)
             items[i].protection = Measured(outcome.protection)
             guard let verdict = outcome.verdict else { continue }
-            findings.append(finding(for: items[i], outcome: outcome, verdict: verdict))
+            findings.append(finding(for: items[i], outcome: outcome, verdict: verdict, ncpu: scan.system.ncpu))
         }
         findings.sort { a, b in
             if a.verdict != b.verdict { return rank(a.verdict) > rank(b.verdict) }
@@ -325,8 +325,14 @@ public struct Analyzer: Sendable {
 
     // MARK: Findings
 
-    func finding(for item: Item, outcome: RuleEngine.Outcome, verdict: Verdict) -> Finding {
-        let reason = outcome.fired.compactMap { $0.reason.text(lang) }.map { Format.fill($0, facts: item.facts, lang: lang) }
+    func finding(for item: Item, outcome: RuleEngine.Outcome, verdict: Verdict, ncpu: Int) -> Finding {
+        // Sentences say CPU as a share of the whole machine, like every screen ("11 %", not 88 % of one core); facts and
+        // evidence keep % of one core.
+        var machine: [String: String] = [:]
+        for k in ["cpu.now_pct", "cpu.avg_pct"] {
+            if let x = item.facts[k]?.number { machine[k.replacingOccurrences(of: "_pct", with: "_machine")] = Format.percent(x / Double(max(1, ncpu)), lang) }
+        }
+        let reason = outcome.fired.compactMap { $0.reason.text(lang) }.map { Format.fill($0, facts: item.facts, extra: machine, lang: lang) }
             .joined(separator: " ")
         let used = Set(outcome.fired.flatMap(\.when.facts)).subtracting(FactNames.structural)
         let evidence = item.facts.filter { used.contains($0.key) && !$0.value.isNull }

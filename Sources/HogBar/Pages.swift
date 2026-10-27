@@ -103,7 +103,7 @@ struct MainPage: View {
                 Text(model.t("Đã chọn \(n)", "\(n) selected")).font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 // Opens the confirmation; the red "Dọn" that stops things is in there.
-                Button(model.t("Dọn \(n) thứ", n == 1 ? "Clean up 1" : "Clean up \(n)")) { model.prepareBatch() }
+                Button(n == 0 ? model.t("Dọn", "Clean up") : model.t("Dọn \(n) thứ", n == 1 ? "Clean up 1" : "Clean up \(n)")) { model.prepareBatch() }
                     .glassButton(prominent: true).controlSize(.small).disabled(n == 0)
             }
             .padding(.top, 2) }
@@ -163,6 +163,8 @@ struct EntryPage: View {
     @EnvironmentObject var model: HogModel
     let groupId: String
     let entryId: String
+    /// What it runs (cleaned like "Chép thông tin"); read when the page opens, not on every redraw.
+    @State private var command: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.s3) {
@@ -175,19 +177,27 @@ struct EntryPage: View {
                     }
                     Text(subtitle(g, e)).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
+                if let what = e.summary { Text(what).font(.callout).fixedSize(horizontal: false, vertical: true) }
                 Grid(alignment: .leading, horizontalSpacing: Theme.s3, verticalSpacing: 4) {
                     row("RAM", e.bytes.map { Format.bytes($0, model.lang) } ?? "–")
                     row("CPU", e.cpu.map { Format.percent($0, model.lang) + model.t(" của cả máy", " of the machine") } ?? "–")
                     if e.pids.count > 1 { row(model.t("Tiến trình", "Processes"), "\(e.pids.count)") }
                     if let age = age(e) { row(model.t("Đã chạy", "Running for"), Format.duration(age, model.lang)) }
                     if !e.detail.isEmpty { row(model.t("Mạng", "Network"), e.detail) }
+                    if let command {
+                        GridRow(alignment: .firstTextBaseline) {
+                            Text(model.t("Lệnh", "Runs")).foregroundStyle(.secondary)
+                            Text(command).font(.caption.monospaced()).lineLimit(3).truncationMode(.tail).textSelection(.enabled)
+                        }
+                    }
                 }
                 .font(.callout)
                 .padding(Theme.s3).frame(maxWidth: .infinity, alignment: .leading).module()
                 if let f = e.itemId.flatMap({ id in model.snapshot?.findings.first { $0.itemId == id } }) {
                     VStack(alignment: .leading, spacing: 4) {
+                        Text(e.cleanup != nil ? model.t("Vì sao nên dọn", "Why clean it up") : model.t("hog thấy", "hog noticed")).font(.headline)
                         Text(f.reason)
-                        Text(f.stop.effect).foregroundStyle(.secondary)
+                        Text(model.t("Tắt thì sao: ", "If stopped: ") + f.stop.effect).foregroundStyle(.secondary)
                     }
                     .font(.callout).fixedSize(horizontal: false, vertical: true)
                 }
@@ -199,6 +209,7 @@ struct EntryPage: View {
             Spacer(minLength: 0)
         }
         .padding(Theme.s3)
+        .task(id: entryId) { command = model.entry(groupId, entryId).flatMap(model.command) }
     }
 
     func subtitle(_ g: Overview.Group, _ e: Overview.Entry) -> String {

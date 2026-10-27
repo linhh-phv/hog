@@ -164,4 +164,22 @@ import Testing
         #expect(Ownership.appBundle("/Applications/A.app/Contents/MacOS/A") == "/Applications/A.app")
         #expect(Ownership.appName("/usr/bin/zsh") == nil)
     }
+
+    @Test func whatTheParentRestartsIsNotACleanup() {
+        func finding(_ id: String, _ v: Verdict, _ respawns: Respawns) -> Finding {
+            Finding(itemId: id, verdict: v, confidence: .high, rules: ["dormant-large"], reason: "r", evidence: [:], unmeasured: [],
+                    stop: StopAdvice(strategy: .manual, respawns: respawns, effect: "e"))
+        }
+        let items = ["gpu", "tool"].map { Item(id: $0, kind: .process, label: $0, pids: [$0 == "gpu" ? 1 : 2], footprintBytes: Measured(700_000_000)) }
+        let o = Overview.make(snapshot([proc(1, "Code Helper", mb: 700, item: "gpu"), proc(2, "tool", mb: 700, item: "tool")], items: items,
+                                       findings: [finding("gpu", .watch, .byParent), finding("tool", .watch, .never)]), catalog: catalog)
+        #expect(o.cleanups.map(\.itemId) == ["tool"], "VS Code starts its GPU process again at once: stopping it frees nothing")
+    }
+
+    @Test func entriesSayWhatTheyAre() throws {
+        let o = Overview.make(snapshot([proc(1, "watchman", mb: 300, catalogId: "watchman"), proc(2, "mystery", mb: 300)]), catalog: catalog)
+        let entries = o.groups.flatMap(\.entries)
+        #expect(try #require(entries.first { $0.name == "Watchman" }).summary?.isEmpty == false, "from the catalog")
+        #expect(try #require(entries.first { $0.name == "mystery" }).summary == nil, "unknown: no made-up sentence")
+    }
 }

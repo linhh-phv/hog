@@ -101,34 +101,21 @@ struct Explanation: View {
     }
 }
 
-/// A short reason in a capsule; tapping it says the whole reason.
+/// A short reason in a capsule ("rảnh 3 giờ", "27 % CPU"); the whole reason is on the thing's page.
 struct ReasonTag: View {
-    @EnvironmentObject var model: HogModel
     let c: Overview.Cleanup
-    @State private var explain = false
 
     var body: some View {
-        Button { explain.toggle() } label: {
-            Text(c.why).font(.caption.weight(.medium)).monospacedDigit()
-                .foregroundStyle(c.whyKind == .idle ? Color.orange : Color.red)
-                .padding(.horizontal, 6).padding(.vertical, 2)
-                .background((c.whyKind == .idle ? Color.orange : Color.red).opacity(0.12), in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .popover(isPresented: $explain, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(c.name).font(.headline)
-                if let f = model.snapshot?.findings.first(where: { $0.itemId == c.itemId }) {
-                    Text(f.reason)
-                    Text(f.stop.effect).foregroundStyle(.secondary)
-                }
-            }
-            .font(.callout).fixedSize(horizontal: false, vertical: true).frame(width: 280, alignment: .leading).padding(Theme.s3)
-        }
+        Text(c.why).font(.caption.weight(.medium)).monospacedDigit()
+            .foregroundStyle(c.whyKind == .idle ? Color.orange : Color.red)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background((c.whyKind == .idle ? Color.orange : Color.red).opacity(0.12), in: Capsule())
     }
 }
 
-/// One line of "Nên dọn": check box · name · project · reason · RAM.
+/// One line of "Nên dọn": check box (or a hand: only a person closes it) · name · project · reason · RAM · ›.
+/// Tapping the line opens the thing: what it is, what it runs, why it is suggested, what stopping does (user 2026-10-27:
+/// "nhấn vào để xem chi tiết nó đang chạy gì thì mới biết để ra quyết định có tắt hay không").
 struct CleanupRow: View {
     @EnvironmentObject var model: HogModel
     let c: Overview.Cleanup
@@ -137,24 +124,30 @@ struct CleanupRow: View {
         HStack(spacing: Theme.s2) {
             if c.manual {
                 Image(systemName: "hand.raised").foregroundStyle(.secondary).frame(width: 16)
+                    .help(model.t("Chỉ bạn đóng được thứ này — mở để xem cách đóng", "Only you can close this — open it to see how"))
             } else {
                 Toggle("", isOn: Binding(get: { model.selected.contains(c.itemId) },
                                          set: { if $0 { model.selected.insert(c.itemId) } else { model.selected.remove(c.itemId) } }))
                     .toggleStyle(.checkbox).labelsHidden()
                     .accessibilityLabel(c.name)
             }
-            Text("\(c.name)\(Text(c.project.map { " · \($0)" } ?? "").foregroundStyle(.secondary))")
-                .lineLimit(1).truncationMode(.tail)
-            Spacer(minLength: 4)
-            if c.manual {
-                Button(model.t("Cách đóng", "How to close")) { model.prepareStop(c.itemId) }.buttonStyle(.link).font(.caption)
-            } else {
-                ReasonTag(c: c)
+            Button { model.open(c) } label: {
+                HStack(spacing: Theme.s2) {
+                    Text("\(c.name)\(Text(c.project.map { " · \($0)" } ?? "").foregroundStyle(.secondary))")
+                        .lineLimit(1).truncationMode(.tail)
+                    Spacer(minLength: 4)
+                    ReasonTag(c: c)
+                    Text(c.bytes.map { Format.bytes($0, model.lang) } ?? "–").font(.callout).monospacedDigit().foregroundStyle(.secondary)
+                        .frame(minWidth: 52, alignment: .trailing)
+                    Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+                .frame(minHeight: 26)
+                .contentShape(Rectangle())
             }
-            Text(c.bytes.map { Format.bytes($0, model.lang) } ?? "–").font(.callout).monospacedDigit().foregroundStyle(.secondary)
-                .frame(minWidth: 52, alignment: .trailing)
+            .buttonStyle(.plain)
+            .hoverRow()
+            .accessibilityHint(model.t("Mở để xem nó là gì và vì sao nên dọn", "Opens what it is and why to clean it up"))
         }
-        .frame(minHeight: 26)
     }
 }
 

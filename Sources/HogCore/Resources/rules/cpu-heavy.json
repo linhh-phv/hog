@@ -19,7 +19,7 @@
     ]
   },
   "reason": {
-    "vi": "Đang dùng {cpu.now_pct} CPU (trung bình {cpu.avg_pct} từ lúc chạy) — một lý do máy nóng.",
-    "en": "Using {cpu.now_pct} CPU now ({cpu.avg_pct} on average since it started) — one reason the machine gets hot."
+    "vi": "Đang dùng {cpu.now_machine} CPU của cả máy (trung bình {cpu.avg_machine} từ lúc chạy) — một lý do máy nóng.",
+    "en": "Using {cpu.now_machine} of the machine's CPU now ({cpu.avg_machine} on average since it started) — one reason the machine gets hot."
   }
 }

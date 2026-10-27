@@ -32,7 +32,7 @@ import Testing
             for text in [r.reason.vi, r.reason.en].compactMap({ $0 }) {
                 for m in text.matches(of: placeholder) {
                     let name = String(text[m.range].dropFirst().dropLast())
-                    #expect(FactNames.all.contains(name), "rule \(r.id) uses unknown placeholder {\(name)}")
+                    #expect(FactNames.all.union(FactNames.derived).contains(name), "rule \(r.id) uses unknown placeholder {\(name)}")
                 }
             }
         }

@@ -63,6 +63,10 @@ enum Renderer {
                 write(model, dir, "menu-entry-light")
             }
         }
+        if let c = model.overview?.cleanups.first(where: { $0.whyKind == .heavy }) {
+            model.open(c)
+            write(model, dir, "menu-cleanup-entry-light")
+        }
         model.page = .all
         write(model, dir, "menu-all-light")
         model.page = .main
@@ -159,7 +163,7 @@ enum Renderer {
                 finding(watchman.id, .mayStop, ["watchman-no-subscribers"],
                         vi ? "Watchman chạy 3 giờ, không công cụ nào đăng ký theo dõi." : "Watchman ran 3 hours with no tool subscribed.", .watchmanShutdown),
                 finding(node.id, hot ? .mayStop : .watch, ["cpu-heavy"],
-                        vi ? "Đang dùng \(hot ? 310 : 88) % CPU — một lý do máy nóng." : "Using \(hot ? 310 : 88) % CPU — one reason the machine is hot.", .signal),
+                        vi ? "Đang dùng \(hot ? 39 : 11) % CPU của cả máy — một lý do máy nóng." : "Using \(hot ? 39 : 11) % of the machine's CPU — one reason the machine is hot.", .signal),
             ])
     }
 

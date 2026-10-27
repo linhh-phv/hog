@@ -50,10 +50,10 @@ macos 27"*.
 | --- | --- | --- |
 | `StatusHeader` | `Gauge(.accessoryCircularCapacity)` "73% RAM" + "Máy ổn / hơi nặng / nặng / nóng" + một dòng | vòng → giải nghĩa RAM (kèm phần đã nén) |
 | `MetricChip` ×3 | CPU đang bận · Tràn ra ổ đĩa · Nhiệt | → popover giải nghĩa (thay các nút `?` cũ) |
-| Khối "Nên dọn" | `CleanupRow`: ô chọn · tên · dự án · `ReasonTag` · RAM; nút "Dọn N thứ" | lý do → popover lý do + tắt thì sao; "Dọn N thứ" → `BatchSheet` |
+| Khối "Nên dọn" | `CleanupRow`: ô chọn (hoặc ✋ khi chỉ đóng tay) · tên · dự án · `ReasonTag` · RAM · ›; nút "Dọn N thứ" | cả dòng → `EntryPage` của thứ đó (container không có dòng → hộp dừng); "Dọn N thứ" → `BatchSheet` |
 | `GroupRow` | mũi tên · icon (app thật / `folder.fill` / hệ thống) · tên · tóm tắt · RAM · CPU | mở/gập từng thứ (`EntryRow`) |
 | `EntryRow` | tên · `?` nếu chưa rõ · cổng · `×N` · RAM · CPU | → `EntryPage` |
-| `EntryPage` | số đo, lý do (nếu có đề xuất), "Chép thông tin" (nút chính khi chưa rõ), "Dừng…"/"Cách đóng" (không có ở dòng `×N`) | |
+| `EntryPage` | tên · thuộc đâu · **là gì** (câu của danh mục) · số đo + **Lệnh** (đã làm sạch như "Chép thông tin", chụp gửi được) · **Vì sao nên dọn** + "Tắt thì sao" · "Chép thông tin" (nút chính khi chưa rõ), "Dừng…"/"Cách đóng" (không có ở dòng `×N`) | |
 | `AllPage` | ô tìm + mọi nhóm, mọi thứ; "macOS và hệ thống" → Đo chi tiết | |
 | `BatchSheet` / `StopSheet` | hộp kính (`rSheet`) trên nền tối mờ; tiêu đề có RAM lấy lại; từng thứ: an toàn / hỏi trước (kèm lý do của cổng) / bị chặn | |
 | `Footer` | giờ quét · RAM của hog · `arrow.clockwise` · `gearshape` | |
@@ -65,7 +65,8 @@ macos 27"*.
 - Trạng thái: nặng = áp lực đỏ hoặc nhiệt rất nóng; hơi nặng = áp lực vàng; nóng = nhiệt nóng; "ổn, CPU bận" = CPU cả máy ≥ 80 %.
   Dòng phụ: lý do khi không ổn; khi ổn là việc nên làm ("2 thứ nên dọn · lấy lại 683 MB") hoặc "Không có gì cần dọn".
 - "Nên dọn": có thể tắt (chọn sẵn), hỏi trước và ăn nhiều (chưa chọn); thứ chỉ đóng tay (phiên Claude) có "Cách đóng" thay ô chọn.
-  Lý do tối đa 3 chữ ("rảnh 3 giờ", "22 % CPU", "hay bị sập").
+  Lý do tối đa 3 chữ ("rảnh 3 giờ", "22 % CPU", "hay bị sập"). Không đưa vào thứ mà app cha bật lại ngay (`respawns: by-parent`, trừ
+  `may-stop`): tắt không lấy lại được gì (chủ dự án 2026-10-27, tiến trình GPU của VS Code nằm trong "Nên dọn").
   Không có gì → không có khối. Chỉ có thứ đóng tay → không có nút "Dọn".
 - "Dọn N thứ": một hộp xác nhận cho cả nhóm; mỗi thứ vẫn qua đủ cổng an toàn; thứ bị chặn được liệt kê nhưng không chạy; buộc tắt
   (SIGKILL) không bao giờ nằm trong nhóm — phải mở riêng.

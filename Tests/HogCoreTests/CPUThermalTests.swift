@@ -68,7 +68,8 @@ import Testing
         let tool = s.items.first { $0.pids == [200] }
         let f = s.findings.first { $0.itemId == tool?.id }
         #expect(f?.verdict == .watch && f?.rules.contains("cpu-heavy") == true)
-        #expect(f?.reason.contains("95 %") == true)
+        #expect(f?.reason.contains(Format.percent(95.0 / 8, s.lang) + " of the machine") == true, "the sentence says the whole machine's share")
+        #expect(f?.evidence["cpu.now_pct"]?.number == 95, "evidence keeps % of one core")
         // Not measured (fast mode): the rule does not fire.
         let fast = analyzer.analyze(scan(thermal: .nominal, idle: nil))
         #expect(!fast.findings.contains { $0.rules.contains("cpu-heavy") })

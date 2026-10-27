@@ -128,6 +128,17 @@ final class HogModel: ObservableObject {
 
     func entry(_ group: String, _ entry: String) -> Overview.Entry? { self.group(group)?.entries.first { $0.id == entry } }
 
+    /// A "Nên dọn" line was tapped: its line in "Đang chạy" (numbers, what it is, why), else its stop sheet (a container has
+    /// no process line).
+    func open(_ c: Overview.Cleanup) {
+        let match: (Overview.Entry) -> Bool = { $0.id == c.itemId || $0.itemId == c.itemId }
+        if let g = overview?.groups.first(where: { $0.entries.contains(where: match) }), let e = g.entries.first(where: match) {
+            page = .entry(group: g.id, entry: e.id)
+        } else {
+            prepareStop(c.itemId)
+        }
+    }
+
     func toggle(_ group: String) {
         if expanded.contains(group) { expanded.remove(group) } else { expanded.insert(group) }
     }
@@ -212,12 +223,19 @@ final class HogModel: ObservableObject {
 
     /// "Chép thông tin": `hog.share/1` to the clipboard, to paste into a chat with Claude. hog sends nothing.
     func copyShare(_ e: Overview.Entry) {
-        guard let scan else { return }
-        let item = e.itemId.flatMap { id in snapshot?.items.first { $0.id == id } } ?? e.pids.first.flatMap { analyzer.item(forPid: $0, in: scan) }
-        guard let item else { return }
+        guard let info = shareInfo(e) else { return }
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(ShareInfo.make(item, scan: scan).text(lang), forType: .string)
+        NSPasteboard.general.setString(info.text(lang), forType: .string)
         copied = e.id
+    }
+
+    /// What an entry runs, cleaned like "Chép thông tin" (no directories, users, hosts or secrets): safe in a screenshot.
+    func command(_ e: Overview.Entry) -> String? { shareInfo(e)?.item.args }
+
+    private func shareInfo(_ e: Overview.Entry) -> ShareInfo? {
+        guard let scan else { return nil }
+        let item = e.itemId.flatMap { id in snapshot?.items.first { $0.id == id } } ?? e.pids.first.flatMap { analyzer.item(forPid: $0, in: scan) }
+        return item.map { ShareInfo.make($0, scan: scan) }
     }
 
     // MARK: System detail

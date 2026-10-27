@@ -54,6 +54,10 @@ public enum FactNames {
         "launchd.job",
     ]
 
+    /// Placeholders a reason may use besides facts: the CPU facts as a share of the whole machine (the facts are % of one
+    /// core), so a sentence says the same number as every screen.
+    public static let derived: Set<String> = ["cpu.now_machine", "cpu.avg_machine"]
+
     /// Facts that describe what something *is*, not a measurement of use; they do not add to confidence.
     static let structural: Set<String> = ["catalog.id", "catalog.family", "catalog.detached", "owner.kind", "exe.name",
                                           "exe.system", "exe.macos", "own", "launchd.label", "launchd.job", "self.ancestor", "self.window"]

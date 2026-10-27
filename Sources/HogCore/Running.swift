@@ -44,6 +44,8 @@ public struct Overview: Sendable, Equatable {
         /// Not in the catalog and not part of an app: hog does not know what it is ("?", copy info to ask).
         public var unknown: Bool
         public var cleanup: Cleanup?
+        /// What it is, in one sentence of the catalog ("Vẽ đồ hoạ bằng GPU cho mọi cửa sổ VS Code."); nil when hog does not know.
+        public var summary: String? = nil
     }
 
     public struct Group: Sendable, Equatable, Identifiable {
@@ -119,10 +121,13 @@ public struct Overview: Sendable, Equatable {
             return nil
         }
 
-        // Nên dọn: every may-stop / ask / watch finding, may-stop first, biggest first.
+        // Nên dọn: every may-stop / ask / watch finding, may-stop first, biggest first. Not what its parent starts again at once
+        // (VS Code's GPU process): stopping it gives nothing back, whatever it holds (user 2026-10-27, a "dormant-large" GPU
+        // process in the list with no reason to act on).
         let order: [Verdict] = [.mayStop, .ask, .watch]
         let procOfItem = Dictionary(s.processes.compactMap { p in p.itemId.value.map { ($0, p) } }, uniquingKeysWith: { a, _ in a })
-        let cleanups = s.findings.filter { order.contains($0.verdict) }.compactMap { f -> Cleanup? in
+        func givesBack(_ f: Finding) -> Bool { f.verdict == .mayStop || f.stop.respawns.value != .byParent }
+        let cleanups = s.findings.filter { order.contains($0.verdict) && givesBack($0) }.compactMap { f -> Cleanup? in
             guard let item = items[f.itemId] else { return nil }
             let proc = procOfItem[f.itemId]
             let project = proc?.project.value ?? ownerProject(item.ownerId.value)
@@ -169,7 +174,8 @@ public struct Overview: Sendable, Equatable {
                 detail: port.map { t("cổng \($0)", "port \($0)") } ?? "", bytes: nil, cpu: nil, pids: [], itemId: item?.id,
                 // Not in the catalog and not explained by an app (a Chrome helper is Chrome): something to ask about.
                 unknown: catalogName == nil && kind != .app && Self.isUnknownProgram(p),
-                cleanup: item.flatMap { cleanupOf[$0.id] })
+                cleanup: item.flatMap { cleanupOf[$0.id] },
+                summary: (p.catalogId.value ?? item?.catalogId.value).flatMap { catalog.entries[$0]?.summary.text(lang) })
             e.pids.append(p.pid)
             if let b = p.footprintBytes.value { e.bytes = (e.bytes ?? 0) + b }
             if let c = p.cpu.nowPct.value { e.cpu = (e.cpu ?? 0) + c }
