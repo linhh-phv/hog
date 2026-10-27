@@ -31,6 +31,22 @@ public struct Overview: Sendable, Equatable {
     }
     public enum WhyKind: String, Sendable, Equatable { case idle, heavy, broken }
 
+    /// Whether stopping a thing makes sense, from what hog already concluded about it — never a new guess (user 2026-10-27:
+    /// "những tiến trình con bên trong có thể thêm nhãn để biết cái nào an toàn có thể tắt"). A line of several processes takes
+    /// the strongest; `nil` (no label) when hog has no conclusion, e.g. a small process it does not analyse.
+    public enum Safety: Int, Sendable, Comparable {
+        /// A pre-checked "Nên dọn" suggestion: measured unused, hog can stop it.
+        case canStop = 1
+        /// Soft protection: part of a Claude session, window or app in use.
+        case inUse = 2
+        /// The catalog says its parent starts it again at once: stopping gives nothing back, in use or not (a language server
+        /// of a busy window says this rather than "in use").
+        case restarts = 3
+        /// Hard protection: hog itself, what runs hog, macOS or another user.
+        case keep = 4
+        public static func < (a: Safety, b: Safety) -> Bool { a.rawValue < b.rawValue }
+    }
+
     /// One thing inside a group.
     public struct Entry: Sendable, Equatable, Identifiable {
         public var id: String
@@ -46,6 +62,7 @@ public struct Overview: Sendable, Equatable {
         public var cleanup: Cleanup?
         /// What it is, in one sentence of the catalog ("Vẽ đồ hoạ bằng GPU cho mọi cửa sổ VS Code."); nil when hog does not know.
         public var summary: String? = nil
+        public var safety: Safety? = nil
     }
 
     public struct Group: Sendable, Equatable, Identifiable {
@@ -143,6 +160,13 @@ public struct Overview: Sendable, Equatable {
             return ra != rb ? ra < rb : (a.bytes ?? 0, a.itemId) > (b.bytes ?? 0, b.itemId)
         }
         let cleanupOf = Dictionary(uniqueKeysWithValues: cleanups.map { ($0.itemId, $0) })
+        func safety(_ item: Item?, catalogId: String?) -> Safety? {
+            if item?.protection.value?.level == .hard { return .keep }
+            if catalogId.flatMap({ catalog.entries[$0]?.respawns }) == .byParent { return .restarts }
+            if item?.protection.value?.level == .soft { return .inUse }
+            if let c = item.flatMap({ cleanupOf[$0.id] }), c.preselected { return .canStop }
+            return nil
+        }
 
         // Đang chạy: every readable process, grouped by project, else by app, else "other".
         var groups: [String: Group] = [:]
@@ -179,6 +203,7 @@ public struct Overview: Sendable, Equatable {
                 cleanup: item.flatMap { cleanupOf[$0.id] },
                 summary: (p.catalogId.value ?? item?.catalogId.value).flatMap { catalog.entries[$0]?.summary.text(lang) })
             e.pids.append(p.pid)
+            if let s = safety(item, catalogId: p.catalogId.value ?? item?.catalogId.value) { e.safety = max(e.safety ?? s, s) }
             if let b = p.footprintBytes.value { e.bytes = (e.bytes ?? 0) + b }
             if let c = p.cpu.nowPct.value { e.cpu = (e.cpu ?? 0) + c }
             entriesByGroup[gid, default: [:]][eid] = e
@@ -194,6 +219,7 @@ public struct Overview: Sendable, Equatable {
                 // Same name already in Other (two small apps' helpers): add up, never drop a process.
                 if var have = entriesByGroup["other"]?[eid] {
                     have.pids += e.pids
+                    if let s = e.safety { have.safety = max(have.safety ?? s, s) }
                     if let b = e.bytes { have.bytes = (have.bytes ?? 0) + b }
                     if let c = e.cpu { have.cpu = (have.cpu ?? 0) + c }
                     entriesByGroup["other"]?[eid] = have

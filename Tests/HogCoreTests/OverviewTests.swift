@@ -187,4 +187,37 @@ import Testing
         #expect(try #require(entries.first { $0.name == "Watchman" }).summary?.isEmpty == false, "from the catalog")
         #expect(try #require(entries.first { $0.name == "mystery" }).summary == nil, "unknown: no made-up sentence")
     }
+
+    /// Labels on running things (user 2026-10-27): only from what hog concluded; the strongest wins on a line of several.
+    @Test func safetyLabelsComeFromConclusions() throws {
+        let items = [
+            Item(id: "w", kind: .process, label: "watchman", catalogId: "watchman", pids: [1], footprintBytes: Measured(300_000_000)),
+            Item(id: "t", kind: .process, label: "tsserver", catalogId: "tsserver", pids: [2], ownerId: "vscode:1",
+                 protection: Protection(level: .soft, rules: ["protect-busy-owner"])),
+            Item(id: "n", kind: .process, label: "node", pids: [3], ownerId: "vscode:1", protection: Protection(level: .soft, rules: ["protect-busy-owner"])),
+            Item(id: "f", kind: .process, label: "Finder", pids: [4], protection: Protection(level: .hard, rules: ["protect-foreign"])),
+            Item(id: "z", kind: .process, label: "zsh", catalogId: "shell", pids: [5], ownerId: "vscode:1",
+                 protection: Protection(level: .soft, rules: ["protect-busy-owner"])),
+        ]
+        let findings = [Finding(itemId: "w", verdict: .mayStop, confidence: .high, rules: ["watchman-no-subscribers"], reason: "r", evidence: [:],
+                                unmeasured: [], stop: StopAdvice(strategy: .watchmanShutdown, respawns: .onDemand, effect: "e"))]
+        let o = Overview.make(snapshot([
+            proc(1, "watchman", mb: 300, item: "w", catalogId: "watchman"),
+            proc(2, "node", mb: 900, project: "web-app", item: "t", catalogId: "tsserver"),
+            proc(3, "node", mb: 200, project: "web-app", item: "n"),
+            proc(4, "Finder", mb: 200, item: "f"),
+            proc(5, "zsh", mb: 5, project: "web-app", item: "z", catalogId: "shell"),
+            proc(6, "zsh", mb: 5, project: "web-app", catalogId: "shell"),
+            proc(7, "grep", mb: 2, project: "web-app"),
+        ], items: items, findings: findings), catalog: catalog)
+        let entries = Dictionary(o.groups.flatMap(\.entries).map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
+        #expect(entries["Watchman"]?.safety == .canStop, "pre-checked suggestion")
+        #expect(entries["TypeScript language server"]?.safety == .restarts, "its parent starts it again: stronger than in use")
+        #expect(entries["node"]?.safety == .inUse)
+        #expect(entries["Finder"]?.safety == .keep)
+        #expect(entries["Shell"]?.safety == .inUse && entries["Shell"]?.pids.count == 2, "one protected shell labels the line")
+        #expect(entries["grep"].map { $0.safety == nil } == true, "no conclusion, no label")
+        #expect(Overview.Safety.keep > .restarts && Overview.Safety.restarts > .inUse && Overview.Safety.inUse > .canStop)
+        #expect(Format.safety(.canStop, .vi) == "có thể tắt" && Format.safety(.restarts, .vi) == "tắt vô ích")
+    }
 }

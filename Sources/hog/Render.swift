@@ -98,7 +98,8 @@ struct Render {
                     let visible = trunc(e.name, 28).count + (e.unknown ? 2 : 0) + (e.detail.isEmpty ? 0 : e.detail.count + 3)
                     out.append("      " + label + String(repeating: " ", count: max(1, 30 - visible)) + padLeft(bytes(e.bytes), 8)
                                + padLeft(e.cpu.map { Format.percent($0, lang) } ?? "–", 7)
-                               + (e.pids.count > 1 ? dim("   ×\(e.pids.count)") : ""))
+                               + (e.pids.count > 1 ? dim("   ×\(e.pids.count)") : "")
+                               + (e.safety.map { s in "   " + (s == .canStop ? green(Format.safety(s, lang)) : dim(Format.safety(s, lang))) } ?? ""))
                 }
             }
         }

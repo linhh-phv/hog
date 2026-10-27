@@ -251,7 +251,21 @@ struct GroupIcon: View {
     }
 }
 
-/// A thing inside an open group: name · "?" when unknown · detail · RAM · CPU.
+/// "đừng tắt" / "đang dùng" / "có thể tắt" / "tắt vô ích" next to a running thing.
+struct SafetyTag: View {
+    @EnvironmentObject var model: HogModel
+    let s: Overview.Safety
+
+    var body: some View {
+        Text(Format.safety(s, model.lang)).font(.caption).lineLimit(1).fixedSize().foregroundStyle(color)
+    }
+
+    var color: Color {
+        switch s { case .keep: .red; case .inUse: .blue; case .canStop: .green; case .restarts: .secondary }
+    }
+}
+
+/// A thing inside an open group: name · "?" when unknown · detail · label · RAM · CPU.
 struct EntryRow: View {
     @EnvironmentObject var model: HogModel
     let g: Overview.Group
@@ -265,7 +279,9 @@ struct EntryRow: View {
                 if !e.detail.isEmpty { Text("· " + e.detail).foregroundStyle(.secondary).lineLimit(1) }
                 if e.pids.count > 1 { Text("×\(e.pids.count)").foregroundStyle(.tertiary) }
                 Spacer(minLength: 4)
-                if let c = e.cleanup { Text(c.why).font(.caption).foregroundStyle(c.whyKind == .idle ? .orange : .red) }
+                // A suggestion keeps its reason ("rảnh 4 giờ"); a pre-checked one and everything else say whether to stop it.
+                if let c = e.cleanup, !c.preselected { Text(c.why).font(.caption).foregroundStyle(c.whyKind == .idle ? .orange : .red) }
+                else if let s = e.safety { SafetyTag(s: s) }
                 Text(e.bytes.map { Format.bytes($0, model.lang) } ?? "–").monospacedDigit().frame(minWidth: 54, alignment: .trailing)
                 Text(e.cpu.map { Format.percent($0, model.lang) } ?? "–").monospacedDigit()
                     .foregroundStyle((e.cpu ?? 0) >= Overview.heavyCPU ? .red : .secondary)

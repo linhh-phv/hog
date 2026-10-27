@@ -152,6 +152,20 @@ public enum Format {
         text.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 
+    /// The label of a running thing: may it be stopped (`Overview.Safety`).
+    public static func safety(_ s: Overview.Safety, _ lang: Lang) -> String {
+        switch (s, lang) {
+        case (.keep, .vi): "đừng tắt"
+        case (.inUse, .vi): "đang dùng"
+        case (.canStop, .vi): "có thể tắt"
+        case (.restarts, .vi): "tắt vô ích"
+        case (.keep, .en): "keep"
+        case (.inUse, .en): "in use"
+        case (.canStop, .en): "can stop"
+        case (.restarts, .en): "comes back"
+        }
+    }
+
     /// "53 °C": whole degrees, sensors of one chip already differ by more than that.
     public static func celsius(_ c: Double, _ lang: Lang) -> String { number(c, 0, lang) + " °C" }
 
