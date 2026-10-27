@@ -166,6 +166,20 @@ public enum Format {
         }
     }
 
+    /// What a label means for the person about to press "Dừng…" (the page of a thing, user 2026-10-27).
+    public static func safetyMeaning(_ s: Overview.Safety, _ lang: Lang) -> String {
+        switch (s, lang) {
+        case (.keep, .vi): "hog không tắt thứ này: nó là hog, thứ đang chạy hog, hoặc của macOS."
+        case (.inUse, .vi): "Đang được dùng (thuộc phiên Claude, cửa sổ hoặc app đang làm việc) — hog hỏi lại trước khi dừng."
+        case (.canStop, .vi): "Đo thấy không ai dùng — hog có thể tắt."
+        case (.restarts, .vi): "Tắt cũng vô ích: app của nó bật lại ngay, không lấy lại được RAM."
+        case (.keep, .en): "hog never stops this: it is hog, something running hog, or part of macOS."
+        case (.inUse, .en): "In use (part of a Claude session, window or app that is working) — hog asks again before stopping it."
+        case (.canStop, .en): "Measured as unused — hog can stop it."
+        case (.restarts, .en): "Pointless to stop: its app starts it again at once, no memory comes back."
+        }
+    }
+
     /// "53 °C": whole degrees, sensors of one chip already differ by more than that.
     public static func celsius(_ c: Double, _ lang: Lang) -> String { number(c, 0, lang) + " °C" }
 

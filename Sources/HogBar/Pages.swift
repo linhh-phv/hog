@@ -204,15 +204,27 @@ struct EntryPage: View {
                 }
                 .font(.callout)
                 .padding(Theme.s3).frame(maxWidth: .infinity, alignment: .leading).module()
-                if let f = e.itemId.flatMap({ id in model.snapshot?.findings.first { $0.itemId == id } }) {
-                    VStack(alignment: .leading, spacing: Theme.s2) {
+                let f = e.itemId.flatMap { id in model.snapshot?.findings.first { $0.itemId == id } }
+                VStack(alignment: .leading, spacing: Theme.s2) {
+                    if let f {
                         Part(title: e.cleanup != nil ? model.t("Vì sao nên dọn", "Why clean it up") : model.t("hog thấy", "hog noticed")) {
                             Points(text: f.reason)
                         }
-                        Part(title: model.t("Tắt thì sao", "If stopped")) { Points(text: f.stop.effect) }
                     }
-                    .font(.callout)
+                    // Every page says what stopping costs, not only suggestions (user 2026-10-27: "nếu lỡ mình dừng thì sao? nên giải
+                    // thích mức độ của nó"): the label and what it means, then the catalog's effect — or that hog does not know.
+                    Part(title: model.t("Nếu dừng", "If stopped")) {
+                        if let s = e.safety {
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                SafetyTag(s: s)
+                                Text(Format.safetyMeaning(s, model.lang)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        Points(text: f?.stop.effect ?? e.stopEffect
+                               ?? model.t("hog chưa biết thứ này nên chưa biết tắt thì ảnh hưởng gì.", "hog does not know this yet, so it cannot say what stopping it does."))
+                    }
                 }
+                .font(.callout)
                 actions(e)
             } else {
                 Text(model.t("Không còn thấy thứ này ở lần quét mới nhất — có thể nó đã thoát.", "Not seen in the latest scan — it may have exited."))

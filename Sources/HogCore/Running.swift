@@ -63,6 +63,8 @@ public struct Overview: Sendable, Equatable {
         /// What it is, in one sentence of the catalog ("Vẽ đồ hoạ bằng GPU cho mọi cửa sổ VS Code."); nil when hog does not know.
         public var summary: String? = nil
         public var safety: Safety? = nil
+        /// What stopping it does, from the catalog; nil when hog does not know (the page then says so).
+        public var stopEffect: String? = nil
     }
 
     public struct Group: Sendable, Equatable, Identifiable {
@@ -201,7 +203,8 @@ public struct Overview: Sendable, Equatable {
                 // Not in the catalog and not explained by an app (a Chrome helper is Chrome): something to ask about.
                 unknown: catalogName == nil && kind != .app && Self.isUnknownProgram(p),
                 cleanup: item.flatMap { cleanupOf[$0.id] },
-                summary: (p.catalogId.value ?? item?.catalogId.value).flatMap { catalog.entries[$0]?.summary.text(lang) })
+                summary: (p.catalogId.value ?? item?.catalogId.value).flatMap { catalog.entries[$0]?.summary.text(lang) },
+                stopEffect: (p.catalogId.value ?? item?.catalogId.value).flatMap { catalog.entries[$0]?.stopEffect.text(lang) })
             e.pids.append(p.pid)
             if let s = safety(item, catalogId: p.catalogId.value ?? item?.catalogId.value) { e.safety = max(e.safety ?? s, s) }
             if let b = p.footprintBytes.value { e.bytes = (e.bytes ?? 0) + b }

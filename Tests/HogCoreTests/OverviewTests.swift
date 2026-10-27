@@ -219,5 +219,11 @@ import Testing
         #expect(entries["grep"].map { $0.safety == nil } == true, "no conclusion, no label")
         #expect(Overview.Safety.keep > .restarts && Overview.Safety.restarts > .inUse && Overview.Safety.inUse > .canStop)
         #expect(Format.safety(.canStop, .vi) == "có thể tắt" && Format.safety(.restarts, .vi) == "tắt vô ích")
+        // Every page says what stopping costs, with or without a suggestion: the catalog's effect, none when hog does not know.
+        #expect(entries["TypeScript language server"]?.stopEffect?.contains("starts it again") == true, "no finding, still explained")
+        #expect(entries["node"].map { $0.stopEffect == nil } == true)
+        for s in [Overview.Safety.keep, .restarts, .inUse, .canStop] {
+            for lang in Lang.allCases { #expect(!Format.safetyMeaning(s, lang).isEmpty && Format.safetyMeaning(s, lang).count <= 150) }
+        }
     }
 }
