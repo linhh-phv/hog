@@ -329,7 +329,8 @@ struct Redactor {
     /// `gethostname`: the kernel's name, no DNS lookup (`ProcessInfo.hostName` can block for seconds).
     static func hostName() -> String {
         var buf = [CChar](repeating: 0, count: 256)
-        return gethostname(&buf, buf.count) == 0 ? String(cString: buf) : ""
+        guard gethostname(&buf, buf.count) == 0 else { return "" }
+        return String(decoding: buf.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
     }
 
     func names(_ s: String) -> String {

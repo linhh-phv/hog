@@ -21,7 +21,8 @@ hog started as `lps` (list processes by listening port); `hog ports` keeps that 
 
 ## Install (from source)
 
-Requires macOS 14+ on Apple Silicon and Swift 6 (Xcode or the command line tools).
+Requires macOS 26+ on Apple Silicon and Swift 6.2+ (Xcode 26 or later, or its command line tools). The menu bar app uses the
+system's Liquid Glass.
 
 ```bash
 git clone https://github.com/linhh-phv/hog.git

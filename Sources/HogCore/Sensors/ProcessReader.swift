@@ -85,7 +85,7 @@ public enum ProcessReader {
         var buf = [CChar](repeating: 0, count: Int(MAXPATHLEN) * 4)
         let n = proc_pidpath(pid, &buf, UInt32(buf.count))
         guard n > 0 else { return nil }
-        return String(cString: buf)
+        return String(decoding: buf.prefix(Int(n)).map { UInt8(bitPattern: $0) }, as: UTF8.self)
     }
 
     struct ProcArgs { var execPath: String; var argv: [String] }

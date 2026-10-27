@@ -620,7 +620,7 @@ scripts/                            build-app.sh (dist/Hog.app, LSUIElement, ký
 docs/architecture/design-vi.md      tài liệu này · docs/design/ giao diện
 ```
 
-- Swift 6 (máy có Swift 6.4), macOS 14 trở lên (`MenuBarExtra` cần 13), arm64. **Không phụ thuộc thư viện ngoài.**
+- Swift 6.2+ (máy có Swift 6.4), **macOS 26 trở lên** (app dùng kính Liquid Glass của hệ thống; nâng từ 14 ngày 2026-10-27, task liquid-glass), arm64. **Không phụ thuộc thư viện ngoài.**
 - Build bằng SwiftPM, không có project Xcode để duy trì; `scripts/build-app.sh` tự đóng gói `.app`.
 - **Cài đặt giai đoạn 1: build từ nguồn** — `scripts/install.sh` đặt CLI vào `~/.local/bin/hog` và app `Hog.app` vào thư mục Applications của người dùng.
   Build tại máy nên không bị Gatekeeper chặn như app tải về chưa notarize. Phát hành qua Release/tap để sau, khi đã ổn định.
@@ -654,7 +654,7 @@ docs/architecture/design-vi.md      tài liệu này · docs/design/ giao diện
 | 3 | Không bao giờ tự SIGKILL | Đồng ý — G4 |
 | 4 | Claude chỉ dừng qua `--yes --plan <plan_id>` sau khi user đồng ý trong chat | Đồng ý |
 | 5 | Ngưỡng: phiên Claude rảnh ≥ 2 giờ · `resident_ratio` < 0,1 | Đồng ý, chỉnh sau theo thực tế |
-| 6 | Nền tảng | macOS 14+, Apple Silicon |
+| 6 | Nền tảng | macOS 26+ (từ 2026-10-27; trước đó 14+), Apple Silicon |
 | 7 | Ngôn ngữ giao diện, câu kết luận, giải nghĩa | **Việt + Anh** (mục 5), theo ngôn ngữ máy, đổi được |
 | 8 | Cài đặt giai đoạn 1 | Build từ nguồn; gỡ `lps.rb` khỏi tap khi hog có bản đầu |
 | 9 | Tiến trình hệ thống không đọc được | **Gộp một dòng + nút "Đo chi tiết" chạy `top` một lần** (mục 3.5). Dòng gộp không ghi số ước tính: phép trừ ra số âm — reviewer phát hiện ở mốc chốt 2026-10-26 |
