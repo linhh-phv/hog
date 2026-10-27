@@ -6,10 +6,9 @@ struct MenuView: View {
     @EnvironmentObject var model: HogModel
 
     var body: some View {
-        // One container: the modules of a page are glass of the same material, and blend as they move.
-        GlassEffectContainer(spacing: Theme.s2) {
-          ZStack(alignment: .top) {
-            Group {
+        ZStack(alignment: .top) {
+            // One container: the modules of a page are glass of the same material, and blend as they move.
+            GlassEffectContainer(spacing: Theme.s2) {
                 switch model.page {
                 case .main: MainPage()
                 case .entry(let g, let e): EntryPage(groupId: g, entryId: e)
@@ -18,28 +17,33 @@ struct MenuView: View {
                 case .settings: SettingsPage()
                 }
             }
+            // Outside that container: a sheet's glass must not blend with the modules under it (user 2026-10-27: the page
+            // showed through the "Dọn" confirmation and its text overlapped).
             if let plan = model.stopPlan { Sheet { StopSheet(plan: plan) } }
             if let plans = model.batch { Sheet { BatchSheet(plans: plans) } }
-          }
         }
         .frame(width: Theme.width)
     }
 }
 
-/// A confirmation over the menu: dimmed backdrop + a card of glass.
+/// A confirmation over the menu: dimmed backdrop + a card. The card is opaque (window background) with glass only at its
+/// edge: clear glass let the page's text show through and mix with the card's (user 2026-10-27).
 struct Sheet<Content: View>: View {
     @ViewBuilder let content: Content
     var body: some View {
         ZStack(alignment: .top) {
-            Color.black.opacity(0.25)
+            Color.black.opacity(0.4)
+                .contentShape(Rectangle()).onTapGesture {}  // the page under it is not clickable while the sheet is open
             Group {
                 if Theme.offscreen {
                     content.padding(Theme.s4).background(Color(nsColor: .windowBackgroundColor), in: .rect(cornerRadius: Theme.rSheet))
-                        .shadow(color: .black.opacity(0.25), radius: 14, y: 6)
                 } else {
-                    content.padding(Theme.s4).glassEffect(.regular, in: .rect(cornerRadius: Theme.rSheet))
+                    content.padding(Theme.s4)
+                        .background(Color(nsColor: .windowBackgroundColor), in: .rect(cornerRadius: Theme.rSheet))
+                        .glassEffect(.regular, in: .rect(cornerRadius: Theme.rSheet))
                 }
             }
+            .shadow(color: .black.opacity(0.25), radius: 14, y: 6)
             .padding(Theme.s3).padding(.top, 48)
         }
     }

@@ -55,7 +55,7 @@ macos 27"*.
 | `EntryRow` | tên · `?` nếu chưa rõ · cổng · `×N` · RAM · CPU | → `EntryPage` |
 | `EntryPage` | tên · thuộc đâu · **là gì** (`Points`: một ý → đoạn, nhiều ý → gạch đầu dòng) · số đo + **Lệnh** (đã làm sạch như "Chép thông tin", chụp gửi được) · **Vì sao nên dọn** và **Tắt thì sao** (mỗi phần một tiêu đề `Part`, nội dung `Points`) · "Chép thông tin" **chỉ khi hog chưa rõ** thứ đó (thứ đã biết thì câu "là gì" đã giải thích, không có gì để hỏi — chủ dự án 2026-10-27), "Dừng…"/"Cách đóng" (không có ở dòng `×N`) | |
 | `AllPage` | ô tìm + mọi nhóm, mọi thứ; "macOS và hệ thống" → Đo chi tiết | |
-| `BatchSheet` / `StopSheet` | hộp kính (`rSheet`) trên nền tối mờ; tiêu đề có RAM lấy lại; từng thứ: an toàn / hỏi trước (kèm lý do của cổng) / bị chặn | |
+| `BatchSheet` / `StopSheet` | hộp nền đặc của cửa sổ, kính chỉ ở viền (`rSheet`), trên nền tối mờ 40 %, nằm **ngoài** `GlassEffectContainer` của trang (kính trong suốt và hoà với khối phía sau làm chữ đè lên nhau — chủ dự án 2026-10-27); tiêu đề có RAM lấy lại; từng thứ: an toàn / hỏi trước (kèm lý do của cổng) / bị chặn | |
 | `Footer` | giờ quét · RAM của hog · `arrow.clockwise` · `gearshape` | |
 
 ## Luật dùng
