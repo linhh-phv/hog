@@ -1,0 +1,42 @@
+{
+  "id": "shell",
+  "name": {
+    "vi": "Shell (dòng lệnh)",
+    "en": "Shell (command line)"
+  },
+  "family": "shell",
+  "summary": {
+    "vi": "Chương trình nhận lệnh bạn gõ trong một tab terminal (zsh, bash, fish…). Rất nhẹ.",
+    "en": "The program that takes the commands you type in a terminal tab (zsh, bash, fish…). Very light."
+  },
+  "stop_effect": {
+    "vi": "Tắt là đóng tab terminal đó và mọi lệnh đang chạy trong nó — đóng tab thay vì tắt từ đây.",
+    "en": "Stopping it closes that terminal tab and everything running in it — close the tab instead."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "exe": "zsh"
+    },
+    {
+      "exe": "bash"
+    },
+    {
+      "exe": "fish"
+    },
+    {
+      "exe": "sh"
+    },
+    {
+      "exe": "-zsh"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-27",
+    "source": "measured",
+    "verified": true
+  }
+}

@@ -45,95 +45,78 @@ struct Render {
         }
     }
 
-    // MARK: status
+    // MARK: status (compact, task ui-compact)
 
-    func status(_ s: Snapshot) -> String {
+    /// `hog`: state and plain numbers, what to clean up, what is running by project. `all`: every group and process.
+    func overview(_ o: Overview, all: Bool) -> String {
         var out: [String] = []
-        out.append(bold(s.headline.text))
-        out.append("")
-        let m = s.memory
-        var memLine = t("Áp lực bộ nhớ ", "Memory pressure ") + pressure(m.pressure.value)
-        memLine += "   RAM \(bytes(s.host.memTotalBytes))"
-        if let st = m.compressedStoredBytes.value, let oc = m.compressorBytes.value {
-            memLine += " · " + t("đã nén \(bytes(st)) (chiếm \(bytes(oc)))", "compressed \(bytes(st)) (taking \(bytes(oc)))")
-        }
-        if let su = m.swapUsedBytes.value {
-            memLine += " · " + t("đẩy ra ổ đĩa", "swapped") + " \(bytes(su))" + (m.swapTotalBytes.value.map { " / \(bytes($0))" } ?? "")
-        }
-        out.append(memLine)
-        var cpuLine = "CPU "
-        if let idle = s.cpu.idlePct.value { cpuLine += Format.percent(100 - idle, lang) } else { cpuLine += dim(t("chưa đo (--fast)", "not measured (--fast)")) }
-        if let l = s.cpu.load.value, l.count == 3 { cpuLine += " · " + t("tải", "load") + " " + l.map { Format.number($0, 1, lang) }.joined(separator: " / ") }
-        if let th = s.cpu.thermal.value {
+        let mark = switch o.status.tone { case .ok: green("●"); case .warn: yellow("◐"); case .critical: red("▲") }
+        var head = mark + " " + bold(o.status.title)
+        if let used = o.ramUsed, o.ramTotal > 0 { head += " · RAM " + Format.percent(Double(used) / Double(o.ramTotal) * 100, lang) }
+        head += " · CPU " + (o.cpuUsed.map { Format.percent($0, lang) } ?? dim(t("chưa đo", "not measured")))
+        if let sw = o.swapUsed { head += " · " + t("tràn ra ổ đĩa ", "swapped ") + bytes(sw) }
+        if let th = o.thermal {
             let word = Format.thermal(th, lang)
-            cpuLine += " · " + t("nhiệt", "heat") + " " + (th >= .serious ? red(word) : (th == .fair ? yellow(word) : word))
+            head += " · " + t("nhiệt ", "heat ") + (th >= .serious ? red(word) : (th == .fair ? yellow(word) : word))
         }
-        out.append(cpuLine)
-        let rows = MenuSummary.cpuRows(s, max: MenuSummary.maxCPURows)
-        if !rows.isEmpty {
-            out.append(t("Ăn CPU nhiều nhất: ", "Most CPU: ") + rows.map { "\($0.label) " + dim(Format.percent($0.pct, lang)) }.joined(separator: ", ")
-                       + dim(t("  (% một nhân)", "  (% of one core)")))
-        }
+        out.append(head)
+        // The line under the state says why it is not fine, or that there is nothing to do ("Nên dọn" says the rest).
+        if !o.status.detail.isEmpty, o.cleanups.isEmpty || o.status.tone != .ok { out.append(dim(o.status.detail)) }
 
-        out.append("")
-        out.append(bold(t("Đang ăn nhiều nhất", "Biggest")))
-        for line in biggest(s) { out.append(line) }
-
-        let actionable = s.findings.filter { $0.verdict == .mayStop || $0.verdict == .ask }
-        let watch = s.findings.filter { $0.verdict == .watch }
-        let info = s.findings.filter { $0.verdict == .info }
-        out.append("")
-        out.append(bold(t("Đề xuất", "Suggestions")))
-        if actionable.isEmpty && watch.isEmpty { out.append("  " + dim(t("Không có gì cần tắt.", "Nothing to stop."))) }
-        for f in actionable + watch.prefix(5) { out += finding(f, s) }
-        if !info.isEmpty {
-            out.append("  " + dim(t("+ \(info.count) thông tin khác (hog --json để xem đủ)", "+ \(info.count) more info items (hog --json for all)")))
-        }
-        let notes = s.sensors.filter { $0.status != .ok && $0.status != .skipped }
-        if !notes.isEmpty {
+        if !o.cleanups.isEmpty {
             out.append("")
-            out.append(dim(t("Chưa đo được: ", "Not measured: ") + notes.map { "\($0.name) (\($0.note.value ?? $0.status.rawValue))" }.joined(separator: "; ")))
+            out.append(bold(t("Nên dọn", "Clean up")) + dim(t(" (lấy lại \(bytes(o.reclaimable)))", " (frees \(bytes(o.reclaimable)))")))
+            let nameW = min(22, o.cleanups.map(\.name.count).max() ?? 8) + 1
+            let projW = min(16, o.cleanups.map { $0.project?.count ?? 0 }.max() ?? 0) + 1
+            for c in o.cleanups {
+                let why = switch c.whyKind { case .idle: yellow(pad(c.why, 13)); case .heavy: red(pad(c.why, 13)); case .broken: red(pad(c.why, 13)) }
+                let how = (c.manual ? t("cách đóng: ", "how to close: ") : "") + "hog stop \(c.itemId)"
+                out.append("  " + pad(trunc(c.name, nameW - 1), nameW) + dim(pad(trunc(c.project ?? "", projW - 1), projW)) + why
+                           + padLeft(bytes(c.bytes), 8) + "   " + dim(how))
+            }
         }
-        if !s.warnings.isEmpty { out.append(yellow(t("Cảnh báo dữ liệu: ", "Data warnings: ") + s.warnings.joined(separator: "; "))) }
+
+        out.append("")
+        out.append(bold(pad(t("Đang chạy", "Running"), 36)) + dim(padLeft("RAM", 8) + padLeft("CPU", 7)))
+        let readable = o.groups.filter { $0.kind != .system }
+        let shown = all ? readable : Array(readable.prefix(Overview.mainGroups))
+        for g in shown {
+            let tag = g.kind == .project ? dim(t(" (dự án)", " (project)")) : ""
+            let nameCol = trunc(g.name, 24) + tag
+            let visible = trunc(g.name, 24).count + (g.kind == .project ? t(" (dự án)", " (project)").count : 0)
+            out.append("  " + nameCol + String(repeating: " ", count: max(1, 34 - visible)) + padLeft(bytes(g.bytes), 8)
+                       + padLeft(g.cpu.map { Format.percent($0, lang) } ?? "–", 7) + "   " + dim(trunc(g.summary, 40)))
+            if all {
+                for e in g.entries {
+                    let label = trunc(e.name, 28) + (e.unknown ? yellow(" ?") : "") + (e.detail.isEmpty ? "" : dim(" · " + e.detail))
+                    let visible = trunc(e.name, 28).count + (e.unknown ? 2 : 0) + (e.detail.isEmpty ? 0 : e.detail.count + 3)
+                    out.append("      " + label + String(repeating: " ", count: max(1, 30 - visible)) + padLeft(bytes(e.bytes), 8)
+                               + padLeft(e.cpu.map { Format.percent($0, lang) } ?? "–", 7)
+                               + (e.pids.count > 1 ? dim("   ×\(e.pids.count)") : ""))
+                }
+            }
+        }
+        var tail: [String] = []
+        if !all, readable.count > shown.count { tail.append(t("… \(readable.count - shown.count) nhóm khác", "… \(readable.count - shown.count) more groups")) }
+        if let sys = o.groups.first(where: { $0.kind == .system }) {
+            tail.append(t("macOS và hệ thống", "macOS and system") + (sys.cpu.map { " " + Format.percent($0, lang) + " CPU" } ?? "")
+                        + t(" (\(sys.processCount) tiến trình hog không đọc được)", " (\(sys.processCount) processes hog cannot read)"))
+        }
+        if !tail.isEmpty { out.append("  " + dim(tail.joined(separator: " · "))) }
+
+        // Unknown things among what is shown: how to ask about them.
+        let unknowns = shown.flatMap { g in g.entries.filter(\.unknown).prefix(all ? 99 : 2).map { (g, $0) } }.prefix(all ? 99 : 3)
+        out.append("")
+        if !unknowns.isEmpty {
+            out.append(dim(t("Chưa rõ: ", "Not known: ") + unknowns.map { g, e in "\(e.name) (\(g.name)) — hog explain \(e.itemId ?? String(e.pids[0])) --share" }
+                .joined(separator: t("; ", "; "))))
+        }
+        out.append(dim(t("Chi tiết: hog explain <id> · Đầy đủ: hog --all · Cho Claude: hog --json",
+                         "Details: hog explain <id> · Everything: hog --all · For Claude: hog --json")))
         return out.joined(separator: "\n")
     }
 
-    func biggest(_ s: Snapshot) -> [String] {
-        var rows: [(String, Int64, [String])] = []
-        for o in s.owners where o.parent.value == nil {
-            let children = s.owners.filter { $0.parent.value == o.id }.sorted { $0.totalFootprintBytes > $1.totalFootprintBytes }
-            rows.append((o.label, o.totalFootprintBytes, children.prefix(3).map {
-                "          " + padLeft(bytes($0.totalFootprintBytes), 7) + "  " + dim($0.label)
-            }))
-        }
-        for i in s.items where i.ownerId.value == nil {
-            if let b = i.footprintBytes.value { rows.append((i.label, b, [])) }
-        }
-        rows.sort { $0.1 > $1.1 }
-        var out: [String] = []
-        for r in rows.prefix(8) {
-            out.append("  " + padLeft(bytes(r.1), 7) + "  " + r.0)
-            out += r.2
-        }
-        if s.memory.unreadableProcessCount > 0 {
-            out.append("  " + padLeft("…", 7) + "  " + t("macOS và dịch vụ hệ thống — \(s.memory.unreadableProcessCount) tiến trình chưa đo",
-                                                         "macOS and system services — \(s.memory.unreadableProcessCount) processes not measured")
-                       + dim("  (hog explain system)"))
-        }
-        return out
-    }
-
-    func finding(_ f: Finding, _ s: Snapshot) -> [String] {
-        let item = s.items.first { $0.id == f.itemId }
-        var head = "  " + verdictLabel(f.verdict) + "  " + (item?.label ?? f.itemId)
-        if let b = item?.footprintBytes.value { head += dim(" · \(bytes(b))") }
-        var lines = [head, "      " + f.reason]
-        if f.verdict == .mayStop || f.verdict == .ask {
-            let how = f.stop.strategy == .manual ? t("cách làm", "how") : t("dừng", "stop")
-            lines.append("      " + dim("→ \(how): hog stop \(f.itemId)   ·   " + t("vì sao", "why") + ": hog explain \(f.itemId)"))
-        }
-        return lines
-    }
+    func trunc(_ s: String, _ n: Int) -> String { s.count > n ? String(s.prefix(max(1, n - 1))) + "…" : s }
 
     // MARK: explain
 
@@ -219,7 +202,6 @@ struct Render {
             return orphansOnly ? green("  " + t("Không có tiến trình mồ côi nào đang nghe cổng.", "No orphan services running."))
                 : dim("  " + t("Không có gì đang nghe cổng.", "No services listening."))
         }
-        func trunc(_ s: String, _ n: Int) -> String { s.count > n ? String(s.prefix(n - 1)) + "…" : s }
         var out = [bold(pad("PID", 7) + " " + pad("PORT", 7) + " " + pad("COMMAND", 32) + " " + pad("PROJECT", 22) + " CWD")]
         out.append(dim(String(repeating: "-", count: 100)))
         for r in rows {

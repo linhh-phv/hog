@@ -8,6 +8,8 @@ public struct RawSystem: Sendable, Equatable {
     public var pageSize: Int64
     public var freeBytes: Int64?
     public var wiredBytes: Int64?
+    /// Anonymous pages that are not purgeable ("App Memory" in Activity Monitor).
+    public var appMemoryBytes: Int64?
     public var compressorBytes: Int64?
     public var compressedStoredBytes: Int64?
     public var swapUsedBytes: Int64?
@@ -16,6 +18,12 @@ public struct RawSystem: Sendable, Equatable {
     public var uptimeS: Int64?
     public var load: [Double]?
     public var thermal: ThermalState?
+
+    /// Activity Monitor's "Memory Used": app memory + wired + compressor; `nil` when any part is unknown.
+    public var usedBytes: Int64? {
+        guard let a = appMemoryBytes, let w = wiredBytes, let c = compressorBytes else { return nil }
+        return max(0, a) + w + c
+    }
 
     public init(memTotalBytes: Int64, ncpu: Int, pageSize: Int64) {
         self.memTotalBytes = memTotalBytes; self.ncpu = ncpu; self.pageSize = pageSize
@@ -31,6 +39,7 @@ public enum SystemReader {
         if let vm = vmStatistics() {
             s.freeBytes = Int64(vm.free_count) * pageSize
             s.wiredBytes = Int64(vm.wire_count) * pageSize
+            s.appMemoryBytes = Int64(vm.internal_page_count) * pageSize - Int64(vm.purgeable_count) * pageSize
             s.compressorBytes = Int64(vm.compressor_page_count) * pageSize
             s.compressedStoredBytes = Int64(vm.total_uncompressed_pages_in_compressor) * pageSize
         }

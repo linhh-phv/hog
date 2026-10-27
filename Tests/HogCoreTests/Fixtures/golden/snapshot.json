@@ -107,6 +107,7 @@
     "swap_used_bytes" : 3292000000,
     "system_detail" : null,
     "unreadable_process_count" : 200,
+    "used_bytes" : null,
     "wired_bytes" : 2731000000
   },
   "owners" : [

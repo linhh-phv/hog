@@ -159,7 +159,8 @@ public struct Analyzer: Sendable {
             keep.formUnion(parents)
             owners = owners.filter { keep.contains($0.id) }
         }
-        let memory = MemoryInfo(freeBytes: Measured(scan.system.freeBytes), wiredBytes: Measured(scan.system.wiredBytes),
+        let memory = MemoryInfo(freeBytes: Measured(scan.system.freeBytes), usedBytes: Measured(scan.system.usedBytes),
+                                wiredBytes: Measured(scan.system.wiredBytes),
                                 compressorBytes: Measured(scan.system.compressorBytes),
                                 compressedStoredBytes: Measured(scan.system.compressedStoredBytes),
                                 swapUsedBytes: Measured(scan.system.swapUsedBytes), swapTotalBytes: Measured(scan.system.swapTotalBytes),

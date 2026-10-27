@@ -22,6 +22,7 @@ struct Args {
     var plan: String?
     var noColor = false
     var share = false
+    var all = false
 
     init(_ argv: [String], environment: [String: String] = ProcessInfo.processInfo.environment) throws {
         lang = Self.defaultLang(environment)
@@ -37,6 +38,7 @@ struct Args {
             case "--yes", "-y": yes = true
             case "--no-color": noColor = true
             case "--share": share = true
+            case "--all", "-a": all = true
             case "--plan":
                 guard let v = rest.popFirst() else { throw UsageError(description: "--plan needs a plan id") }
                 plan = v

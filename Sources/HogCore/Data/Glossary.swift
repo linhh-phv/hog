@@ -135,11 +135,11 @@ public enum Format {
     /// macOS's thermal assessment in words.
     public static func thermal(_ t: ThermalState, _ lang: Lang) -> String {
         switch (t, lang) {
-        case (.nominal, .vi): "bình thường"
+        case (.nominal, .vi): "mát"
         case (.fair, .vi): "ấm"
         case (.serious, .vi): "nóng"
         case (.critical, .vi): "rất nóng"
-        case (.nominal, .en): "normal"
+        case (.nominal, .en): "cool"
         case (.fair, .en): "warm"
         case (.serious, .en): "hot"
         case (.critical, .en): "very hot"

@@ -37,4 +37,10 @@ import HogCore
         #expect(cli.run() == .usage)
         #expect(errors.first?.contains("--share") == true)
     }
+
+    @Test func allFlag() throws {
+        #expect(try Args(["--all"], environment: [:]).all)
+        #expect(try Args(["-a", "--lang", "en"], environment: [:]).all)
+        #expect(try !Args([], environment: [:]).all)
+    }
 }

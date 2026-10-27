@@ -63,6 +63,9 @@ public enum Pressure: String, Codable, Sendable { case normal, warn, critical }
 
 public struct MemoryInfo: Codable, Sendable, Equatable {
     public var freeBytes: Measured<Int64>
+    /// "Memory Used" as Activity Monitor computes it: app memory (anonymous pages not purgeable) + wired + compressor.
+    /// High is normal on macOS (it keeps RAM full on purpose); pressure says whether it is a problem.
+    public var usedBytes: Measured<Int64>
     public var wiredBytes: Measured<Int64>
     /// Physical RAM taken by the compressor ("Pages occupied by compressor"; matches `top`).
     public var compressorBytes: Measured<Int64>
@@ -79,11 +82,11 @@ public struct MemoryInfo: Codable, Sendable, Equatable {
     /// Filled only by "measure system detail" (one `top` run); `null` otherwise.
     public var systemDetail: Measured<[SystemProcess]>
 
-    public init(freeBytes: Measured<Int64> = nil, wiredBytes: Measured<Int64> = nil, compressorBytes: Measured<Int64> = nil,
+    public init(freeBytes: Measured<Int64> = nil, usedBytes: Measured<Int64> = nil, wiredBytes: Measured<Int64> = nil, compressorBytes: Measured<Int64> = nil,
                 compressedStoredBytes: Measured<Int64> = nil, swapUsedBytes: Measured<Int64> = nil,
                 swapTotalBytes: Measured<Int64> = nil, pressure: Measured<Pressure> = nil, unreadableProcessCount: Int = 0,
                 measuredFootprintBytes: Int64 = 0, systemDetail: Measured<[SystemProcess]> = nil) {
-        self.freeBytes = freeBytes; self.wiredBytes = wiredBytes; self.compressorBytes = compressorBytes
+        self.freeBytes = freeBytes; self.usedBytes = usedBytes; self.wiredBytes = wiredBytes; self.compressorBytes = compressorBytes
         self.compressedStoredBytes = compressedStoredBytes; self.swapUsedBytes = swapUsedBytes
         self.swapTotalBytes = swapTotalBytes; self.pressure = pressure
         self.unreadableProcessCount = unreadableProcessCount; self.measuredFootprintBytes = measuredFootprintBytes

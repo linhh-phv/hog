@@ -47,13 +47,14 @@ struct CLI {
     // MARK: status / json
 
     func status() -> Exit {
-        let (_, snapshot) = world()
+        // People get the compact view over every readable process (full analysis); `--json` keeps its size cap.
+        let (_, snapshot) = world(full: args.json ? nil : true)
         if args.json {
             // Compact by default: this goes into Claude's context (design 4: ≤ 100 KB). --pretty for people.
             guard let data = try? SnapshotJSON.encode(args.brief ? SnapshotJSON.brief(snapshot) : snapshot, pretty: args.pretty) else { return .error }
             out(String(decoding: data, as: UTF8.self))
         } else {
-            out(r.status(snapshot))
+            out(r.overview(Overview.make(snapshot, catalog: Catalog.load(.standard("catalog"))), all: args.all))
         }
         return .ok
     }
