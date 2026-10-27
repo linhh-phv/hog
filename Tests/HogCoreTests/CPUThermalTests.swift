@@ -89,6 +89,8 @@ import Testing
         #expect(!fires(one(now: 79, avgSeconds: 500)), "79 % now")
         #expect(!fires(one(now: 80, avgSeconds: 89)), "8.9 % average")
         #expect(fires(one(now: 80, avgSeconds: 101)), "80 % now, 10.1 % average")
+        let reason = analyzer.analyze(one(now: 80, avgSeconds: 101)).findings.first { $0.rules.contains("cpu-heavy") }?.reason ?? ""
+        #expect(reason.contains(Format.percent(10, .en)) && reason.contains(Format.percent(10.1 / 8, .en)), "now and average, both / 8 cores: \(reason)")
     }
 
     @Test func topCountsSmallAndSystemProcesses() throws {

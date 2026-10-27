@@ -170,10 +170,15 @@ import Testing
             Finding(itemId: id, verdict: v, confidence: .high, rules: ["dormant-large"], reason: "r", evidence: [:], unmeasured: [],
                     stop: StopAdvice(strategy: .manual, respawns: respawns, effect: "e"))
         }
-        let items = ["gpu", "tool"].map { Item(id: $0, kind: .process, label: $0, pids: [$0 == "gpu" ? 1 : 2], footprintBytes: Measured(700_000_000)) }
-        let o = Overview.make(snapshot([proc(1, "Code Helper", mb: 700, item: "gpu"), proc(2, "tool", mb: 700, item: "tool")], items: items,
-                                       findings: [finding("gpu", .watch, .byParent), finding("tool", .watch, .never)]), catalog: catalog)
-        #expect(o.cleanups.map(\.itemId) == ["tool"], "VS Code starts its GPU process again at once: stopping it frees nothing")
+        let ids = ["gpu", "tool", "server", "orphan"]
+        let items = ids.enumerated().map { i, id in Item(id: id, kind: .process, label: id, pids: [Int32(i + 1)], footprintBytes: Measured(700_000_000)) }
+        let o = Overview.make(snapshot(ids.enumerated().map { i, id in proc(Int32(i + 1), id, mb: 700, item: id) }, items: items,
+                                       findings: [finding("gpu", .watch, .byParent), finding("tool", .watch, .never),
+                                                  finding("server", .ask, .byParent), finding("orphan", .mayStop, .byParent)]), catalog: catalog)
+        #expect(!o.cleanups.contains { $0.itemId == "gpu" }, "VS Code starts its GPU process again at once: stopping it frees nothing")
+        #expect(!o.cleanups.contains { $0.itemId == "server" }, "ask, restarted by its parent: nothing to gain either")
+        #expect(o.cleanups.contains { $0.itemId == "orphan" }, "may-stop is suggested whatever restarts it: its rule already weighed that")
+        #expect(o.cleanups.contains { $0.itemId == "tool" })
     }
 
     @Test func entriesSayWhatTheyAre() throws {
