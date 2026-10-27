@@ -49,7 +49,7 @@ macos 27"*.
 | Component | Là gì | Bấm |
 | --- | --- | --- |
 | `StatusHeader` | `Gauge(.accessoryCircularCapacity)` "73% RAM" + "Máy ổn / hơi nặng / nặng / nóng" + một dòng | vòng → giải nghĩa RAM (kèm phần đã nén) |
-| `MetricChip` ×3 | CPU đang bận · Tràn ra ổ đĩa · Nhiệt | → popover giải nghĩa (thay các nút `?` cũ) |
+| `MetricChip` ×3 | CPU đang bận · Tràn ra ổ đĩa · Nhiệt. Ô Nhiệt: số là °C trung bình các nhân CPU (SMC), màu theo `thermalState` của macOS, nhãn "Nhiệt · mát" (chữ của macOS); chip chưa có bảng khoá → số là chữ như cũ, nhãn "Nhiệt" | → popover giải nghĩa (thay các nút `?` cũ); ô Nhiệt kèm CPU trung bình/nóng nhất, GPU, từng quạt, nguồn "cảm biến không chính thức" |
 | Khối "Nên dọn" | `CleanupRow`: ô chọn (hoặc ✋ khi chỉ đóng tay) · tên · dự án · `ReasonTag` · RAM · ›; nút "Dọn N thứ" | cả dòng → `EntryPage` của thứ đó (container không có dòng → hộp dừng); "Dọn N thứ" → `BatchSheet` |
 | `GroupRow` | mũi tên · icon (app thật / `folder.fill` / hệ thống) · tên · tóm tắt · RAM · CPU | mở/gập từng thứ (`EntryRow`) |
 | `EntryRow` | tên · `?` nếu chưa rõ · cổng · `×N` · RAM · CPU | → `EntryPage` |

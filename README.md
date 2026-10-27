@@ -10,7 +10,8 @@ idle for hours, a container restarting in a loop.
 hog answers four questions, in this order:
 
 1. **Is the machine short of memory — or hot?** — one sentence, based on memory pressure, compression and swap, and on
-   macOS's own thermal assessment and CPU use (what uses the most CPU, including macOS itself).
+   macOS's own thermal assessment and CPU use (what uses the most CPU, including macOS itself), with the CPU/GPU
+   temperature in °C and the fan speed.
 2. **What is eating it, and who owns it?** — grouped by app → VS Code window → Claude session / project.
 3. **Can I stop it, and what do I lose?** — suggestions backed by measurements, never guesses.
 4. **What does this number mean?** — every number has a plain-language explanation, with the Activity Monitor name.
@@ -75,6 +76,11 @@ exception: when `code --status` hangs, hog removes the `Code --status` processes
 left behind, and stops asking until VS Code restarts (`~/.local/state/hog/vscode-status-timeout`).
 hog sends nothing over the network.
 
+Temperatures and fans come from the SMC, read without root and **read-only**: hog never controls the fans. These sensors
+are unofficial — Apple does not publish their keys, and they differ per chip — so the keys are data (below). A chip with
+no table gets no degrees rather than a guess; the M1 table was checked on a real Mac, M2–M4 come from the open-source
+[Stats](https://github.com/exelban/stats) app and are marked unverified.
+
 ## Data, not code
 
 What hog knows lives in JSON files, one per entry, in Vietnamese and English:
@@ -82,14 +88,16 @@ What hog knows lives in JSON files, one per entry, in Vietnamese and English:
 - `Sources/HogCore/Resources/catalog/` — what a process is and what stopping it does;
 - `Sources/HogCore/Resources/rules/` — when to suggest, watch or protect (three-valued logic: a missing measurement never
   supports a stop);
-- `Sources/HogCore/Resources/explain/` — the glossary and the one-line headlines.
+- `Sources/HogCore/Resources/explain/` — the glossary and the one-line headlines;
+- `Sources/HogCore/Resources/smc/` — which SMC keys are the CPU and GPU temperatures, per chip
+  (`machdep.cpu.brand_string`).
 
 **Something hog does not know?** The app lists big unknown things under "Not known yet"; open one and press *Copy info*
 (or run `hog explain <item> --share`). The copied text has no project names, directories, window titles or secrets.
 Paste it into a chat with Claude (or any assistant), and add the answer as a catalog entry. hog itself never calls an
 assistant and sends nothing anywhere.
 
-Local additions go to `~/.config/hog/catalog.d/` and `~/.config/hog/rules.d/` (same id overrides; hard protections
+Local additions go to `~/.config/hog/catalog.d/`, `~/.config/hog/rules.d/` and `~/.config/hog/smc.d/` (same id overrides; hard protections
 cannot be overridden). Data files cannot contain commands. Check them with `hog catalog check` / `hog rules check`.
 
 ## Develop

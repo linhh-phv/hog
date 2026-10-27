@@ -12,7 +12,7 @@ implementation has to differ from it, update the design in the same change.
 - `Sources/hog/` — the CLI. Thin: parses arguments, calls `HogCore`, prints.
 - `Sources/HogBar/` — the menu bar app. Thin, like the CLI. UI tokens in `Theme.swift` mirror docs/design/design-system.md.
 - `scripts/` — `build-app.sh` (dist/Hog.app, ad-hoc signed) and `install.sh` (installs for the current user).
-- `Sources/HogCore/Resources/{catalog,rules,explain}/` — data, one JSON file per entry. Never code-like: no commands.
+- `Sources/HogCore/Resources/{catalog,rules,explain,smc}/` — data, one JSON file per entry. Never code-like: no commands.
 - `Tests/HogCoreTests/` — Swift Testing. Fixtures in `Tests/HogCoreTests/Fixtures/` are **sanitized** real outputs.
 
 ## Commands
@@ -29,6 +29,7 @@ swift run hog        # run the CLI
 - Measure, don't guess: a value that could not be measured is `nil`/`null`, never `0` or `false`.
 - Sensors are read-only and must never start a service (`watchman --no-spawn --no-local`, no Docker CLI, check sockets first).
   Only exception: cleaning up exactly what a timed-out `code --status` left behind (`ExternalSensors.cleanUpCodeStatus`).
+- The SMC (temperatures, fans) is only ever read: key info (9) and read key (5), never write (6) — no fan control.
 - External commands go through `Command.run` (own process group, timeout kills the group; the CLI forwards Ctrl-C).
 - Tests only signal processes the test itself spawned. Never touch real processes of the machine.
 - This repo is public: no real names, work emails, company or private project names, or machine paths in code, fixtures,
