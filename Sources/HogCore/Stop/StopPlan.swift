@@ -71,6 +71,12 @@ public struct StopPlan: Codable, Sendable, Equatable {
 
     public var blocked: GateCheck? { gates.first { $0.result == .block } }
     public var needsConfirmation: Bool { gates.contains { $0.result == .confirm } }
+    /// What deserves a look beyond the routine "a person agrees" (G7 on measured evidence, which pressing "Dọn" already
+    /// is): another owner (G2), or no suggestion / unmeasured facts (G7). nil = safe to clean up with the others.
+    public var askFirst: GateCheck? {
+        gates.first { $0.gate == "G2" && $0.result == .confirm }
+            ?? (reason == nil || !unmeasured.isEmpty ? gates.first { $0.gate == "G7" && $0.result == .confirm } : nil)
+    }
 
     /// `plan_id` = hash of identity + action only (not of measurements, which change every second).
     public static func makeId(_ identity: StopIdentity, _ action: StopAction) -> String {

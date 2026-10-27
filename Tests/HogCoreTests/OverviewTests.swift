@@ -2,13 +2,13 @@ import Foundation
 import Testing
 @testable import HogCore
 
-/// Task ui-compact: what the compact menu and `hog` show.
+/// What the compact menu and `hog` show.
 @Suite struct OverviewTests {
     let catalog: Catalog = .load(DataSource(bundledDirectory: DataSource.standard("catalog").bundledDirectory, localDirectory: nil))
 
     func proc(_ pid: Int32, _ exe: String, mb: Int64, cpu: Double? = nil, project: String? = nil, owner: String? = nil,
-              item: String? = nil, catalogId: String? = nil, port: Int? = nil) -> ProcessRecord {
-        ProcessRecord(pid: pid, exe: Measured(exe), footprintBytes: Measured(mb * 1_000_000), cpu: ProcessCPU(nowPct: Measured(cpu)),
+              item: String? = nil, catalogId: String? = nil, port: Int? = nil, path: String? = nil) -> ProcessRecord {
+        ProcessRecord(pid: pid, exe: Measured(exe), exePath: Measured(path), footprintBytes: Measured(mb * 1_000_000), cpu: ProcessCPU(nowPct: Measured(cpu)),
                       project: Measured(project), net: ProcessNet(listen: port.map { [ListenSocket(addr: "*", port: $0)] } ?? []),
                       catalogId: Measured(catalogId), ownerId: Measured(owner), itemId: Measured(item))
     }
@@ -17,6 +17,7 @@ import Testing
                   pressure: Pressure = .normal, thermal: ThermalState = .nominal, idle: Double = 90) -> Snapshot {
         var s = SampleSnapshot.make()
         s.lang = .en
+        s.host.ncpu = 4
         s.processes = processes; s.owners = owners; s.items = items; s.findings = findings
         s.memory.pressure = Measured(pressure)
         s.memory.usedBytes = Measured(12_000_000_000)
@@ -39,7 +40,8 @@ import Testing
         #expect(web.entries.first?.name == "VS Code window", "catalog name without the part in brackets")
         #expect(web.entries.contains { $0.name == "node" && $0.detail == "port 3000" && $0.unknown })
         #expect(o.groups.contains { $0.id == "app:code" && $0.processCount == 1 }, "the app's own process stays with the app")
-        #expect(o.groups.last?.kind == .system && o.groups.last?.cpu == 30)
+        #expect(o.groups.last?.kind == .system && o.groups.last?.cpu == 7.5, "CPU as a share of the whole machine: 30 % of a core / 4")
+        #expect(web.cpu == 0.75)
     }
 
     @Test func smallAppsGoToOtherAndSameNamesMerge() throws {
@@ -76,7 +78,7 @@ import Testing
         #expect(o.cleanups.map(\.itemId) == ["b", "c", "a"], "may-stop first, biggest first")
         #expect(o.cleanups[0].why == "idle 3 hours" && o.cleanups[0].whyKind == .idle && o.cleanups[0].name == "Watchman" && o.cleanups[0].preselected)
         #expect(o.cleanups[1].why == "idle 2 hours" && o.cleanups[1].manual && !o.cleanups[1].preselected && o.cleanups[1].project == "hub")
-        #expect(o.cleanups[2].why == "88 % CPU" && o.cleanups[2].whyKind == .heavy && !o.cleanups[2].preselected)
+        #expect(o.cleanups[2].why == "22 % CPU" && o.cleanups[2].whyKind == .heavy && !o.cleanups[2].preselected)
         #expect(o.reclaimable == 900_000_000)
         #expect(o.status.title == "Machine fine" && o.status.detail.contains("3 to clean up"))
         let group = try #require(o.groups.first { $0.id == "project:api" })
@@ -101,5 +103,62 @@ import Testing
         s.appMemoryBytes = 6_000; s.wiredBytes = 2_000; s.compressorBytes = 1_000
         #expect(s.usedBytes == 9_000)
         #expect(SystemReader.read().usedBytes.map { $0 > 0 && $0 <= SystemReader.read().memTotalBytes } == true)
+    }
+
+    @Test func unknownOnlyForBigProgramsNothingExplains() {
+        let o = Overview.make(snapshot([
+            proc(1, "mystery", mb: 300, path: "/opt/tools/mystery"),
+            proc(2, "tiny", mb: 5, path: "/opt/tools/tiny"),
+            proc(3, "cfprefsd", mb: 40, path: "/usr/sbin/cfprefsd"),
+            proc(4, "Helper", mb: 90, path: "/Applications/Some.app/Contents/MacOS/Helper"),
+            proc(5, "Google Chrome", mb: 90, path: "/private/var/folders/x/Google Chrome.app.bundle/Contents/MacOS/Google Chrome"),
+        ]), catalog: catalog)
+        let unknown = o.groups.flatMap(\.entries).filter(\.unknown).map(\.name)
+        #expect(unknown == ["mystery"], "not small, not macOS, not inside an app bundle")
+    }
+
+    @Test func otherAddsUpSameNamesFromSmallApps() throws {
+        let owners = [Owner(id: "app:a", kind: .app, label: "A"), Owner(id: "app:b", kind: .app, label: "B")]
+        let o = Overview.make(snapshot([proc(1, "helper", mb: 10, owner: "app:a"), proc(2, "helper", mb: 20, owner: "app:b")], owners: owners),
+                              catalog: catalog)
+        let other = try #require(o.groups.first { $0.kind == .other })
+        let helper = try #require(other.entries.first { $0.name == "helper" })
+        #expect(helper.pids.sorted() == [1, 2] && helper.bytes == 30_000_000, "two small apps' same-named helpers: none dropped")
+    }
+
+    @Test func shortReasonsStayShort() {
+        let rules = ["watchman-no-subscribers", "claude-session-abandoned", "cpu-heavy", "container-restart-high", "duplicate-language-server"]
+        let item = Item(id: "x", kind: .process, label: "x", pids: [1], facts: ["age_s": .int(36_000), "session.idle_s": .int(36_000), "cpu.now_pct": .double(400)])
+        for lang in [Lang.vi, .en] {
+            for r in rules {
+                let f = Finding(itemId: "x", verdict: .mayStop, confidence: .high, rules: [r], reason: "", evidence: [:], unmeasured: [],
+                                stop: StopAdvice(strategy: .signal, respawns: nil, effect: ""))
+                let (why, _) = Overview.shortReason(f, item, lang, cores: 8)
+                #expect(why.split(separator: " ").count <= 3, "\(lang) \(r): \(why)")
+            }
+        }
+    }
+
+    @Test func notesSayWhatWasNotMeasured() {
+        var s = snapshot([])
+        s.sensors = [SensorStatus(name: "docker", status: .unavailable, tookMs: 1, note: "socket missing"),
+                     SensorStatus(name: "watchman", status: .ok, tookMs: 1)]
+        s.warnings = ["catalog/x.json: bad JSON"]
+        let notes = Overview.make(s, catalog: catalog).notes
+        #expect(notes == ["Docker — the engine is stopped (not an error).", "Data: catalog/x.json: bad JSON"])
+    }
+
+    @Test func infoFindingsAreNotCleanups() {
+        let item = Item(id: "a", kind: .process, label: "node", pids: [1], footprintBytes: Measured(400_000_000))
+        let f = Finding(itemId: "a", verdict: .info, confidence: .high, rules: ["x"], reason: "r", evidence: [:], unmeasured: [],
+                        stop: StopAdvice(strategy: .signal, respawns: nil, effect: "e"))
+        #expect(Overview.make(snapshot([proc(1, "node", mb: 400, item: "a")], items: [item], findings: [f]), catalog: catalog).cleanups.isEmpty)
+    }
+
+    @Test func chromeCloneIsChrome() {
+        #expect(Ownership.appName("/private/var/folders/x/Google Chrome.app.bundle/Contents/MacOS/Google Chrome") == "Google Chrome")
+        #expect(Ownership.appName("/Applications/A.app/Contents/Frameworks/B.app/Contents/MacOS/B") == "A", "outermost")
+        #expect(Ownership.appBundle("/Applications/A.app/Contents/MacOS/A") == "/Applications/A.app")
+        #expect(Ownership.appName("/usr/bin/zsh") == nil)
     }
 }

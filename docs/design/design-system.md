@@ -35,7 +35,7 @@ các tiến trình"* · *"có thể làm UI giống với macos luôn được k
 | Lý do dọn | `.orange` rảnh · `.red` ăn nhiều / lỗi | nhãn tròn trong "Nên dọn" |
 | Chữ | `.title3.semibold` tiêu đề · `.headline` đầu mục · `.callout` thân · `.caption` phụ; số `monospacedDigit` | |
 | Dự án | `.tint` (màu nhấn của máy): biểu tượng `folder.fill`, nhãn "dự án" | |
-| Chưa rõ | `questionmark.circle` `.orange` | thứ không có trong danh mục và không thuộc app |
+| Chưa rõ | `questionmark.circle` `.orange` | thứ không có trong danh mục, không thuộc app, không phải công cụ macOS, từ 20 MB |
 
 ## Component (`Sources/HogBar/Components.swift`, `Pages.swift`)
 
@@ -46,9 +46,9 @@ các tiến trình"* · *"có thể làm UI giống với macos luôn được k
 | Khối "Nên dọn" | `CleanupRow`: ô chọn · tên · dự án · `ReasonTag` · RAM; nút "Dọn N thứ" | lý do → popover lý do + tắt thì sao; "Dọn N thứ" → `BatchSheet` |
 | `GroupRow` | mũi tên · icon (app thật / `folder.fill` / hệ thống) · tên · tóm tắt · RAM · CPU | mở/gập từng thứ (`EntryRow`) |
 | `EntryRow` | tên · `?` nếu chưa rõ · cổng · `×N` · RAM · CPU | → `EntryPage` |
-| `EntryPage` | số đo, lý do (nếu có đề xuất), "Chép thông tin" (nút chính khi chưa rõ), "Dừng…"/"Cách đóng" | |
+| `EntryPage` | số đo, lý do (nếu có đề xuất), "Chép thông tin" (nút chính khi chưa rõ), "Dừng…"/"Cách đóng" (không có ở dòng `×N`) | |
 | `AllPage` | ô tìm + mọi nhóm, mọi thứ; "macOS và hệ thống" → Đo chi tiết | |
-| `BatchSheet` / `StopSheet` | hộp xác nhận trên nền tối mờ, vật liệu `.regularMaterial`; cổng an toàn từng thứ | |
+| `BatchSheet` / `StopSheet` | hộp xác nhận trên nền tối mờ, vật liệu `.regularMaterial`; tiêu đề có RAM lấy lại; từng thứ: an toàn / hỏi trước (kèm lý do của cổng) / bị chặn | |
 | `Footer` | giờ quét · RAM của hog · `arrow.clockwise` · `gearshape` | |
 
 ## Luật dùng
@@ -58,9 +58,11 @@ các tiến trình"* · *"có thể làm UI giống với macos luôn được k
 - Trạng thái: nặng = áp lực đỏ hoặc nhiệt rất nóng; hơi nặng = áp lực vàng; nóng = nhiệt nóng; "ổn, CPU bận" = CPU cả máy ≥ 80 %.
   Dòng phụ: lý do khi không ổn; khi ổn là việc nên làm ("2 thứ nên dọn · lấy lại 683 MB") hoặc "Không có gì cần dọn".
 - "Nên dọn": có thể tắt (chọn sẵn), hỏi trước và ăn nhiều (chưa chọn); thứ chỉ đóng tay (phiên Claude) có "Cách đóng" thay ô chọn.
+  Lý do tối đa 3 chữ ("rảnh 3 giờ", "22 % CPU", "hay bị sập").
   Không có gì → không có khối. Chỉ có thứ đóng tay → không có nút "Dọn".
 - "Dọn N thứ": một hộp xác nhận cho cả nhóm; mỗi thứ vẫn qua đủ cổng an toàn; thứ bị chặn được liệt kê nhưng không chạy; buộc tắt
   (SIGKILL) không bao giờ nằm trong nhóm — phải mở riêng.
 - "Đang chạy" ở màn chính: tối đa 5 nhóm (dự án và app, không gồm "Khác"/hệ thống), rồi "Tất cả N tiến trình".
-- "Chưa đo được" (Docker tắt, VS Code không trả lời…) nằm trong Cài đặt, không ở màn chính.
+- CPU ở mọi dòng là **% của cả máy** (cộng lại ra "CPU đang bận"), không phải % một nhân như Activity Monitor.
+- "Chưa đo được" (Docker tắt, VS Code không trả lời…) nằm trong Cài đặt, không ở màn chính của app; CLI in một dòng ở cuối.
 - Chuỗi hiển thị lấy từ HogCore (`Overview`, đã theo `vi`/`en`); nhãn của app có đủ hai ngôn ngữ.

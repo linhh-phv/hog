@@ -26,6 +26,7 @@ struct StatusHeader: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(model.t("RAM đã dùng", "Memory used"))
+            .accessibilityValue(Format.percent(ramFraction * 100, model.lang))
             .popover(isPresented: $explain, arrowEdge: .bottom) {
                 Explanation(id: "memory-used", extra: o.compressed.map {
                     model.t("Trong đó \(Format.bytes($0, model.lang)) đã được nén để vừa RAM.",
@@ -228,7 +229,7 @@ struct EntryRow: View {
     var body: some View {
         Button { model.page = .entry(group: g.id, entry: e.id) } label: {
             HStack(spacing: 4) {
-                Text(e.name).lineLimit(1).truncationMode(.middle)
+                Text(e.name).lineLimit(1).truncationMode(.tail)
                 if e.unknown { Image(systemName: "questionmark.circle").foregroundStyle(.orange).accessibilityLabel(model.t("chưa rõ", "unknown")) }
                 if !e.detail.isEmpty { Text("· " + e.detail).foregroundStyle(.secondary).lineLimit(1) }
                 if e.pids.count > 1 { Text("×\(e.pids.count)").foregroundStyle(.tertiary) }

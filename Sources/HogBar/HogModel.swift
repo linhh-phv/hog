@@ -84,7 +84,7 @@ final class HogModel: ObservableObject {
     }
 
     func reloadData() {
-        // Full analysis: "Đang chạy" and "Tất cả" list every readable process (task ui-compact, criterion 4).
+        // Full analysis: "Đang chạy" and "Tất cả" list every readable process.
         analyzer = Analyzer.standard(lang: lang, full: true)
         explanations = .load(.standard("explain"))
         catalog = .load(.standard("catalog"))

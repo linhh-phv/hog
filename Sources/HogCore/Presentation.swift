@@ -1,8 +1,7 @@
 import Foundation
 
-/// Presentation rules shared by the CLI, the analyzer and the app that are not part of `Overview` (task ui-compact
-/// replaced the old menu summary): which glossary entries each shown number links to, the CPU top, and which items
-/// count as "not known yet" candidates kept through the snapshot size cap.
+/// Presentation rules shared by the CLI, the analyzer and the app that are not part of `Overview`: which glossary
+/// entries each shown number links to, the CPU top, and which items count as "not known yet" candidates kept through the snapshot size cap.
 public enum Presentation {
     /// Glossary entries the menu's gauge and number chips open (Overview page). Tested to exist in both languages.
     public static let tileGlossaryIds = ["memory-used", "cpu-machine", "swap-used", "thermal-state", "cpu-pct"]
@@ -11,7 +10,7 @@ public enum Presentation {
     public static let cliGlossaryIds = ["memory-pressure", "memory-used", "compressed-stored", "compressor-occupied", "swap-used", "cpu-pct",
                                         "load", "footprint", "ram-total", "cpu-machine", "thermal-state"]
 
-    /// Glossary entry for every measured fact (`hog explain <item>` prints it next to the number; criterion 5).
+    /// Glossary entry for every measured fact (`hog explain <item>` prints it next to the number).
     /// Structural facts (what something *is*) are excluded: they are names, not numbers.
     public static let factGlossary: [String: String] = [
         "orphan": "orphan", "age_s": "age", "cpu.now_pct": "cpu-pct", "cpu.avg_pct": "cpu-avg",

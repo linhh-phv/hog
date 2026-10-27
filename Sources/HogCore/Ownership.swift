@@ -102,8 +102,17 @@ public enum Ownership {
 
     /// Outermost `X.app` in a path → "X".
     public static func appName(_ path: String) -> String? {
-        for comp in path.split(separator: "/") where comp.hasSuffix(".app") {
-            return String(comp.dropLast(4))
+        guard let bundle = appBundle(path)?.split(separator: "/").last else { return nil }
+        return String(bundle.hasSuffix(".app") ? bundle.dropLast(4) : bundle.dropLast(11))
+    }
+
+    /// Path of the outermost app bundle in an executable's path. Chrome runs from a code-signing clone,
+    /// `…/Google Chrome.app.bundle/…`, which is the same app (QA 2026-10-27).
+    public static func appBundle(_ path: String) -> String? {
+        var parts: [Substring] = []
+        for comp in path.split(separator: "/", omittingEmptySubsequences: false) {
+            parts.append(comp)
+            if comp.hasSuffix(".app") || comp.hasSuffix(".app.bundle") { return parts.joined(separator: "/") }
         }
         return nil
     }

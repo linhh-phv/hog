@@ -91,6 +91,16 @@ import Testing
         let p = try plan(snap, scan)
         #expect(p.blocked == nil)
         #expect(p.gates.contains { $0.gate == "G2" && $0.result == .confirm })
+        #expect(p.askFirst?.gate == "G2", "the batch sheet says why to ask")
+    }
+
+    @Test func measuredSuggestionIsNotAskFirst() throws {
+        let child = try Child("/bin/sleep", ["30"])
+        let (snap, scan) = world(child.pid)
+        var p = try plan(snap, scan)
+        #expect(p.needsConfirmation && p.askFirst == nil, "G7 on measured evidence: pressing Clean up is the consent")
+        p.unmeasured = ["net.established"]
+        #expect(p.askFirst?.gate == "G7")
     }
 
     @Test func g3CancelsWhenTheProcessChanged() throws {

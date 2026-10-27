@@ -1,6 +1,6 @@
 import Foundation
 
-/// What the compact menu and `hog` show (task ui-compact, docs/design/compact/screens.html): the machine's state in one
+/// What the compact menu and `hog` show (docs/design/compact/screens.html): the machine's state in one
 /// phrase, a few plain numbers, what to clean up, and what is running grouped by **project**. Built from a snapshot
 /// analysed with `full: true` (every readable process), so the lists are complete.
 public struct Overview: Sendable, Equatable {
@@ -76,6 +76,8 @@ public struct Overview: Sendable, Equatable {
     public var processCount: Int
     public var takenAt: Date
     public var selfBytes: Int64?
+    /// Sensors that could not measure, in words ("Docker — the engine is stopped"), and data-file warnings.
+    public var notes: [String]
 
     /// Groups on the main page before "Tất cả N tiến trình".
     public static let mainGroups = 5
@@ -122,7 +124,7 @@ public struct Overview: Sendable, Equatable {
             guard let item = items[f.itemId] else { return nil }
             let proc = procOfItem[f.itemId]
             let project = proc?.project.value ?? ownerProject(item.ownerId.value)
-            let (why, kind) = shortReason(f, item, lang)
+            let (why, kind) = shortReason(f, item, lang, cores: Double(max(1, s.host.ncpu)))
             let name = item.catalogId.value.flatMap { catalog.entries[$0]?.name.text(lang) } ?? proc?.exe.value ?? item.label
             return Cleanup(itemId: f.itemId, name: shortName(name), project: project, why: why, whyKind: kind, bytes: item.footprintBytes.value,
                            verdict: f.verdict, manual: f.stop.strategy == .manual, preselected: f.verdict == .mayStop && f.stop.strategy != .manual)
@@ -145,9 +147,7 @@ public struct Overview: Sendable, Equatable {
                 else { ("other", .other, t("Khác", "Other")) }
             var g = groups[gid] ?? Group(id: gid, kind: kind, name: gname, summary: "", bytes: 0, cpu: nil, entries: [], processCount: 0)
             g.bytes += p.footprintBytes.value ?? 0
-            if kind == .app, g.appPath == nil, let path = p.exePath.value, let r = path.range(of: ".app/") {
-                g.appPath = String(path[..<r.lowerBound]) + ".app"
-            }
+            if kind == .app, g.appPath == nil, let path = p.exePath.value { g.appPath = Ownership.appBundle(path) }
             if let c = p.cpu.nowPct.value { g.cpu = (g.cpu ?? 0) + c }
             g.processCount += 1
             groups[gid] = g
@@ -166,7 +166,7 @@ public struct Overview: Sendable, Equatable {
                 id: eid, name: name,
                 detail: port.map { t("cổng \($0)", "port \($0)") } ?? "", bytes: nil, cpu: nil, pids: [], itemId: item?.id,
                 // Not in the catalog and not explained by an app (a Chrome helper is Chrome): something to ask about.
-                unknown: catalogName == nil && kind != .app,
+                unknown: catalogName == nil && kind != .app && Self.isUnknownProgram(p),
                 cleanup: item.flatMap { cleanupOf[$0.id] })
             e.pids.append(p.pid)
             if let b = p.footprintBytes.value { e.bytes = (e.bytes ?? 0) + b }
@@ -180,7 +180,17 @@ public struct Overview: Sendable, Equatable {
             if let c = g.cpu { other.cpu = (other.cpu ?? 0) + c }
             other.processCount += g.processCount
             groups["other"] = other
-            for (eid, e) in entriesByGroup[id] ?? [:] { entriesByGroup["other", default: [:]][eid] = e }
+            for (eid, e) in entriesByGroup[id] ?? [:] {
+                // Same name already in Other (two small apps' helpers): add up, never drop a process.
+                if var have = entriesByGroup["other"]?[eid] {
+                    have.pids += e.pids
+                    if let b = e.bytes { have.bytes = (have.bytes ?? 0) + b }
+                    if let c = e.cpu { have.cpu = (have.cpu ?? 0) + c }
+                    entriesByGroup["other"]?[eid] = have
+                } else {
+                    entriesByGroup["other", default: [:]][eid] = e
+                }
+            }
             groups[id] = nil
             entriesByGroup[id] = nil
         }
@@ -197,7 +207,16 @@ public struct Overview: Sendable, Equatable {
             if (a.kind == .other) != (b.kind == .other) { return b.kind == .other }
             return (a.bytes, a.id) > (b.bytes, b.id)
         }
-        let systemCPU = s.cpu.top.value?.first { $0.id == "system" }?.pct
+        // CPU as a share of the whole machine everywhere, so the lines add up to "CPU đang bận" (QA 2026-10-27: per-core
+        // values above 100 % next to a whole-machine percentage confused).
+        let cores = Double(max(1, s.host.ncpu))
+        list = list.map { g in
+            var g = g
+            g.cpu = g.cpu.map { $0 / cores }
+            g.entries = g.entries.map { e in var e = e; e.cpu = e.cpu.map { $0 / cores }; return e }
+            return g
+        }
+        let systemCPU = (s.cpu.top.value?.first { $0.id == "system" }?.pct).map { $0 / cores }
         if s.memory.unreadableProcessCount > 0 || systemCPU != nil {
             list.append(Group(id: "system", kind: .system, name: t("macOS và hệ thống", "macOS and system"),
                               summary: t("hog không đọc được từng tiến trình", "hog cannot read each process"),
@@ -210,7 +229,7 @@ public struct Overview: Sendable, Equatable {
                         cpuUsed: s.cpu.usedPct, swapUsed: s.memory.swapUsedBytes.value, compressed: s.memory.compressedStoredBytes.value,
                         thermal: s.cpu.thermal.value, cleanups: cleanups, reclaimable: reclaimable, groups: list,
                         processCount: s.processes.count + s.memory.unreadableProcessCount, takenAt: s.takenAt,
-                        selfBytes: s.hog.selfFootprintBytes.value)
+                        selfBytes: s.hog.selfFootprintBytes.value, notes: notes(s))
     }
 
     /// The worst of memory pressure, heat and CPU, as one phrase plus a line.
@@ -221,7 +240,7 @@ public struct Overview: Sendable, Equatable {
         let thermal = s.cpu.thermal.value ?? .nominal
         let busy = (s.cpu.usedPct ?? 0) >= Analyzer.busyCPUPct
         let topCPU = groups.filter { $0.kind != .system }.max { ($0.cpu ?? 0) < ($1.cpu ?? 0) }
-        let cpuHint = topCPU.flatMap { g in (g.cpu ?? 0) >= 50 ? t("\(g.name) ăn CPU nhất", "\(g.name) uses the most CPU") : nil }
+        let cpuHint = topCPU.flatMap { g in (g.cpu ?? 0) >= 10 ? t("\(g.name) ăn CPU nhất", "\(g.name) uses the most CPU") : nil }
         var reasons: [String] = []
         if pressure == .critical || pressure == .warn { reasons.append(t("thiếu RAM", "short of memory")) }
         if thermal >= .serious { reasons.append(t("đang nóng", "running hot")) }
@@ -249,7 +268,7 @@ public struct Overview: Sendable, Equatable {
     }
 
     /// ≤ 3 words: why this is suggested.
-    static func shortReason(_ f: Finding, _ item: Item, _ lang: Lang) -> (String, WhyKind) {
+    static func shortReason(_ f: Finding, _ item: Item, _ lang: Lang, cores: Double) -> (String, WhyKind) {
         func t(_ vi: String, _ en: String) -> String { lang == .vi ? vi : en }
         func fact(_ k: String) -> Double? {
             switch item.facts[k] ?? f.evidence[k] {
@@ -259,11 +278,11 @@ public struct Overview: Sendable, Equatable {
             }
         }
         let rules = Set(f.rules)
-        if rules.contains("cpu-heavy"), let c = fact("cpu.now_pct") { return ("\(Format.percent(c, lang)) CPU", .heavy) }
+        if rules.contains("cpu-heavy"), let c = fact("cpu.now_pct") { return ("\(Format.percent(c / cores, lang)) CPU", .heavy) }
         if rules.contains("container-crash-loop") { return (t("lỗi lặp lại", "crash loop"), .broken) }
-        if rules.contains("container-restart-high") { return (t("khởi động lại nhiều", "restarts a lot"), .broken) }
+        if rules.contains("container-restart-high") { return (t("hay bị sập", "keeps crashing"), .broken) }
         if rules.contains("container-no-clients") { return (t("không ai dùng", "unused"), .idle) }
-        if rules.contains("duplicate-language-server") { return (t("trùng cửa sổ khác", "duplicate"), .heavy) }
+        if rules.contains("duplicate-language-server") { return (t("bị trùng", "duplicate"), .heavy) }
         if rules.contains("claude-session-abandoned"), let idle = fact("session.idle_s") {
             return (t("rảnh ", "idle ") + Format.duration(Int64(idle), lang), .idle)
         }
@@ -272,6 +291,33 @@ public struct Overview: Sendable, Equatable {
         }
         if let b = item.footprintBytes.value { return (Format.bytes(b, lang), .heavy) }
         return (t("nên xem", "check"), .heavy)
+    }
+
+    /// A program hog has no entry for and nothing else explains: not inside an app bundle (a Chrome helper is Chrome),
+    /// not a macOS or system tool, and big enough to matter. Those get "?" and "copy info" (reviewer 2026-10-27: the first
+    /// rule marked 244 lines, every small macOS daemon included).
+    static func isUnknownProgram(_ p: ProcessRecord) -> Bool {
+        guard (p.footprintBytes.value ?? 0) >= unknownMinBytes else { return false }
+        let path = p.exePath.value
+        return path.flatMap(Ownership.appBundle) == nil && Ownership.isSystemExecutable(path) != true
+    }
+    static let unknownMinBytes: Int64 = 20_000_000
+
+    /// Sensors that could not measure, and data-file warnings, in words.
+    static func notes(_ s: Snapshot) -> [String] {
+        func t(_ vi: String, _ en: String) -> String { s.lang == .vi ? vi : en }
+        let sensors = s.sensors.filter { $0.status == .unavailable || $0.status == .error }.map { st -> String in
+            switch (st.name, st.status) {
+            case ("docker", .unavailable): t("Docker — engine đang tắt (không phải lỗi).", "Docker — the engine is stopped (not an error).")
+            case ("watchman", .unavailable): t("watchman — không có server nào đang chạy.", "watchman — no server running.")
+            case ("vscode", .unavailable) where st.note.value?.contains("timed out") == true:
+                t("VS Code — không trả lời lần trước; khởi động lại VS Code để hog chia được theo cửa sổ.",
+                  "VS Code — did not answer last time; restart VS Code so hog can split by window.")
+            case ("vscode", .unavailable): t("VS Code — không tìm thấy lệnh `code`.", "VS Code — the `code` command was not found.")
+            default: "\(st.name) — \(st.note.value ?? st.status.rawValue)"
+            }
+        }
+        return sensors + s.warnings.map { t("Dữ liệu: ", "Data: ") + $0 }
     }
 
     /// Catalog names can be long ("Cửa sổ VS Code (phần vẽ)"): drop the part in brackets.

@@ -610,7 +610,7 @@ Mã thoát CLI: `0` xong · `1` lỗi · `2` dùng sai · `3` cần người xá
 
 ```text
 Package.swift                       Swift package, không phụ thuộc ngoài
-Sources/HogCore/                    Sensors/ · Model/ · Data/ (catalog, rules, glossary) · Stop/ · Analyzer · Ownership · Reports · MenuSummary
+Sources/HogCore/                    Sensors/ · Model/ · Data/ (catalog, rules, glossary) · Stop/ · Analyzer · Ownership · Reports · Running (Overview) · Presentation
 Sources/HogCore/Resources/          catalog/ · rules/ · explain/ (glossary/, headline.json) — đóng gói cùng HogCore
 Sources/hog/                        CLI (tự phân tích tham số)
 Sources/HogBar/                     app thanh menu (SwiftUI MenuBarExtra), Theme theo design system

@@ -45,7 +45,7 @@ struct Render {
         }
     }
 
-    // MARK: status (compact, task ui-compact)
+    // MARK: status (compact)
 
     /// `hog`: state and plain numbers, what to clean up, what is running by project. `all`: every group and process.
     func overview(_ o: Overview, all: Bool) -> String {
@@ -111,6 +111,8 @@ struct Render {
             out.append(dim(t("Chưa rõ: ", "Not known: ") + unknowns.map { g, e in "\(e.name) (\(g.name)) — hog explain \(e.itemId ?? String(e.pids[0])) --share" }
                 .joined(separator: t("; ", "; "))))
         }
+        // What could not be measured, so a missing table is never read as "nothing there".
+        if !o.notes.isEmpty { out.append(yellow(t("Chưa đo được: ", "Not measured: ") + o.notes.joined(separator: " · "))) }
         out.append(dim(t("Chi tiết: hog explain <id> · Đầy đủ: hog --all · Cho Claude: hog --json",
                          "Details: hog explain <id> · Everything: hog --all · For Claude: hog --json")))
         return out.joined(separator: "\n")

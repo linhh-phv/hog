@@ -2,7 +2,7 @@ import AppKit
 import HogCore
 import SwiftUI
 
-/// Native macOS look (task ui-compact, user: "làm UI giống với macos"): system semantic colours that follow the
+/// Native macOS look: system semantic colours that follow the
 /// accent colour, light/dark and Increase Contrast; system fonts and materials. Only sizes are hog's own.
 /// docs/design/design-system.md lists the rules.
 enum Theme {

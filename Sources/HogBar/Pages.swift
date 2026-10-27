@@ -168,7 +168,7 @@ struct EntryPage: View {
                 }
                 Grid(alignment: .leading, horizontalSpacing: Theme.s3, verticalSpacing: 4) {
                     row("RAM", e.bytes.map { Format.bytes($0, model.lang) } ?? "–")
-                    row("CPU", e.cpu.map { Format.percent($0, model.lang) + model.t(" một nhân", " of a core") } ?? "–")
+                    row("CPU", e.cpu.map { Format.percent($0, model.lang) + model.t(" của cả máy", " of the machine") } ?? "–")
                     if e.pids.count > 1 { row(model.t("Tiến trình", "Processes"), "\(e.pids.count)") }
                     if let age = age(e) { row(model.t("Đã chạy", "Running for"), Format.duration(age, model.lang)) }
                     if !e.detail.isEmpty { row(model.t("Mạng", "Network"), e.detail) }
@@ -225,8 +225,11 @@ struct EntryPage: View {
                     Button { model.copyShare(e) } label: { Label(copied ? model.t("Đã chép", "Copied") : model.t("Chép thông tin", "Copy info"),
                                                                  systemImage: copied ? "checkmark" : "doc.on.doc") }
                 }
-                Button(e.cleanup?.manual == true ? model.t("Cách đóng", "How to close") : model.t("Dừng…", "Stop…")) {
-                    model.prepareStop(model.target(e))
+                // A line of several processes (×N) is not one thing to stop: stop them from their own app or project.
+                if e.pids.count == 1 || e.itemId != nil {
+                    Button(e.cleanup?.manual == true ? model.t("Cách đóng", "How to close") : model.t("Dừng…", "Stop…")) {
+                        model.prepareStop(model.target(e))
+                    }
                 }
             }
             .controlSize(.regular)
@@ -346,19 +349,8 @@ struct SettingsPage: View {
         .padding(Theme.s3)
     }
 
-    /// Sensors that could not measure, in words (moved here from the main page).
-    var notes: [String]? {
-        model.snapshot?.sensors.filter { $0.status == .unavailable || $0.status == .error }.map { st in
-            switch (st.name, st.status) {
-            case ("docker", .unavailable): model.t("Docker — engine đang tắt (không phải lỗi).", "Docker — the engine is stopped (not an error).")
-            case ("watchman", .unavailable): model.t("watchman — không có server nào đang chạy.", "watchman — no server running.")
-            case ("vscode", .unavailable) where st.note.value?.contains("timed out") == true:
-                model.t("VS Code — không trả lời lần trước; khởi động lại VS Code để hog chia được theo cửa sổ.",
-                        "VS Code — did not answer last time; restart VS Code so hog can split by window.")
-            default: "\(st.name) — \(st.note.value ?? st.status.rawValue)"
-            }
-        }
-    }
+    /// Sensors that could not measure, in words (from HogCore; not on the main page).
+    var notes: [String]? { model.overview?.notes }
 }
 
 // MARK: Stop sheets
@@ -405,8 +397,11 @@ struct BatchSheet: View {
 
     var body: some View {
         let runnable = model.batchRunnable
+        let frees = runnable.compactMap { p in model.overview?.cleanups.first { $0.itemId == p.itemId }?.bytes }.reduce(0, +)
         VStack(alignment: .leading, spacing: Theme.s2) {
-            Text(model.t("Dọn \(runnable.count) thứ?", runnable.count == 1 ? "Clean up 1 thing?" : "Clean up \(runnable.count) things?")).font(.headline)
+            Text(model.t("Dọn \(runnable.count) thứ?", runnable.count == 1 ? "Clean up 1 thing?" : "Clean up \(runnable.count) things?")
+                 + (frees > 0 ? model.t(" · lấy lại \(Format.bytes(frees, model.lang))", " · frees \(Format.bytes(frees, model.lang))") : ""))
+                .font(.headline)
             ForEach(plans, id: \.planId) { p in
                 VStack(alignment: .leading, spacing: 1) {
                     HStack {
@@ -414,14 +409,15 @@ struct BatchSheet: View {
                         Spacer()
                         if p.blocked != nil {
                             Label(model.t("bị chặn", "blocked"), systemImage: "xmark.circle.fill").foregroundStyle(.red)
-                        } else if p.gates.contains(where: { $0.result == .confirm && ($0.gate == "G2" || $0.gate == "G4") }) {
+                        } else if p.askFirst != nil {
                             Label(model.t("hỏi trước", "ask first"), systemImage: "questionmark.circle.fill").foregroundStyle(.orange)
                         } else {
                             Label(model.t("an toàn", "safe"), systemImage: "checkmark.circle.fill").foregroundStyle(.green)
                         }
                     }
                     .font(.callout)
-                    Text(p.blocked.map(\.reason) ?? p.effect).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                    // Why it is blocked or why to ask (owner, unmeasured facts) before what stopping costs.
+                    Text(p.blocked.map(\.reason) ?? p.askFirst?.reason ?? p.effect).font(.caption).foregroundStyle(.secondary).lineLimit(3)
                 }
             }
             HStack(spacing: Theme.s2) {

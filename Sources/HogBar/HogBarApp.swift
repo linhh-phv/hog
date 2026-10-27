@@ -166,7 +166,7 @@ enum Renderer {
     static func samplePlans(_ model: HogModel) -> [StopPlan] {
         guard let s = model.snapshot else { return [] }
         let scan = Scan(system: RawSystem(memTotalBytes: 0, ncpu: 1, pageSize: 16384), processes: [:])
-        return s.items.map { item in
+        return s.items.filter { model.selected.contains($0.id) }.map { item in
             var plan = model.stopper.plan(.process(item.pids.first ?? 0, startSec: nil, startUsec: nil), item: item, snapshot: s, scan: scan)
             plan.gates = plan.gates.filter { $0.gate != "G6" }
             return plan
