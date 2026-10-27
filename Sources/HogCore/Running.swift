@@ -85,6 +85,8 @@ public struct Overview: Sendable, Equatable {
     /// Apps below both go to "Other".
     static let smallAppBytes: Int64 = 100_000_000
     static let smallAppCPU: Double = 5
+    /// A group or line using at least this share of the whole machine's CPU is shown in red.
+    public static let heavyCPU: Double = 50
 
     public static func make(_ s: Snapshot, catalog: Catalog) -> Overview {
         let lang = s.lang
@@ -197,9 +199,18 @@ public struct Overview: Sendable, Equatable {
         var list = groups.values.map { g -> Group in
             var g = g
             g.entries = (entriesByGroup[g.id] ?? [:]).values.sorted { ($0.bytes ?? 0, $0.id) > ($1.bytes ?? 0, $1.id) }
+            // Under "Google Chrome", "Helper (Renderer)" says it all; cut at the end of a narrow row, the full name kept only
+            // "Google Chrome Helper (…" and two different helpers looked the same (QA 2026-10-27).
+            if g.kind == .app {
+                g.entries = g.entries.map { e in
+                    var e = e
+                    if e.name.hasPrefix(g.name + " ") { e.name = String(e.name.dropFirst(g.name.count + 1)).capitalizedFirst }
+                    return e
+                }
+            }
             let names = g.entries.map(\.name).reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
             g.summary = g.kind == .project ? names.prefix(3).joined(separator: ", ")
-                : (lang == .vi ? "\(g.processCount) tiến trình" : "\(g.processCount) processes")
+                : (lang == .vi ? "\(g.processCount) tiến trình" : g.processCount == 1 ? "1 process" : "\(g.processCount) processes")
             return g
         }
         // "Other" last among the readable groups, whatever its size; system at the very end.

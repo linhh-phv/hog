@@ -63,6 +63,7 @@ các tiến trình"* · *"có thể làm UI giống với macos luôn được k
 - "Dọn N thứ": một hộp xác nhận cho cả nhóm; mỗi thứ vẫn qua đủ cổng an toàn; thứ bị chặn được liệt kê nhưng không chạy; buộc tắt
   (SIGKILL) không bao giờ nằm trong nhóm — phải mở riêng.
 - "Đang chạy" ở màn chính: tối đa 5 nhóm (dự án và app, không gồm "Khác"/hệ thống), rồi "Tất cả N tiến trình".
-- CPU ở mọi dòng là **% của cả máy** (cộng lại ra "CPU đang bận"), không phải % một nhân như Activity Monitor.
+- Dòng trong nhóm app bỏ tên app ở đầu ("Helper (Renderer)" dưới "Google Chrome"); tên dài cắt ở cuối dòng.
+- CPU ở mọi dòng là **% của cả máy** (đỏ từ 50 %) (cộng lại ra "CPU đang bận"), không phải % một nhân như Activity Monitor.
 - "Chưa đo được" (Docker tắt, VS Code không trả lời…) nằm trong Cài đặt, không ở màn chính của app; CLI in một dòng ở cuối.
 - Chuỗi hiển thị lấy từ HogCore (`Overview`, đã theo `vi`/`en`); nhãn của app có đủ hai ngôn ngữ.

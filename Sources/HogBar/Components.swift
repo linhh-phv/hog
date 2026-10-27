@@ -171,7 +171,7 @@ struct GroupRow: View {
                 GroupIcon(g: g)
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(spacing: 5) {
-                        Text(g.name).lineLimit(1).truncationMode(.middle)
+                        Text(g.name).lineLimit(1).truncationMode(.tail)
                         if g.kind == .project {
                             Text(model.t("dự án", "project")).font(.caption2.weight(.semibold)).foregroundStyle(.tint)
                                 .padding(.horizontal, 4).overlay(Capsule().stroke(.tint, lineWidth: 0.8))
@@ -192,7 +192,7 @@ struct GroupRow: View {
         .accessibilityHint(model.t("Mở để xem từng thứ", "Opens to show each thing"))
     }
 
-    var cpuColor: Color { (g.cpu ?? 0) >= 100 ? .red : .secondary }
+    var cpuColor: Color { (g.cpu ?? 0) >= Overview.heavyCPU ? .red : .secondary }
 }
 
 /// The app's own icon, else a symbol for projects, "Other" and macOS.

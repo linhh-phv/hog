@@ -268,6 +268,7 @@ struct CLI {
 
         DÙNG
           hog                         câu kết luận, thứ ăn nhiều nhất, đề xuất
+          hog --all                   như trên, kèm mọi nhóm và mọi tiến trình đọc được
           hog --json                  ảnh chụp đầy đủ cho Claude/hub (--fast: nhanh, không có CPU tức thời)
           hog explain <đích>          vì sao: số đo, quy tắc, danh mục, cổng an toàn
           hog explain <thuật ngữ>     giải nghĩa một con số (hog explain terms để xem danh sách)
@@ -289,6 +290,7 @@ struct CLI {
 
         USAGE
           hog                         headline, biggest consumers, suggestions
+          hog --all                   the same, with every group and every readable process
           hog --json                  full snapshot for Claude/hub (--fast: quicker, no current CPU)
           hog explain <target>        why: measurements, rules, catalog, safety gates
           hog explain <term>          what a number means (hog explain terms for the list)

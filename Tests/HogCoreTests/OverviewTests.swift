@@ -53,9 +53,12 @@ import Testing
         let chrome = try #require(o.groups.first { $0.id == "app:chrome" })
         #expect(chrome.entries.count == 1 && chrome.entries[0].pids.count == 2 && chrome.entries[0].bytes == 500_000_000)
         #expect(chrome.summary == "2 processes")
+        #expect(chrome.entries[0].name == "Helper", "the app's name is not repeated on its own lines")
         #expect(!o.groups.contains { $0.id == "app:dock" }, "a small app goes to Other")
         let other = try #require(o.groups.first { $0.kind == .other })
         #expect(other.processCount == 2 && other.entries.contains { $0.name == "Dock" && !$0.unknown })
+        #expect(other.summary == "2 processes" && Overview.make(snapshot([proc(1, "Finder", mb: 900, owner: "app:dock")], owners: owners),
+                                                                 catalog: catalog).groups[0].summary == "1 process")
         #expect(o.groups.firstIndex { $0.kind == .other }! > o.groups.firstIndex { $0.id == "app:chrome" }!, "Other after the named groups")
     }
 
