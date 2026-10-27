@@ -10,8 +10,8 @@
     "en": "Fan speed (revolutions per minute), read from the SMC. Apple Silicon Macs often keep the fans stopped (0) while cool; a MacBook Air has no fan."
   },
   "how_to_read": {
-    "vi": "Quạt quay nhanh dần khi máy nóng lên; gần mức cao nhất của nó = máy đang phải làm mát hết sức. hog chỉ đọc, không điều khiển quạt.",
-    "en": "Fans speed up as the machine heats up; near their maximum = the machine is cooling as hard as it can. hog only reads them, it never controls the fans."
+    "vi": "Quạt quay nhanh dần khi máy nóng lên; % là tốc độ so với mức cao nhất của chính quạt đó — gần 100 % = máy đang phải làm mát hết sức. hog chỉ đọc, không điều khiển quạt.",
+    "en": "Fans speed up as the machine heats up; % is the speed against that fan's own maximum — near 100 % = the machine is cooling as hard as it can. hog only reads them, it never controls the fans."
   },
   "act": {
     "vi": "Quạt kêu to lâu mà không làm gì nặng → xem \"Đang ăn CPU\" và tắt thứ không dùng.",

@@ -153,6 +153,14 @@ public struct HeatInfo: Codable, Sendable, Equatable {
 
     public static let unmeasured = HeatInfo()
 
+    /// How hard the fans work: the busiest fan's speed in % of its own maximum (`F<n>Mx`). `nil` without a fan, or when
+    /// any fan's % is unknown (a spinning fan without a maximum could be the busiest). Not in the JSON: it follows from `fans`.
+    public var fanPct: Int? {
+        guard let fans = fans.value, !fans.isEmpty else { return nil }
+        let pcts = fans.map(\.pct)
+        return pcts.contains(nil) ? nil : pcts.compactMap { $0 }.max()
+    }
+
     public struct Fan: Codable, Sendable, Equatable {
         /// `F<index>Ac` …: 0 is the first fan.
         public var index: Int
@@ -161,6 +169,12 @@ public struct HeatInfo: Codable, Sendable, Equatable {
         public var maxRpm: Measured<Int>
         public init(index: Int, rpm: Measured<Int>, minRpm: Measured<Int> = nil, maxRpm: Measured<Int> = nil) {
             self.index = index; self.rpm = rpm; self.minRpm = minRpm; self.maxRpm = maxRpm
+        }
+
+        /// Speed in % of this fan's maximum; `nil` when either is unknown.
+        public var pct: Int? {
+            guard let r = rpm.value, let m = maxRpm.value, m > 0 else { return nil }
+            return Int((Double(r) / Double(m) * 100).rounded())
         }
     }
 }

@@ -29,7 +29,8 @@ enum Theme {
     }
 
     static func thermal(_ t: ThermalState?) -> Color {
-        switch t { case .nominal?: .green; case .fair?: .primary; case .serious?: .orange; case .critical?: .red; case nil: .secondary }
+        // Normal is not green: the machine can be at 90 °C and still nominal (user 2026-10-27).
+        switch t { case .nominal?: .primary; case .fair?: .primary; case .serious?: .orange; case .critical?: .red; case nil: .secondary }
     }
 }
 

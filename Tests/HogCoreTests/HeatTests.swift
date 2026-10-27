@@ -147,12 +147,39 @@ import Testing
 @Suite struct HeatFormatTests {
     @Test func degreesAndFans() {
         #expect(Format.celsius(52.8, .en) == "53 °C")
-        #expect(Format.fans(nil, .vi) == nil)
-        #expect(Format.fans([], .vi) == "không có quạt" && Format.fans([], .en) == "no fan")
-        let f = { (rpm: Int?) in HeatInfo.Fan(index: 0, rpm: Measured(rpm)) }
-        #expect(Format.fans([f(0), f(0)], .vi) == "quạt đứng" && Format.fans([f(0)], .en) == "fan stopped")
-        #expect(Format.fans([f(0), f(2512)], .vi) == "quạt 2512 vòng/phút")
-        #expect(Format.fans([f(nil)], .vi) == nil, "no fan speed read: say nothing, not \"stopped\"")
+        let h = { (fans: [HeatInfo.Fan]?) in HeatInfo(fans: Measured(fans)) }
+        #expect(Format.fans(h(nil), .vi) == nil)
+        #expect(Format.fans(h([]), .vi) == "không có quạt" && Format.fans(h([]), .en) == "no fan")
+        let f = { (rpm: Int?, max: Int?) in HeatInfo.Fan(index: 0, rpm: Measured(rpm), maxRpm: Measured(max)) }
+        #expect(Format.fans(h([f(0, 5779), f(0, 6241)]), .vi) == "quạt đứng" && Format.fans(h([f(0, nil)]), .en) == "fan stopped")
+        #expect(Format.fans(h([f(0, 5779), f(2512, nil)]), .vi) == "quạt 2512 vòng/phút", "no maximum: no %")
+        #expect(Format.fans(h([f(3861, 5779), f(4154, 6241)]), .vi) == "quạt 4154 vòng/phút (67 %)")
+        #expect(Format.fans(h([f(nil, 5779)]), .vi) == nil, "no fan speed read: say nothing, not \"stopped\"")
+    }
+
+    @Test func fanPercentIsOfEachFansOwnMaximum() {
+        let fans = [HeatInfo.Fan(index: 0, rpm: Measured(3861), maxRpm: Measured(5779)),   // 66.8 %
+                    HeatInfo.Fan(index: 1, rpm: Measured(4154), maxRpm: Measured(6241))]   // 66.6 %
+        #expect(fans.map(\.pct) == [67, 67])
+        #expect(HeatInfo(fans: Measured([HeatInfo.Fan(index: 0, rpm: Measured(1200), maxRpm: Measured(6000)),
+                                         HeatInfo.Fan(index: 1, rpm: Measured(3000), maxRpm: Measured(6000))])).fanPct == 50, "the busiest")
+        #expect(HeatInfo(fans: Measured([HeatInfo.Fan(index: 0, rpm: Measured(3000), maxRpm: Measured(0))])).fanPct == nil)
+        #expect(HeatInfo(fans: Measured([])).fanPct == nil && HeatInfo().fanPct == nil)
+        #expect(HeatInfo(fans: Measured([HeatInfo.Fan(index: 0, rpm: Measured(0), maxRpm: Measured(5779)),
+                                         HeatInfo.Fan(index: 1, rpm: Measured(2512))])).fanPct == nil, "not 0 % while a fan spins")
+    }
+
+    @Test func tagNextToDegreesIsMeasuredCooling() {
+        let working = HeatInfo(cpuAvgC: Measured(88.7), fans: Measured([HeatInfo.Fan(index: 0, rpm: Measured(4154), maxRpm: Measured(6241))]))
+        #expect(Format.heatTag(working, thermal: .nominal, .vi) == "quạt 67 %", "not \"mát\" at 89 °C")
+        #expect(Format.heatTag(working, thermal: .fair, .en) == "fans 67 %")
+        #expect(Format.heatTag(working, thermal: .serious, .vi) == "nóng")
+        #expect(Format.heatTag(working, thermal: .critical, .en) == "very hot")
+        let stopped = HeatInfo(fans: Measured([HeatInfo.Fan(index: 0, rpm: Measured(0), maxRpm: Measured(5779))]))
+        #expect(Format.heatTag(stopped, thermal: .nominal, .vi) == "quạt đứng")
+        #expect(Format.heatTag(HeatInfo(fans: Measured([])), thermal: .nominal, .vi) == "bình thường", "no fan: macOS's word")
+        #expect(Format.heatTag(HeatInfo(), thermal: nil, .vi) == nil)
+        #expect(Format.thermal(.nominal, .vi) == "bình thường" && Format.thermal(.nominal, .en) == "normal")
     }
 
     @Test func detailSaysWhereDegreesComeFrom() {
@@ -161,7 +188,7 @@ import Testing
                                                  cpuAvgC: Measured(52.8), cpuMaxC: Measured(54.6), cpuSensors: 10,
                                                  gpuAvgC: Measured(51.6), fans: fans), thermal: .nominal, .vi)
         #expect(checked == [
-            "CPU: trung bình 53 °C, nóng nhất 55 °C (10 cảm biến)", "GPU: 52 °C", "Quạt 1: đứng (chạy 1200–5779)", "macOS đánh giá: mát",
+            "CPU: trung bình 53 °C, nóng nhất 55 °C (10 cảm biến)", "GPU: 52 °C", "Quạt 1: đứng (chạy 1200–5779)", "macOS: bình thường, chưa phải giảm tốc vì nóng",
             "Nguồn: cảm biến SMC không chính thức (Apple không công bố) — khoá của Apple M1 Pro đã kiểm trên máy thật.",
         ], "\(checked)")
 
@@ -170,7 +197,11 @@ import Testing
         #expect(unchecked.last?.contains("not checked on a real Mac yet") == true)
 
         let unknown = Format.heatDetail(HeatInfo(chip: Measured("Apple M9"), fans: Measured([])), thermal: .fair, .vi)
-        #expect(unknown == ["Máy không có quạt", "macOS đánh giá: ấm", "Chưa đo được độ C: hog chưa biết khoá cảm biến của Apple M9."])
+        #expect(unknown == ["Máy không có quạt", "macOS: hơi nóng, chưa giảm tốc", "Chưa đo được độ C: hog chưa biết khoá cảm biến của Apple M9."])
+        let spinning = Format.heatDetail(HeatInfo(cpuAvgC: Measured(88.7), cpuMaxC: Measured(93.5), cpuSensors: 10,
+                                                  fans: Measured([HeatInfo.Fan(index: 1, rpm: Measured(4154), minRpm: Measured(1200), maxRpm: Measured(6241))])),
+                                         thermal: .nominal, .vi)
+        #expect(spinning.contains("Quạt 2: 4154 vòng/phút (67 % sức; chạy 1200–6241)"), "\(spinning)")
         let silent = Format.heatDetail(HeatInfo(chip: Measured("Apple M1"), keyTable: Measured("m1")), thermal: nil, .vi)
         #expect(silent == ["Chưa đo được độ C: cảm biến không trả lời."])
     }

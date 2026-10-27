@@ -6,12 +6,12 @@
     "en": "Temperature"
   },
   "plain": {
-    "vi": "Nhiệt độ CPU (trung bình các nhân), đọc từ cảm biến bên trong máy (SMC) — cảm biến không chính thức: Apple không công bố mã của chúng, hog dùng bảng mã theo đời chip. Chữ đi kèm (mát, ấm, nóng, rất nóng) là macOS tự đánh giá.",
-    "en": "CPU temperature (average of the cores), read from the machine's internal sensors (SMC) — unofficial sensors: Apple does not publish their codes, hog uses a table per chip generation. The word next to it (cool, warm, hot, very hot) is macOS's own assessment."
+    "vi": "Nhiệt độ CPU (trung bình các nhân), đọc từ cảm biến bên trong máy (SMC) — cảm biến không chính thức: Apple không công bố mã của chúng, hog dùng bảng mã theo đời chip. Chữ đi kèm là quạt đang quay bao nhiêu % sức; khi macOS báo nóng thì là chữ của macOS (nóng, rất nóng: máy có thể giảm tốc).",
+    "en": "CPU temperature (average of the cores), read from the machine's internal sensors (SMC) — unofficial sensors: Apple does not publish their codes, hog uses a table per chip generation. The words next to it say how hard the fans work; when macOS reports heat they are macOS's word (hot, very hot: it may slow down)."
   },
   "how_to_read": {
-    "vi": "Con số lên xuống nhanh theo việc máy đang làm và khác nhau giữa các đời máy. Chữ của macOS mới cho biết máy có phải giảm tốc vì nóng hay không: nóng / rất nóng = có thể chậm đi.",
-    "en": "The number moves quickly with what the machine is doing and differs between models. macOS's word is what tells you whether it has to slow down: hot / very hot = it may get slower."
+    "vi": "Chip Apple chạy nặng có thể lên 85–95 °C mà macOS vẫn chưa phải giảm tốc (đã đo trên M1 Pro): số cao không có nghĩa máy hỏng. Quạt quay càng nhiều % sức = máy càng phải làm mát. Máy chỉ chậm đi khi macOS báo nóng.",
+    "en": "An Apple chip under load can reach 85–95 °C while macOS still has no need to slow down (measured on an M1 Pro): a high number does not mean something is wrong. The higher the fans' %, the harder the machine is cooling. It only gets slower when macOS reports heat."
   },
   "act": {
     "vi": "Nóng mà không làm gì nặng → xem \"Đang ăn CPU\" và tắt thứ không dùng; để máy chỗ thoáng.",

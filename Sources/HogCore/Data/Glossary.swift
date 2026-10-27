@@ -135,11 +135,12 @@ public enum Format {
     /// macOS's thermal assessment in words.
     public static func thermal(_ t: ThermalState, _ lang: Lang) -> String {
         switch (t, lang) {
-        case (.nominal, .vi): "mát"
+        // `nominal` is not "cool": the machine can be at 90 °C with its fans at 2/3 and still be nominal (measured 2026-10-27).
+        case (.nominal, .vi): "bình thường"
         case (.fair, .vi): "ấm"
         case (.serious, .vi): "nóng"
         case (.critical, .vi): "rất nóng"
-        case (.nominal, .en): "cool"
+        case (.nominal, .en): "normal"
         case (.fair, .en): "warm"
         case (.serious, .en): "hot"
         case (.critical, .en): "very hot"
@@ -151,13 +152,40 @@ public enum Format {
 
     public static func rpm(_ r: Int, _ lang: Lang) -> String { lang == .vi ? "\(r) vòng/phút" : "\(r) rpm" }
 
-    /// The fans in a few words: none, all stopped, or the fastest; `nil` when not measured.
-    public static func fans(_ fans: [HeatInfo.Fan]?, _ lang: Lang) -> String? {
-        guard let fans else { return nil }
+    /// The fans in a few words: none, all stopped, or the fastest with how hard they work; `nil` when not measured.
+    public static func fans(_ h: HeatInfo, _ lang: Lang) -> String? {
+        guard let fans = h.fans.value else { return nil }
         if fans.isEmpty { return lang == .vi ? "không có quạt" : "no fan" }
         guard let fastest = fans.compactMap(\.rpm.value).max() else { return nil }
         if fastest == 0 { return lang == .vi ? "quạt đứng" : (fans.count == 1 ? "fan stopped" : "fans stopped") }
-        return (lang == .vi ? "quạt " : (fans.count == 1 ? "fan " : "fans ")) + rpm(fastest, lang)
+        return (lang == .vi ? "quạt " : (fans.count == 1 ? "fan " : "fans ")) + rpm(fastest, lang) + (h.fanPct.map { " (\($0) %)" } ?? "")
+    }
+
+    /// The word next to the degrees (app chip label): what is measured about cooling, not a judgement of the number.
+    /// macOS says it is hot (it may slow down) → its word, which then agrees with the number ("có thể giảm tốc" does not fit
+    /// the chip); else the fans (stopped / % of their maximum); without fans, macOS's word.
+    /// No temperature thresholds of hog's own: Apple does not publish them and they differ per chip (user chose 2026-10-27).
+    public static func heatTag(_ h: HeatInfo, thermal: ThermalState?, _ lang: Lang) -> String? {
+        if let th = thermal, th >= .serious { return Self.thermal(th, lang) }
+        if let fans = h.fans.value, !fans.isEmpty {
+            if fans.compactMap(\.rpm.value).max() == 0 { return lang == .vi ? "quạt đứng" : "fans stopped" }
+            if let pct = h.fanPct { return (lang == .vi ? "quạt " : "fans ") + "\(pct) %" }
+        }
+        return thermal.map { Self.thermal($0, lang) }
+    }
+
+    /// What macOS's thermal state means for the machine (it is about slowing down, not about how warm it is).
+    public static func thermalMeaning(_ t: ThermalState, _ lang: Lang) -> String {
+        switch (t, lang) {
+        case (.nominal, .vi): "bình thường, chưa phải giảm tốc vì nóng"
+        case (.fair, .vi): "hơi nóng, chưa giảm tốc"
+        case (.serious, .vi): "nóng, có thể giảm tốc"
+        case (.critical, .vi): "rất nóng, đang giảm tốc"
+        case (.nominal, .en): "normal, no need to slow down for heat"
+        case (.fair, .en): "slightly hot, not slowing down"
+        case (.serious, .en): "hot, may slow down"
+        case (.critical, .en): "very hot, slowing down"
+        }
     }
 
     /// Everything hog knows about heat, one line each, for the "Nhiệt" explanation: CPU, GPU, each fan, macOS's own
@@ -177,11 +205,13 @@ public enum Format {
             for f in fans {
                 let name = t("Quạt \(f.index + 1)", "Fan \(f.index + 1)")
                 let now = f.rpm.value.map { $0 == 0 ? t("đứng", "stopped") : rpm($0, lang) } ?? t("chưa đo", "not measured")
-                let range = f.minRpm.value.flatMap { lo in f.maxRpm.value.map { t(" (chạy \(lo)–\($0))", " (runs \(lo)–\($0))") } } ?? ""
-                out.append("\(name): \(now)\(range)")
+                let pct = f.rpm.value == 0 ? nil : f.pct
+                let range = f.minRpm.value.flatMap { lo in f.maxRpm.value.map { "\(lo)–\($0)" } }
+                let notes = [pct.map { t("\($0) % sức", "\($0) % of its maximum") }, range.map { t("chạy \($0)", "runs \($0)") }].compactMap { $0 }
+                out.append("\(name): \(now)" + (notes.isEmpty ? "" : " (" + notes.joined(separator: "; ") + ")"))
             }
         }
-        if let th = thermal { out.append(t("macOS đánh giá: ", "macOS's own word: ") + Format.thermal(th, lang)) }
+        if let th = thermal { out.append("macOS: " + thermalMeaning(th, lang)) }
         let chip = h.chip.value ?? t("chip này", "this chip")
         if h.cpuAvgC.value != nil {
             out.append(h.keysVerified.value == true

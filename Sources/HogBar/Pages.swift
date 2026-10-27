@@ -79,10 +79,12 @@ struct MainPage: View {
                 MetricChip(label: model.t("Tràn ra ổ đĩa", "Swapped to disk"), glossaryId: "swap-used") {
                     Text(o.swapUsed.map { Format.bytes($0, model.lang) } ?? "–")
                 }
-                // Degrees (SMC) when hog knows this chip; macOS's own word in the label and in the colour.
+                // Degrees (SMC) when hog knows this chip, coloured by macOS's state; the label says how hard the fans work
+                // (or that macOS may slow down). Without degrees: macOS's word, as before.
                 let word = o.thermal.map { Format.thermal($0, model.lang) }
                 let degrees = o.heat.cpuAvgC.value.map { Format.celsius($0, model.lang) }
-                MetricChip(label: model.t("Nhiệt", "Heat") + (degrees != nil ? word.map { " · " + $0 } ?? "" : ""),
+                let tag = degrees != nil ? Format.heatTag(o.heat, thermal: o.thermal, model.lang) : nil
+                MetricChip(label: model.t("Nhiệt", "Heat") + (tag.map { " · " + $0 } ?? ""),
                            glossaryId: "temperature",
                            extra: Format.heatDetail(o.heat, thermal: o.thermal, model.lang).joined(separator: "\n")) {
                     Text(degrees ?? word?.capitalizedFirst ?? "–").foregroundStyle(Theme.thermal(o.thermal))
