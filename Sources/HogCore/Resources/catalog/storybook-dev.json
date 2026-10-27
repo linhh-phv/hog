@@ -1,0 +1,31 @@
+{
+  "id": "storybook-dev",
+  "name": {
+    "vi": "Storybook (xem thử giao diện)",
+    "en": "Storybook (UI preview)"
+  },
+  "family": "dev-server",
+  "summary": {
+    "vi": "Server chạy thử Storybook trên máy bạn: xem từng phần giao diện riêng lẻ trong trình duyệt.",
+    "en": "Runs Storybook on your machine: preview UI parts one by one in the browser."
+  },
+  "stop_effect": {
+    "vi": "Trang Storybook trong trình duyệt ngừng hoạt động.\nCần lại thì chạy lại lệnh storybook của dự án.",
+    "en": "The Storybook page in the browser stops working.\nRun the project's storybook command again when needed."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "signal"
+  },
+  "match": [
+    {
+      "exe": "node",
+      "args_contains": "storybook/dist/bin/"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-27",
+    "source": "claude",
+    "verified": true
+  }
+}

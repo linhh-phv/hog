@@ -10,7 +10,7 @@ import Testing
 
     @Test func catalogLoadsWithoutWarnings() {
         #expect(catalog.warnings.isEmpty, "\(catalog.warnings)")
-        #expect(catalog.entries.count == 24)
+        #expect(catalog.entries.count == 26)
         #expect(catalog.entries.values.filter { $0.detachedByDesign == true }.map(\.id).sorted() == ["gradle-daemon", "screen", "tmux-server"])
     }
 
@@ -62,6 +62,11 @@ import Testing
         #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/web-app/node_modules/jest-worker/build/workers/processChild.js")) == "jest-worker")
         #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/web-app/server.js")) == nil, "not every node program")
         #expect(catalog.match(MatchSubject(exeName: "python3", args: "python3 /x/jest-worker/run.py")) == nil, "node only")
+        // From a pasted `hog.share/1` (2026-10-27): an orphaned `pnpm dev` and the Storybook it started.
+        #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/.nvm/versions/node/v22.13.0/bin/pnpm dev")) == "pnpm")
+        #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/web-app/node_modules/.bin/../storybook/dist/bin/dispatcher.js dev -p 6009")) == "storybook-dev")
+        #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/web-app/node_modules/.pnpm/vite@5/node_modules/vite/bin/vite.js")) != "pnpm",
+                "a package inside pnpm's store is not pnpm")
         #expect(catalog.match(MatchSubject(exeName: "Code Helper (Plugin)", args: "Code Helper (Plugin) --type=utility --utility-sub-type=node.mojom.NodeService --inspect-port=0")) == "vscode-extension-host")
         #expect(catalog.match(MatchSubject(exeName: "Code Helper", args: "Code Helper --type=utility --utility-sub-type=node.mojom.NodeService", vscodeRole: "file-watcher")) == "vscode-file-watcher")
         #expect(catalog.match(MatchSubject(exeName: "Code Helper", args: "Code Helper --type=gpu-process")) == "vscode-gpu")

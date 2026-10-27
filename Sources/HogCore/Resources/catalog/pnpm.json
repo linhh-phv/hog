@@ -1,0 +1,31 @@
+{
+  "id": "pnpm",
+  "name": {
+    "vi": "pnpm (chạy lệnh của dự án)",
+    "en": "pnpm (runs a project command)"
+  },
+  "family": "package-manager",
+  "summary": {
+    "vi": "Chạy một lệnh của dự án, ví dụ `pnpm dev` để mở server chạy thử.\nBản thân nó gần như không làm gì: việc thật nằm ở chương trình con nó mở.",
+    "en": "Runs a project command, e.g. `pnpm dev` to start a test server.\nIt does almost nothing itself: the real work is the program it started."
+  },
+  "stop_effect": {
+    "vi": "Lệnh nó đang chạy dừng theo hoặc vẫn chạy tiếp — xem lại danh sách sau khi tắt.\nTerminal mở nó đã đóng (mồ côi) thì thường là bị quên.",
+    "en": "The command it runs stops too or keeps running — check the list after stopping it.\nIf the terminal that opened it is closed (orphaned), it is usually forgotten."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "signal"
+  },
+  "match": [
+    {
+      "exe": "node",
+      "args_contains": "bin/pnpm"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-27",
+    "source": "claude",
+    "verified": true
+  }
+}
