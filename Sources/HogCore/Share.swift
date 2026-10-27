@@ -15,6 +15,17 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
         public var catalogId: String?
 
         enum CodingKeys: String, CodingKey { case kind, exe, args, image, catalogId = "catalog_id" }
+
+        /// A process always has `args`: `null` when hog could not read its command line (often: it just exited), never
+        /// left out — the reader must see that it is missing, not think the program had no arguments.
+        public func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(kind, forKey: .kind)
+            try c.encodeIfPresent(exe, forKey: .exe)
+            if kind == .process { try c.encode(args, forKey: .args) } else { try c.encodeIfPresent(args, forKey: .args) }
+            try c.encodeIfPresent(image, forKey: .image)
+            try c.encodeIfPresent(catalogId, forKey: .catalogId)
+        }
     }
 
     public var schema = "hog.share/1"
@@ -275,9 +286,13 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
     public func text(_ lang: Lang) -> String {
         let known = item.catalogId.map { lang == .vi ? "hog nhận ra đây là `\($0)`." : "hog identifies this as `\($0)`." }
             ?? (lang == .vi ? "hog chưa biết thứ này là gì." : "hog does not know what this is.")
+        let noArgs = item.kind == .process && item.args == nil
+            ? (lang == .vi ? " hog không đọc được lệnh của nó (thường vì nó vừa thoát), nên `args` là null." :
+                             " hog could not read its command line (usually because it just exited), so `args` is null.")
+            : ""
         let lead = lang == .vi
-            ? "hog (trình xem tài nguyên máy macOS): \(known) Nó là gì, có nên tắt không, tắt thì mất gì? Số đo của hog, đã bỏ tên dự án, thư mục và mật khẩu:"
-            : "hog (a macOS resource viewer): \(known) What is it, should I stop it, what happens if I do? hog's measurements, with project names, directories and secrets removed:"
+            ? "hog (trình xem tài nguyên máy macOS): \(known)\(noArgs) Nó là gì, có nên tắt không, tắt thì mất gì? Số đo của hog, đã bỏ tên dự án, thư mục và mật khẩu:"
+            : "hog (a macOS resource viewer): \(known)\(noArgs) What is it, should I stop it, what happens if I do? hog's measurements, with project names, directories and secrets removed:"
         return lead + "\n\n```json\n" + json + "\n```\n"
     }
 }

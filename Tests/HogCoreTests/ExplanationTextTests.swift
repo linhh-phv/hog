@@ -30,3 +30,30 @@ import Testing
         }
     }
 }
+
+/// From two pasted `hog.share/1` of 0-second programs (2026-10-27): not offered as unknown, and a missing command line is said.
+@Suite struct JustStartedTests {
+    @Test func youngProgramsAreNotUnknown() {
+        func item(age: Int64?) -> Item {
+            Item(id: "x", kind: .process, label: "node", pids: [1], footprintBytes: Measured(300_000_000),
+                 facts: age.map { ["age_s": .int($0), "owner.kind": .string("claude-session")] } ?? ["owner.kind": .string("claude-session")])
+        }
+        #expect(!Presentation.isUnknownCandidate(item(age: 0)) && !Presentation.isUnknownCandidate(item(age: 9)))
+        #expect(Presentation.isUnknownCandidate(item(age: 10)) && Presentation.isUnknownCandidate(item(age: 3600)))
+        #expect(Presentation.isUnknownCandidate(item(age: nil)), "an unmeasured age hides nothing")
+        let young = ProcessRecord(pid: 1, exe: Measured("node"), exePath: Measured("/usr/local/bin/node"), ageS: Measured(0), footprintBytes: Measured(300_000_000))
+        let old = ProcessRecord(pid: 2, exe: Measured("node"), exePath: Measured("/usr/local/bin/node"), ageS: Measured(60), footprintBytes: Measured(300_000_000))
+        #expect(!Overview.isUnknownProgram(young) && Overview.isUnknownProgram(old))
+    }
+
+    @Test func missingCommandLineIsNullAndSaid() throws {
+        let share = ShareInfo(item: .init(kind: .process, exe: "node", args: nil), facts: [:], ownerKind: nil, parents: [], listenPorts: [])
+        let text = share.text(.vi)
+        #expect(text.contains("\"args\" : null"), "\(text)")
+        #expect(text.contains("hog không đọc được lệnh của nó") && text.contains("hog chưa biết thứ này là gì. hog không đọc được"))
+        let withArgs = ShareInfo(item: .init(kind: .process, exe: "node", args: "node x.js"), facts: [:], ownerKind: nil, parents: [], listenPorts: [])
+        #expect(!withArgs.text(.en).contains("could not read") && withArgs.text(.en).contains("\"args\" : \"node x.js\""))
+        let container = ShareInfo(item: .init(kind: .container, image: "postgres:16"), facts: [:], ownerKind: nil, parents: [], listenPorts: [])
+        #expect(!container.text(.vi).contains("\"args\""), "a container has an image, not a command line")
+    }
+}

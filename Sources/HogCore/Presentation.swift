@@ -36,9 +36,17 @@ public enum Presentation {
     }
 
     /// No catalog entry, big enough, not hard-protected (macOS itself), not part of an app (a "Google Chrome Helper"
-    /// is explained by its app), a process: something to ask about.
+    /// is explained by its app), a process, not just started: something to ask about.
     public static func isUnknownCandidate(_ i: Item) -> Bool {
         (i.catalogId.value ?? "").isEmpty && i.protection.value?.level != .hard && i.kind == .process
             && i.facts["owner.kind"] != .string("app") && (i.footprintBytes.value ?? 0) >= unknownMinBytes
+            && !justStarted(i.facts["age_s"].flatMap { if case .int(let a) = $0 { a } else { nil } })
     }
+
+    /// Younger than this, a program is usually a command of a moment (a check, a hook a Claude session runs) that is gone
+    /// before anyone could ask about it: not offered as "not known yet" (user 2026-10-27, two pastes of 0-second programs).
+    public static let unknownMinAgeS: Int64 = 10
+
+    /// Measured and younger than `unknownMinAgeS`; an unmeasured age does not hide anything.
+    public static func justStarted(_ ageS: Int64?) -> Bool { ageS.map { $0 < unknownMinAgeS } ?? false }
 }

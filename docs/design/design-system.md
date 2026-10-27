@@ -42,7 +42,7 @@ macos 27"*.
 | Lý do dọn | `.orange` rảnh · `.red` ăn nhiều / lỗi | nhãn tròn trong "Nên dọn" |
 | Chữ | `.title3.semibold` tiêu đề · `.headline` đầu mục · `.callout` thân · `.caption` phụ; số `monospacedDigit` | |
 | Dự án | `.tint` (màu nhấn của máy): biểu tượng `folder.fill`, nhãn "dự án" | |
-| Chưa rõ | `questionmark.circle` `.orange` | thứ không có trong danh mục, không thuộc app, không phải công cụ macOS, từ 20 MB |
+| Chưa rõ | `questionmark.circle` `.orange` | thứ không có trong danh mục, không thuộc app, không phải công cụ macOS, từ 20 MB, đã chạy từ 10 giây (lệnh chớp nhoáng không hiện) |
 
 ## Component (`Sources/HogBar/Components.swift`, `Pages.swift`)
 

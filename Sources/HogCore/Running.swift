@@ -345,7 +345,7 @@ public struct Overview: Sendable, Equatable {
     /// not a macOS or system tool, and big enough to matter. Those get "?" and "copy info" (reviewer 2026-10-27: the first
     /// rule marked 244 lines, every small macOS daemon included).
     static func isUnknownProgram(_ p: ProcessRecord) -> Bool {
-        guard (p.footprintBytes.value ?? 0) >= unknownMinBytes else { return false }
+        guard (p.footprintBytes.value ?? 0) >= unknownMinBytes, !Presentation.justStarted(p.ageS.value) else { return false }
         let path = p.exePath.value
         return path.flatMap(Ownership.appBundle) == nil && Ownership.isSystemExecutable(path) != true
     }
