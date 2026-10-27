@@ -19,7 +19,7 @@ import Testing
         for e in Explanations.load(b("explain")).glossary.values {
             texts += [("\(e.id).plain", e.plain), ("\(e.id).how_to_read", e.howToRead), ("\(e.id).act", e.act)]
         }
-        #expect(texts.count == 23 * 2 + 30 * 3)
+        #expect(texts.count == 24 * 2 + 30 * 3)
         for (name, t) in texts {
             for lang in Lang.allCases {
                 let points = Format.points(t.text(lang) ?? "")

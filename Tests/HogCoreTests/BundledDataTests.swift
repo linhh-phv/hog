@@ -10,7 +10,7 @@ import Testing
 
     @Test func catalogLoadsWithoutWarnings() {
         #expect(catalog.warnings.isEmpty, "\(catalog.warnings)")
-        #expect(catalog.entries.count == 23)
+        #expect(catalog.entries.count == 24)
         #expect(catalog.entries.values.filter { $0.detachedByDesign == true }.map(\.id).sorted() == ["gradle-daemon", "screen", "tmux-server"])
     }
 
@@ -58,6 +58,10 @@ import Testing
         // Argument shapes measured on a real machine (2026-10-26), with fake paths.
         #expect(catalog.match(MatchSubject(exeName: "Code Helper (Plugin)", args: "Code Helper (Plugin) --max-old-space-size=3072 /x/typescript/lib/tsserver.js --useNodeIpc")) == "tsserver")
         #expect(catalog.match(MatchSubject(exeName: "Code Helper (Plugin)", args: "Code Helper (Plugin) /x/typingsInstaller.js --typesMapLocation /x/typesMap.json")) == "typings-installer")
+        // From a pasted `hog.share/1` (2026-10-27): a Jest worker started by a test run of a Claude session.
+        #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/web-app/node_modules/jest-worker/build/workers/processChild.js")) == "jest-worker")
+        #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/web-app/server.js")) == nil, "not every node program")
+        #expect(catalog.match(MatchSubject(exeName: "python3", args: "python3 /x/jest-worker/run.py")) == nil, "node only")
         #expect(catalog.match(MatchSubject(exeName: "Code Helper (Plugin)", args: "Code Helper (Plugin) --type=utility --utility-sub-type=node.mojom.NodeService --inspect-port=0")) == "vscode-extension-host")
         #expect(catalog.match(MatchSubject(exeName: "Code Helper", args: "Code Helper --type=utility --utility-sub-type=node.mojom.NodeService", vscodeRole: "file-watcher")) == "vscode-file-watcher")
         #expect(catalog.match(MatchSubject(exeName: "Code Helper", args: "Code Helper --type=gpu-process")) == "vscode-gpu")

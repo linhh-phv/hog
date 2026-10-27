@@ -506,6 +506,9 @@ Ghi đè cục bộ: `~/.config/hog/catalog.d/*.json`, cùng quy tắc như mụ
 | 10 | `watchman` | theo dõi file, unix socket | ✔ | 20 | `android-emulator` | emulator Android (qemu) | ○ |
 | 21 | `tmux-server` | máy chủ tmux, `detached_by_design` | ○ | 22 | `screen` | GNU screen, `detached_by_design` | ✔ (qa) |
 
+Thêm sau bộ khởi đầu: `shell`; `jest-worker` (2026-10-27 — tiến trình phụ của Jest/Metro/Next.js, `exe: node` + `args_contains:
+"jest-worker/"`, `stop: manual`; từ thông tin "Chép thông tin" user dán vào. `respawns: by-parent` là suy luận — chưa thử tắt một worker để xem Jest có mở lại không).
+
 Pylance chưa có ✔ vì lúc đo nó không chạy (số đo "2 GB + 1,3 GB" là từ lần máy nặng trước).
 
 ## 8. Hành động dừng — luật an toàn cứng

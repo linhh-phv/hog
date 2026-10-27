@@ -1,0 +1,31 @@
+{
+  "id": "jest-worker",
+  "name": {
+    "vi": "Tiến trình phụ chạy test (Jest)",
+    "en": "Test worker (Jest)"
+  },
+  "family": "test-runner",
+  "summary": {
+    "vi": "Tiến trình phụ mà Jest (chạy test) mở ra để chạy nhiều phần cùng lúc; Metro, Next.js cũng dùng loại này khi build.\nMột đợt chạy mở nhiều cái, mỗi cái có thể ăn gần hết một nhân CPU; xong việc thì tự thoát.",
+    "en": "Helper processes Jest (the test runner) opens to run several parts at once; Metro and Next.js use them too when building.\nOne run opens several, each can use most of a CPU core; they exit when the work is done."
+  },
+  "stop_effect": {
+    "vi": "Đợt chạy test/build đang dở sẽ hỏng hoặc báo lỗi.\nMuốn dừng: dừng cả lệnh đã chạy nó (Ctrl-C trong terminal đó), hoặc đợi nó tự xong.",
+    "en": "The test or build run in progress breaks or reports errors.\nTo stop it: stop the command that started it (Ctrl-C in that terminal), or let it finish."
+  },
+  "respawns": "by-parent",
+  "stop": {
+    "strategy": "manual"
+  },
+  "match": [
+    {
+      "exe": "node",
+      "args_contains": "jest-worker/"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-27",
+    "source": "claude",
+    "verified": true
+  }
+}
