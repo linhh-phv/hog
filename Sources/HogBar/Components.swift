@@ -236,7 +236,8 @@ struct EntryRow: View {
                 Spacer(minLength: 4)
                 if let c = e.cleanup { Text(c.why).font(.caption).foregroundStyle(c.whyKind == .idle ? .orange : .red) }
                 Text(e.bytes.map { Format.bytes($0, model.lang) } ?? "–").monospacedDigit().frame(minWidth: 54, alignment: .trailing)
-                Text(e.cpu.map { Format.percent($0, model.lang) } ?? "–").monospacedDigit().foregroundStyle(.secondary)
+                Text(e.cpu.map { Format.percent($0, model.lang) } ?? "–").monospacedDigit()
+                    .foregroundStyle((e.cpu ?? 0) >= Overview.heavyCPU ? .red : .secondary)
                     .frame(minWidth: 40, alignment: .trailing)
             }
             .font(.callout)

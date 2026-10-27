@@ -284,7 +284,8 @@ struct AllPage: View {
 
     func entries(_ g: Overview.Group) -> [Overview.Entry] {
         guard !query.isEmpty, !g.name.lowercased().contains(query) else { return g.entries }
-        return g.entries.filter { $0.name.lowercased().contains(query) || $0.detail.lowercased().contains(query) }
+        // With the group's name: "chrome helper" finds "Helper (Renderer)" under Google Chrome, as Activity Monitor names it.
+        return g.entries.filter { "\(g.name) \($0.name) \($0.detail)".lowercased().contains(query) }
     }
 }
 
