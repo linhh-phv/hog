@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>hog — hướng B: các màn</title>
+<style>
+:root{--bg:#F4F4F5;--raised:#FFF;--text:#1D1D1F;--text2:#5D5D62;--sep:rgba(0,0,0,.10);--fill:rgba(0,0,0,.05);
+--accent:#0062CC;--ok:#1A7F37;--warn:#A14A00;--red:#C4001A;--bar:#0062CC;--track:rgba(0,0,0,.08)}
+.dark{--bg:#2A2A2C;--raised:#3A3A3C;--text:#F5F5F7;--text2:#B0B0B5;--sep:rgba(255,255,255,.12);--fill:rgba(255,255,255,.07);
+--accent:#4DA3FF;--ok:#4CD964;--warn:#FFB340;--red:#FF6B6B;--bar:#4DA3FF;--track:rgba(255,255,255,.12)}
+*{box-sizing:border-box;margin:0}
+body{font:13px -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;background:#d9dadf;padding:24px;display:grid;grid-template-columns:repeat(4,340px);gap:28px 24px;align-items:start}
+.cap{font-size:12px;color:#3a3a3e;margin-bottom:8px;font-weight:600}.cap small{display:block;font-weight:400;color:#555;margin-top:2px}
+.menu{width:340px;background:var(--bg);color:var(--text);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.22);overflow:hidden;position:relative}
+/* hero */
+.hero{display:flex;gap:14px;align-items:center;padding:14px 14px 8px}
+.ring{width:62px;height:62px;position:relative;flex:none}
+.ring svg{transform:rotate(-90deg);display:block}
+.ring b{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-variant-numeric:tabular-nums;line-height:1.1;text-align:center}
+.ring b small{display:block;font-size:9.5px;color:var(--text2);font-weight:500}
+.state{font-size:17px;font-weight:650}
+.sub{font-size:12px;color:var(--text2);margin-top:2px}
+.chips{display:flex;gap:6px;padding:4px 14px 12px;flex-wrap:nowrap}
+.chip{flex:1;background:var(--raised);border:.5px solid var(--sep);border-radius:8px;padding:5px 6px;text-align:center;min-height:40px}
+.chip b{display:block;font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip span{font-size:10px;color:var(--text2)}
+.chip.on{outline:2px solid var(--accent);outline-offset:-1px}
+/* suggestion card */
+.card{margin:0 10px 10px;background:var(--raised);border:.5px solid var(--sep);border-radius:10px;overflow:hidden}
+.card h5{display:flex;justify-content:space-between;align-items:center;padding:9px 12px 7px;font-size:12px}
+.card h5 span{color:var(--text2);font-weight:500}
+.s{display:flex;align-items:center;gap:8px;padding:0 12px;min-height:38px;border-top:.5px solid var(--sep)}
+.box{width:15px;height:15px;border-radius:4px;border:1.2px solid var(--text2);flex:none;display:grid;place-items:center;font-size:10px;color:#fff}
+.box.on{background:var(--accent);border-color:var(--accent)} .box.off{opacity:.35}
+.s em{font-style:normal;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.why{font-size:11px;padding:2px 6px;border-radius:5px;background:var(--fill);color:var(--text2);white-space:nowrap}
+.why.idle{color:var(--warn)} .why.heavy{color:var(--red)} .why.sel{outline:1.5px solid var(--accent)}
+.num{font-variant-numeric:tabular-nums;color:var(--text2);font-size:12px;min-width:50px;text-align:right}
+.link{color:var(--accent);font-size:11.5px}
+.cta{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:.5px solid var(--sep);font-size:11.5px;color:var(--text2)}
+.btn{font-size:12px;font-weight:500;border:.5px solid var(--sep);background:var(--raised);color:var(--text);border-radius:6px;padding:5px 12px}
+.btn.danger{background:var(--red);color:#fff;border-color:transparent}
+.expl{padding:8px 12px 10px;border-top:.5px solid var(--sep);background:var(--fill);font-size:12px;color:var(--text2);display:grid;gap:6px}
+.expl .acts{display:flex;gap:6px;justify-content:flex-end}
+/* running */
+.disc{display:flex;justify-content:space-between;align-items:center;padding:0 14px;min-height:38px;font-size:12.5px;border-top:.5px solid var(--sep)}
+.disc span{color:var(--text2);font-size:12px}
+.p{display:grid;grid-template-columns:1fr 62px 38px;gap:6px;align-items:center;padding:0 14px;min-height:34px;font-size:12.5px}
+.p .n{text-align:right;font-variant-numeric:tabular-nums} .p .c{text-align:right;color:var(--text2);font-variant-numeric:tabular-nums}
+.bar{height:3px;background:var(--track);border-radius:2px;margin-top:3px;overflow:hidden}.bar::after{content:"";display:block;height:3px;width:var(--w);background:var(--bar)}
+.p.sel{background:var(--fill)}
+.q{font-size:10px;color:var(--text2);border:1px solid var(--text2);border-radius:50%;width:13px;height:13px;display:inline-grid;place-items:center;margin-left:4px;opacity:.8}
+.det{margin:2px 10px 8px;background:var(--raised);border:.5px solid var(--sep);border-radius:10px;padding:10px 12px;display:grid;gap:6px;font-size:12px}
+.det p{color:var(--text2)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px}.kv span:nth-child(odd){color:var(--text2)}
+.foot{display:flex;justify-content:space-between;padding:8px 14px;border-top:.5px solid var(--sep);font-size:11px;color:var(--text2)}.foot a{color:var(--accent)}
+/* overlays */
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.25)}
+.sheet{position:absolute;left:12px;right:12px;top:70px;background:var(--bg);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3);padding:14px;display:grid;gap:8px}
+.sheet h4{font-size:15px}
+.g{font-size:11.5px;white-space:nowrap;flex:none}.g.ok{color:var(--ok)}.g.ask{color:var(--warn)}
+.pop{position:absolute;left:96px;top:118px;width:230px;background:var(--raised);border:.5px solid var(--sep);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:10px 12px;font-size:12px;display:grid;gap:5px}
+.pop p{color:var(--text2)}
+.empty{margin:0 10px 10px;padding:10px 12px;background:var(--raised);border:.5px solid var(--sep);border-radius:10px;font-size:12.5px;color:var(--text2);display:flex;gap:8px;align-items:center}
+.spin{width:12px;height:12px;border:2px solid var(--track);border-top-color:var(--text2);border-radius:50%}
+.skel{height:10px;border-radius:5px;background:var(--fill);margin:6px 0}
+.notes{grid-column:1/-1;font-size:12.5px;line-height:1.55;color:#2b2b2e;max-width:1400px}
+.notes h3{font-size:14px;margin:6px 0}.notes li{margin-left:18px}
+</style></head><body>
+
+<!-- 1 -->
+<div><div class="cap">1 · Mặc định<small>trạng thái + số chính + việc nên làm; còn lại gập</small></div>
+<div class="menu">
+  <div class="hero">
+    <div class="ring"><svg width="62" height="62"><circle cx="31" cy="31" r="26" fill="none" stroke="var(--track)" stroke-width="6"/><circle cx="31" cy="31" r="26" fill="none" stroke="var(--ok)" stroke-width="6" stroke-dasharray="163" stroke-dashoffset="44" stroke-linecap="round"/></svg><b>73%<small>RAM</small></b></div>
+    <div><div class="state" style="color:var(--ok)">Máy ổn</div><div class="sub">Tắt 3 thứ để lấy lại 0,9 GB</div></div>
+  </div>
+  <div class="chips"><div class="chip"><b>12%</b><span>CPU</span></div><div class="chip"><b>6,9 GB</b><span>Đã nén</span></div><div class="chip"><b>5,6 GB</b><span>Swap</span></div><div class="chip"><b style="color:var(--ok)">mát</b><span>Nhiệt</span></div></div>
+  <div class="card">
+    <h5>Nên tắt <span>0,9 GB</span></h5>
+    <div class="s"><span class="box on">✓</span><em>Watchman</em><span class="why idle">rảnh 3h</span><span class="num">323 MB</span></div>
+    <div class="s"><span class="box on">✓</span><em>node</em><span class="why heavy">88% CPU</span><span class="num">393 MB</span></div>
+    <div class="s"><span class="box">&nbsp;</span><em>Claude · hub</em><span class="why idle">rảnh 2h</span><span class="num">216 MB</span></div>
+    <div class="cta"><span>Đã chọn 2</span><span class="btn danger">Tắt 2 thứ</span></div>
+  </div>
+  <div class="disc"><b>Đang chạy</b><span>VS Code 10,8 GB · Chrome · Discord ›</span></div>
+  <div class="foot"><span>14:33</span><span><a>Làm mới</a> · <a>⚙</a></span></div>
+</div></div>
+
+<!-- 2 -->
+<div><div class="cap">2 · Bấm "rảnh 3h"<small>lý do mở ngay dưới dòng, một câu</small></div>
+<div class="menu">
+  <div class="hero">
+    <div class="ring"><svg width="62" height="62"><circle cx="31" cy="31" r="26" fill="none" stroke="var(--track)" stroke-width="6"/><circle cx="31" cy="31" r="26" fill="none" stroke="var(--ok)" stroke-width="6" stroke-dasharray="163" stroke-dashoffset="44" stroke-linecap="round"/></svg><b>73%<small>RAM</small></b></div>
+    <div><div class="state" style="color:var(--ok)">Máy ổn</div><div class="sub">Tắt 3 thứ để lấy lại 0,9 GB</div></div>
+  </div>
+  <div class="chips"><div class="chip"><b>12%</b><span>CPU</span></div><div class="chip"><b>6,9 GB</b><span>Đã nén</span></div><div class="chip"><b>5,6 GB</b><span>Swap</span></div><div class="chip"><b style="color:var(--ok)">mát</b><span>Nhiệt</span></div></div>
+  <div class="card">
+    <h5>Nên tắt <span>0,9 GB</span></h5>
+    <div class="s"><span class="box on">✓</span><em>Watchman</em><span class="why idle sel">rảnh 3h</span><span class="num">323 MB</span></div>
+    <div class="expl">Theo dõi file cho Metro/Jest; 3 giờ không công cụ nào đăng ký. Tắt không mất dữ liệu, lần sau cần thì tự bật lại.
+      <div class="acts"><span class="link">Chép thông tin</span></div></div>
+    <div class="s"><span class="box on">✓</span><em>node</em><span class="why heavy">88% CPU</span><span class="num">393 MB</span></div>
+    <div class="s"><span class="box">&nbsp;</span><em>Claude · hub</em><span class="why idle">rảnh 2h</span><span class="num">216 MB</span></div>
+    <div class="cta"><span>Đã chọn 2</span><span class="btn danger">Tắt 2 thứ</span></div>
+  </div>
+  <div class="foot"><span>14:33</span><span><a>Làm mới</a> · <a>⚙</a></span></div>
+</div></div>
+
+<!-- 3 -->
+<div><div class="cap">3 · Mở "Đang chạy" + bấm một dòng<small>top theo RAM, cột CPU; dòng mở ra chi tiết</small></div>
+<div class="menu">
+  <div class="hero">
+    <div class="ring"><svg width="62" height="62"><circle cx="31" cy="31" r="26" fill="none" stroke="var(--track)" stroke-width="6"/><circle cx="31" cy="31" r="26" fill="none" stroke="var(--ok)" stroke-width="6" stroke-dasharray="163" stroke-dashoffset="44" stroke-linecap="round"/></svg><b>73%<small>RAM</small></b></div>
+    <div><div class="state" style="color:var(--ok)">Máy ổn</div><div class="sub">Tắt 3 thứ để lấy lại 0,9 GB</div></div>
+  </div>
+  <div class="disc"><b>Nên tắt · 3</b><span>Watchman, node, Claude ›</span></div>
+  <div class="disc"><b>Đang chạy</b><span>RAM · CPU ⌄</span></div>
+  <div class="p"><div>Visual Studio Code<div class="bar" style="--w:100%"></div></div><span class="n">10,8 GB</span><span class="c">14%</span></div>
+  <div class="p sel"><div>Google Chrome<div class="bar" style="--w:32%"></div></div><span class="n">3,4 GB</span><span class="c">6%</span></div>
+  <div class="det"><b>Google Chrome · 12 tiến trình</b>
+    <div class="kv"><span>RAM</span><span>3,4 GB (phần lớn là tab)</span><span>CPU</span><span>6% một nhân</span><span>Chạy</span><span>3 ngày</span></div>
+    <div style="display:flex;justify-content:flex-end;gap:6px"><span class="btn">Chép thông tin</span></div></div>
+  <div class="p"><div>Discord<div class="bar" style="--w:9%"></div></div><span class="n">857 MB</span><span class="c">1%</span></div>
+  <div class="p"><div>python3.12<span class="q">?</span><div class="bar" style="--w:3%"></div></div><span class="n">256 MB</span><span class="c">0%</span></div>
+  <div class="p"><div>macOS và hệ thống<div class="bar" style="--w:0%"></div></div><span class="n">—</span><span class="c">34%</span></div>
+  <div class="foot"><span>14:33</span><span><a>Làm mới</a> · <a>⚙</a></span></div>
+</div></div>
+
+<!-- 4 -->
+<div><div class="cap">4 · Bấm "Tắt 2 thứ"<small>một hộp xác nhận cho cả nhóm; cổng an toàn từng thứ</small></div>
+<div class="menu">
+  <div class="hero"><div class="ring"><svg width="62" height="62"><circle cx="31" cy="31" r="26" fill="none" stroke="var(--track)" stroke-width="6"/></svg></div><div><div class="state">Máy ổn</div></div></div>
+  <div style="height:330px"></div>
+  <div class="dim"></div>
+  <div class="sheet">
+    <h4>Tắt 2 thứ? · lấy lại 0,7 GB</h4>
+    <div class="s" style="border:0;padding:0;min-height:30px"><em>Watchman</em><span class="g ok">✓ an toàn</span></div>
+    <div class="g" style="color:var(--text2);margin-top:-6px">Không mất dữ liệu · tự bật lại khi cần</div>
+    <div class="s" style="border:0;padding:0;min-height:30px"><em>node · server.js</em><span class="g ask">? hỏi trước</span></div>
+    <div class="g" style="color:var(--text2);margin-top:-6px">Đang mở cổng 3000 · tắt thì trang dev dừng</div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px"><span class="btn">Huỷ</span><span class="btn danger">Tắt</span></div>
+  </div>
+</div></div>
+
+<!-- 5 -->
+<div><div class="cap">5 · Bấm một con số (Swap)<small>giải nghĩa thay cho các nút "?"</small></div>
+<div class="menu">
+  <div class="hero">
+    <div class="ring"><svg width="62" height="62"><circle cx="31" cy="31" r="26" fill="none" stroke="var(--track)" stroke-width="6"/><circle cx="31" cy="31" r="26" fill="none" stroke="var(--ok)" stroke-width="6" stroke-dasharray="163" stroke-dashoffset="44" stroke-linecap="round"/></svg><b>73%<small>RAM</small></b></div>
+    <div><div class="state" style="color:var(--ok)">Máy ổn</div><div class="sub">Tắt 3 thứ để lấy lại 0,9 GB</div></div>
+  </div>
+  <div class="chips"><div class="chip"><b>12%</b><span>CPU</span></div><div class="chip"><b>6,9 GB</b><span>Đã nén</span></div><div class="chip on"><b>5,6 GB</b><span>Swap</span></div><div class="chip"><b style="color:var(--ok)">mát</b><span>Nhiệt</span></div></div>
+  <div style="height:230px"></div>
+  <div class="foot"><span>14:33</span><span><a>Làm mới</a> · <a>⚙</a></span></div>
+  <div class="pop" style="left:110px;top:136px"><b>Đẩy ra ổ đĩa (swap)</b><p>RAM không đủ chỗ nên macOS chuyển bớt dữ liệu ra ổ đĩa. Có vài GB là bình thường; tăng liên tục + máy chậm = thiếu RAM.</p><p style="font-size:11px">Activity Monitor: Swap Used</p></div>
+</div></div>
+
+<!-- 6 -->
+<div><div class="cap">6 · Máy nặng / nóng<small>màu + chữ + hình; câu phụ nói vì sao</small></div>
+<div class="menu">
+  <div class="hero">
+    <div class="ring"><svg width="62" height="62"><circle cx="31" cy="31" r="26" fill="none" stroke="var(--track)" stroke-width="6"/><circle cx="31" cy="31" r="26" fill="none" stroke="var(--red)" stroke-width="6" stroke-dasharray="163" stroke-dashoffset="8" stroke-linecap="round"/></svg><b>96%<small>RAM</small></b></div>
+    <div><div class="state" style="color:var(--red)">▲ Máy nặng</div><div class="sub">Thiếu RAM và đang nóng · VS Code 310% CPU</div></div>
+  </div>
+  <div class="chips"><div class="chip"><b style="color:var(--red)">78%</b><span>CPU</span></div><div class="chip"><b>9,1 GB</b><span>Đã nén</span></div><div class="chip"><b style="color:var(--warn)">7,8 GB</b><span>Swap</span></div><div class="chip"><b style="color:var(--warn)">▲ nóng</b><span>Nhiệt</span></div></div>
+  <div class="card">
+    <h5>Nên tắt <span>1,4 GB</span></h5>
+    <div class="s"><span class="box on">✓</span><em>node</em><span class="why heavy">310% CPU</span><span class="num">393 MB</span></div>
+    <div class="s"><span class="box on">✓</span><em>Watchman</em><span class="why idle">rảnh 3h</span><span class="num">323 MB</span></div>
+    <div class="s"><span class="box off"></span><em>Claude · api</em><span class="link">Cách đóng</span><span class="num">688 MB</span></div>
+    <div class="cta"><span>Đã chọn 2</span><span class="btn danger">Tắt 2 thứ</span></div>
+  </div>
+  <div class="disc"><b>Đang chạy</b><span>VS Code 11,6 GB · Chrome ›</span></div>
+  <div class="foot"><span>14:33</span><span><a>Làm mới</a> · <a>⚙</a></span></div>
+</div></div>
+
+<!-- 7 -->
+<div><div class="cap">7 · Không có gì nên tắt<small>một dòng, không thẻ rỗng</small></div>
+<div class="menu">
+  <div class="hero">
+    <div class="ring"><svg width="62" height="62"><circle cx="31" cy="31" r="26" fill="none" stroke="var(--track)" stroke-width="6"/><circle cx="31" cy="31" r="26" fill="none" stroke="var(--ok)" stroke-width="6" stroke-dasharray="163" stroke-dashoffset="70" stroke-linecap="round"/></svg><b>57%<small>RAM</small></b></div>
+    <div><div class="state" style="color:var(--ok)">Máy ổn</div><div class="sub">Không có gì cần tắt</div></div>
+  </div>
+  <div class="chips"><div class="chip"><b>8%</b><span>CPU</span></div><div class="chip"><b>2,1 GB</b><span>Đã nén</span></div><div class="chip"><b>0</b><span>Swap</span></div><div class="chip"><b style="color:var(--ok)">mát</b><span>Nhiệt</span></div></div>
+  <div class="disc"><b>Đang chạy</b><span>VS Code 4,2 GB · Safari ›</span></div>
+  <div class="foot"><span>14:33</span><span><a>Làm mới</a> · <a>⚙</a></span></div>
+</div></div>
+
+<!-- 8 -->
+<div><div class="cap">8 · Lần đầu mở (đang quét ~2 s)<small>khung giữ chỗ, không chữ dài</small></div>
+<div class="menu">
+  <div class="hero">
+    <div class="ring"><svg width="62" height="62"><circle cx="31" cy="31" r="26" fill="none" stroke="var(--track)" stroke-width="6"/></svg></div>
+    <div style="flex:1"><div class="state" style="display:flex;gap:8px;align-items:center"><span class="spin"></span>Đang xem máy…</div><div class="skel" style="width:70%"></div></div>
+  </div>
+  <div class="chips"><div class="chip"><div class="skel"></div><span>CPU</span></div><div class="chip"><div class="skel"></div><span>Đã nén</span></div><div class="chip"><div class="skel"></div><span>Swap</span></div><div class="chip"><div class="skel"></div><span>Nhiệt</span></div></div>
+  <div class="foot"><span>—</span><span><a>⚙</a></span></div>
+</div></div>
+
+<!-- 9 dark -->
+<div><div class="cap">9 · Tối (màn 1)</div>
+<div class="menu dark">
+  <div class="hero">
+    <div class="ring"><svg width="62" height="62"><circle cx="31" cy="31" r="26" fill="none" stroke="var(--track)" stroke-width="6"/><circle cx="31" cy="31" r="26" fill="none" stroke="var(--ok)" stroke-width="6" stroke-dasharray="163" stroke-dashoffset="44" stroke-linecap="round"/></svg><b>73%<small>RAM</small></b></div>
+    <div><div class="state" style="color:var(--ok)">Máy ổn</div><div class="sub">Tắt 3 thứ để lấy lại 0,9 GB</div></div>
+  </div>
+  <div class="chips"><div class="chip"><b>12%</b><span>CPU</span></div><div class="chip"><b>6,9 GB</b><span>Đã nén</span></div><div class="chip"><b>5,6 GB</b><span>Swap</span></div><div class="chip"><b style="color:var(--ok)">mát</b><span>Nhiệt</span></div></div>
+  <div class="card">
+    <h5>Nên tắt <span>0,9 GB</span></h5>
+    <div class="s"><span class="box on">✓</span><em>Watchman</em><span class="why idle">rảnh 3h</span><span class="num">323 MB</span></div>
+    <div class="s"><span class="box on">✓</span><em>node</em><span class="why heavy">88% CPU</span><span class="num">393 MB</span></div>
+    <div class="s"><span class="box">&nbsp;</span><em>Claude · hub</em><span class="why idle">rảnh 2h</span><span class="num">216 MB</span></div>
+    <div class="cta"><span>Đã chọn 2</span><span class="btn danger">Tắt 2 thứ</span></div>
+  </div>
+  <div class="disc"><b>Đang chạy</b><span>VS Code 10,8 GB · Chrome · Discord ›</span></div>
+  <div class="foot"><span>14:33</span><span><a>Làm mới</a> · <a>⚙</a></span></div>
+</div></div>
+
+<div class="notes"><h3>Luật của hướng B (đề xuất)</h3><ul>
+<li><b>Vòng RAM</b> = RAM đã dùng như Activity Monitor (App + Wired + Nén), <b>màu theo áp lực bộ nhớ</b>: xanh bình thường, cam cảnh báo, đỏ nghiêm trọng. Bấm vòng → giải nghĩa.</li>
+<li><b>Trạng thái</b>: "Máy ổn" / "Máy hơi nặng" / "▲ Máy nặng" / "▲ Máy nóng" — lấy mức xấu nhất giữa áp lực, nhiệt, CPU bận. Câu phụ một dòng: việc nên làm, hoặc lý do nặng.</li>
+<li><b>4 ô số</b>: CPU · Đã nén · Swap · Nhiệt; không còn nút "?" — <b>bấm vào ô</b> mới hiện giải nghĩa. Số chuyển cam/đỏ khi đáng lo.</li>
+<li><b>Nên tắt</b>: gồm "có thể tắt" (đã chọn sẵn), "hỏi trước" và "nặng" (chưa chọn). Mỗi dòng: tên · lý do 2–3 chữ · RAM. Bấm lý do → một câu giải thích + "Chép thông tin". Thứ chỉ đóng tay được (phiên Claude) có "Cách đóng" thay ô chọn. Không có gì → thẻ biến thành câu phụ "Không có gì cần tắt".</li>
+<li><b>Tắt N thứ</b>: một hộp xác nhận cho cả nhóm, mỗi thứ vẫn qua đủ cổng an toàn (✓ an toàn / ? hỏi trước / ✗ bị chặn — thứ bị chặn tự bỏ khỏi nhóm).</li>
+<li><b>Đang chạy</b>: gập mặc định (một dòng tóm tắt). Mở ra: top theo RAM, cột CPU, kể cả "macOS và hệ thống" (chỉ CPU); thứ chưa rõ có dấu "?"; bấm dòng → chi tiết (số đo, Chép thông tin, Dừng nếu được).</li>
+<li>Bỏ khỏi màn chính (vào ⚙ hoặc khi bấm): câu kết luận dài, thanh RAM nhiều màu, "Chưa rõ là gì" riêng, "Chưa đo được" (thành dấu ! nhỏ ở chân, bấm để xem).</li>
+</ul></div>
+</body></html>

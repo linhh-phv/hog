@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>hog — hướng B: Kết luận trước</title>
+<style>
+:root{--bg:#F4F4F5;--raised:#FFF;--text:#1D1D1F;--text2:#5D5D62;--sep:rgba(0,0,0,.10);--fill:rgba(0,0,0,.05);
+--accent:#0062CC;--ok:#1A7F37;--warn:#A14A00;--red:#C4001A;--bar1:#0062CC}
+*{box-sizing:border-box;margin:0}
+body{font:13px -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;background:#d9dadf;color:var(--text);padding:24px;display:flex;gap:28px;align-items:flex-start}
+.cap{font-size:12px;color:#3a3a3e;margin-bottom:8px;font-weight:600}
+.menu{width:340px;background:var(--bg);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.22);overflow:hidden}
+.hero{display:flex;align-items:center;gap:14px;padding:14px 14px 10px}
+.ring{width:64px;height:64px;position:relative;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;font-variant-numeric:tabular-nums}
+.ring small{position:absolute;bottom:-14px;left:0;right:0;text-align:center;font-size:10.5px;color:var(--text2)}
+.state{font-size:17px;font-weight:600}.state.ok{color:var(--ok)}
+.sub{font-size:12px;color:var(--text2);margin-top:2px}
+.facts{display:flex;gap:10px;margin-top:6px;font-size:11.5px;color:var(--text2)}.facts b{color:var(--text);font-variant-numeric:tabular-nums}
+.card{margin:14px 10px 10px;background:var(--raised);border:.5px solid var(--sep);border-radius:10px}
+.card h5{display:flex;justify-content:space-between;align-items:center;padding:9px 12px 6px;font-size:12px}
+.card h5 span{color:var(--text2);font-weight:500}
+.s{display:flex;align-items:center;gap:8px;padding:0 12px;min-height:36px;border-top:.5px solid var(--sep)}
+.s input{width:15px;height:15px;accent-color:var(--accent)}
+.s em{font-style:normal;flex:1}
+.why{font-size:11px;color:var(--text2)}
+.s .num{font-variant-numeric:tabular-nums;color:var(--text2);font-size:12px}
+.cta{display:flex;justify-content:flex-end;padding:8px 12px;border-top:.5px solid var(--sep)}
+.btn{font-size:12px;font-weight:500;border:.5px solid var(--sep);background:var(--raised);border-radius:6px;padding:5px 12px}
+.btn.danger{background:var(--red);color:#fff;border-color:transparent}
+.disc{display:flex;justify-content:space-between;padding:9px 14px;font-size:12.5px;border-top:.5px solid var(--sep)}
+.disc span{color:var(--text2)}
+.p{display:grid;grid-template-columns:1fr 70px 40px;gap:6px;align-items:center;padding:0 14px;min-height:30px;font-size:12.5px}
+.p .num{text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:3px;background:var(--fill);border-radius:2px;margin-top:2px;overflow:hidden}.bar::after{content:"";display:block;height:3px;width:var(--w);background:var(--bar1)}
+.foot{display:flex;justify-content:space-between;padding:8px 14px;border-top:.5px solid var(--sep);font-size:11px;color:var(--text2)}.foot a{color:var(--accent)}
+.pop{margin:0 10px 10px;background:var(--raised);border:.5px solid var(--sep);border-radius:10px;padding:10px 12px;font-size:12px;display:grid;gap:5px}
+.pop p{color:var(--text2)}
+.note{width:300px;font-size:12.5px;line-height:1.5;color:#2b2b2e}.note h3{font-size:14px;margin-bottom:6px}
+</style></head><body>
+
+<div><div class="cap">B · Mặc định</div>
+<div class="menu">
+  <div class="hero">
+    <div class="ring"><svg width="64" height="64"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="6"/><circle cx="32" cy="32" r="27" fill="none" stroke="#1A7F37" stroke-width="6" stroke-dasharray="170" stroke-dashoffset="80" stroke-linecap="round"/></svg><b>52%</b></div>
+    <div><div class="state ok">Máy ổn</div><div class="sub">Có thể giải phóng 0,7 GB</div>
+      <div class="facts"><span>CPU <b>12%</b></span><span>Swap <b>5,6 GB</b></span><span>Nhiệt <b>mát</b></span></div></div>
+  </div>
+  <div class="card">
+    <h5>Nên tắt <span>3 · 0,7 GB</span></h5>
+    <div class="s"><input type="checkbox" checked><em>Watchman</em><span class="why">rảnh 3h</span><span class="num">323 MB</span></div>
+    <div class="s"><input type="checkbox" checked><em>node</em><span class="why">88% CPU</span><span class="num">393 MB</span></div>
+    <div class="s"><input type="checkbox"><em>Claude · hub</em><span class="why">rảnh 2h</span><span class="num">216 MB</span></div>
+    <div class="cta"><span class="btn danger">Tắt 2 thứ</span></div>
+  </div>
+  <div class="disc"><b>Đang chạy</b><span>VS Code, Chrome, Discord… ›</span></div>
+  <div class="foot"><span>14:33</span><span><a>Làm mới</a> · <a>⚙</a></span></div>
+</div></div>
+
+<div><div class="cap">B · Mở "Đang chạy" + bấm "rảnh 3h"</div>
+<div class="menu">
+  <div class="hero">
+    <div class="ring"><svg width="64" height="64"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="6"/><circle cx="32" cy="32" r="27" fill="none" stroke="#1A7F37" stroke-width="6" stroke-dasharray="170" stroke-dashoffset="80" stroke-linecap="round"/></svg><b>52%</b></div>
+    <div><div class="state ok">Máy ổn</div><div class="sub">Có thể giải phóng 0,7 GB</div>
+      <div class="facts"><span>CPU <b>12%</b></span><span>Swap <b>5,6 GB</b></span><span>Nhiệt <b>mát</b></span></div></div>
+  </div>
+  <div class="card">
+    <h5>Nên tắt <span>3 · 0,7 GB</span></h5>
+    <div class="s"><input type="checkbox" checked><em>Watchman</em><span class="why" style="color:var(--accent)">rảnh 3h</span><span class="num">323 MB</span></div>
+  </div>
+  <div class="pop"><b>Watchman</b><p>Theo dõi file cho Metro/Jest; không công cụ nào đăng ký 3 giờ. Tắt không mất dữ liệu.</p></div>
+  <div class="disc"><b>Đang chạy</b><span>⌄</span></div>
+  <div class="p"><div>Visual Studio Code<div class="bar" style="--w:100%"></div></div><span class="num">10,8 GB</span><span class="num">14%</span></div>
+  <div class="p"><div>Google Chrome<div class="bar" style="--w:32%"></div></div><span class="num">3,4 GB</span><span class="num">6%</span></div>
+  <div class="p"><div>Discord<div class="bar" style="--w:9%"></div></div><span class="num">857 MB</span><span class="num">1%</span></div>
+  <div class="foot"><span>14:33</span><span><a>Làm mới</a> · <a>⚙</a></span></div>
+</div></div>
+
+<div class="note"><h3>B — Kết luận trước</h3>
+<p><b>Ý tưởng:</b> trên cùng là trạng thái máy (vòng RAM + "Máy ổn/nặng" + 3 số phụ), ngay dưới là thẻ "Nên tắt" có ô chọn và một nút "Tắt N thứ". Danh sách "Đang chạy" gập lại, bấm mới mở.</p>
+<p><b>Hợp brief:</b> ít chữ nhất; câu trả lời và hành động lên đầu; chi tiết (lý do, danh sách đầy đủ) chỉ khi bấm.</p>
+<p><b>Đánh đổi:</b> phải bấm một lần mới thấy "cái gì đang chạy"; tắt nhiều thứ cùng lúc cần hộp xác nhận gộp.</p></div>
+</body></html>
