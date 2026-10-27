@@ -1,0 +1,31 @@
+{
+  "id": "react-native-bundle",
+  "name": {
+    "vi": "Đóng gói JS React Native (một lần)",
+    "en": "React Native JS bundle (one-shot)"
+  },
+  "family": "bundler",
+  "summary": {
+    "vi": "Bước build: gom JavaScript và ảnh của app React Native thành bundle để nhúng vào bản build iOS/Android (Re.Pack/webpack). Chạy một lần rồi tự thoát; bản release có thể ăn vài GB RAM và nhiều nhân CPU.",
+    "en": "Build step: packs a React Native app's JavaScript and assets into a bundle embedded in the iOS/Android build (Re.Pack/webpack). Runs once and exits; release builds can use several GB of RAM and multiple CPU cores."
+  },
+  "stop_effect": {
+    "vi": "Bản build đang chạy hỏng, không có bundle; phải build lại từ đầu.",
+    "en": "The running build fails without a bundle; the build must be restarted."
+  },
+  "respawns": "never",
+  "stop": {
+    "strategy": "signal"
+  },
+  "match": [
+    {
+      "exe": "node",
+      "args_contains": "react-native/cli.js webpack-bundle"
+    }
+  ],
+  "provenance": {
+    "added": "2026-10-27",
+    "source": "claude",
+    "verified": true
+  }
+}

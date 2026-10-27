@@ -10,7 +10,7 @@ import Testing
 
     @Test func catalogLoadsWithoutWarnings() {
         #expect(catalog.warnings.isEmpty, "\(catalog.warnings)")
-        #expect(catalog.entries.count == 23)
+        #expect(catalog.entries.count == 24)
         #expect(catalog.entries.values.filter { $0.detachedByDesign == true }.map(\.id).sorted() == ["gradle-daemon", "screen", "tmux-server"])
     }
 

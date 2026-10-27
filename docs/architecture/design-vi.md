@@ -493,6 +493,8 @@ Ghi đè cục bộ: `~/.config/hog/catalog.d/*.json`, cùng quy tắc như mụ
 | 10 | `watchman` | theo dõi file, unix socket | ✔ | 20 | `android-emulator` | emulator Android (qemu) | ○ |
 | 21 | `tmux-server` | máy chủ tmux, `detached_by_design` | ○ | 22 | `screen` | GNU screen, `detached_by_design` | ✔ (qa) |
 
+Thêm sau: `shell` (shell mở trong terminal) và `react-native-bundle` (bước đóng gói JS một lần của React Native qua Re.Pack, ✔).
+
 Pylance chưa có ✔ vì lúc đo nó không chạy (số đo "2 GB + 1,3 GB" là từ lần máy nặng trước).
 
 ## 8. Hành động dừng — luật an toàn cứng
