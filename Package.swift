@@ -16,6 +16,7 @@ let package = Package(
                 .copy("Resources/catalog"),
                 .copy("Resources/rules"),
                 .copy("Resources/explain"),
+                .copy("Resources/smc"),
             ]
         ),
         .executableTarget(name: "hog", dependencies: ["HogCore"]),

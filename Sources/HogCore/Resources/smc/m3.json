@@ -1,0 +1,42 @@
+{
+  "id": "m3",
+  "chips": [
+    "Apple M3",
+    "Apple M3 Pro",
+    "Apple M3 Max",
+    "Apple M3 Ultra"
+  ],
+  "cpu_keys": [
+    "Te05",
+    "Te0L",
+    "Te0P",
+    "Te0S",
+    "Tf04",
+    "Tf09",
+    "Tf0A",
+    "Tf0B",
+    "Tf0D",
+    "Tf0E",
+    "Tf44",
+    "Tf49",
+    "Tf4A",
+    "Tf4B",
+    "Tf4D",
+    "Tf4E"
+  ],
+  "gpu_keys": [
+    "Tf14",
+    "Tf18",
+    "Tf19",
+    "Tf1A",
+    "Tf24",
+    "Tf28",
+    "Tf29",
+    "Tf2A"
+  ],
+  "provenance": {
+    "added": "2026-10-27",
+    "source": "docs",
+    "verified": false
+  }
+}

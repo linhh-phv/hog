@@ -111,6 +111,18 @@ public enum SystemReader {
         return sysctlbyname(name, &v, &size, nil, 0) == 0 ? v : nil
     }
 
+    /// The chip, as `machdep.cpu.brand_string` names it ("Apple M1 Pro"): picks the SMC temperature keys.
+    public static func chipName() -> String? { sysctlString("machdep.cpu.brand_string") }
+
+    static func sysctlString(_ name: String) -> String? {
+        var size = 0
+        guard sysctlbyname(name, nil, &size, nil, 0) == 0, size > 0 else { return nil }
+        var buf = [CChar](repeating: 0, count: size)
+        guard sysctlbyname(name, &buf, &size, nil, 0) == 0 else { return nil }
+        let s = String(decoding: buf.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+        return s.isEmpty ? nil : s
+    }
+
     static func sysctlInt32(_ name: String) -> Int32? {
         var v: Int32 = 0
         var size = MemoryLayout<Int32>.size

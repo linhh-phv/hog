@@ -176,9 +176,10 @@ public struct Analyzer: Sendable {
             memory: memory,
             cpu: CPUInfo(userPct: Measured(scan.cpu?.user), sysPct: Measured(scan.cpu?.sys), idlePct: Measured(scan.cpu?.idle),
                          load: Measured(scan.system.load), thermal: Measured(scan.system.thermal), top: Measured(cpuTop)),
+            heat: scan.heat,
             headline: Headline(level: .ok, text: "", glossaryIds: []),
             sensors: scan.sensors, owners: owners, processes: processes, items: items, findings: findings,
-            warnings: (catalog.warnings + rules.warnings + explain.warnings).map(\.description))
+            warnings: (catalog.warnings + rules.warnings + explain.warnings).map(\.description) + scan.dataWarnings)
         snapshot.headline = headline(snapshot)
         return snapshot
     }

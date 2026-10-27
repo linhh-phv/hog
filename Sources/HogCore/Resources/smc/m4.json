@@ -1,0 +1,35 @@
+{
+  "id": "m4",
+  "chips": [
+    "Apple M4"
+  ],
+  "cpu_keys": [
+    "Te05",
+    "Te0S",
+    "Te09",
+    "Te0H",
+    "Tp01",
+    "Tp05",
+    "Tp09",
+    "Tp0D",
+    "Tp0V",
+    "Tp0Y",
+    "Tp0b",
+    "Tp0e"
+  ],
+  "gpu_keys": [
+    "Tg0G",
+    "Tg0H",
+    "Tg0K",
+    "Tg0L",
+    "Tg0d",
+    "Tg0e",
+    "Tg0j",
+    "Tg0k"
+  ],
+  "provenance": {
+    "added": "2026-10-27",
+    "source": "docs",
+    "verified": false
+  }
+}

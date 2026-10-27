@@ -12,6 +12,7 @@ public struct Snapshot: Codable, Sendable, Equatable {
     public var host: HostInfo
     public var memory: MemoryInfo
     public var cpu: CPUInfo
+    public var heat: HeatInfo
     public var headline: Headline
     public var sensors: [SensorStatus]
     public var owners: [Owner]
@@ -20,11 +21,11 @@ public struct Snapshot: Codable, Sendable, Equatable {
     public var findings: [Finding]
     public var warnings: [String]
 
-    public init(lang: Lang, takenAt: Date, hog: HogInfo, host: HostInfo, memory: MemoryInfo, cpu: CPUInfo,
+    public init(lang: Lang, takenAt: Date, hog: HogInfo, host: HostInfo, memory: MemoryInfo, cpu: CPUInfo, heat: HeatInfo = .unmeasured,
                 headline: Headline, sensors: [SensorStatus] = [], owners: [Owner] = [], processes: [ProcessRecord] = [],
                 items: [Item] = [], findings: [Finding] = [], warnings: [String] = []) {
         self.lang = lang; self.takenAt = takenAt; self.hog = hog; self.host = host; self.memory = memory
-        self.cpu = cpu; self.headline = headline; self.sensors = sensors; self.owners = owners
+        self.cpu = cpu; self.heat = heat; self.headline = headline; self.sensors = sensors; self.owners = owners
         self.processes = processes; self.items = items; self.findings = findings; self.warnings = warnings
     }
 }
@@ -107,7 +108,7 @@ public struct CPUInfo: Codable, Sendable, Equatable {
     public var sysPct: Measured<Double>
     public var idlePct: Measured<Double>
     public var load: Measured<[Double]>
-    /// macOS's own thermal assessment (`ProcessInfo.thermalState`); no temperature in degrees without root.
+    /// macOS's own thermal assessment (`ProcessInfo.thermalState`); degrees are in `heat`.
     public var thermal: Measured<ThermalState>
     /// Biggest CPU users, from every process of the scan (before the size cap): apps with all their processes, programs
     /// without an app grouped by name, and `system` — CPU the machine used that no readable process accounts for (root
@@ -121,6 +122,47 @@ public struct CPUInfo: Codable, Sendable, Equatable {
 
     /// Share of the whole machine in use (100 − idle); `nil` in fast mode.
     public var usedPct: Double? { idlePct.value.map { max(0, 100 - $0) } }
+}
+
+/// Temperatures and fans read from the SMC without root (task temperature-fans). The sensors are not official: Apple
+/// does not publish the keys, they differ per chip and come from `Resources/smc/` (`key_table`, `keys_verified`).
+public struct HeatInfo: Codable, Sendable, Equatable {
+    /// `machdep.cpu.brand_string` ("Apple M1 Pro").
+    public var chip: Measured<String>
+    /// The `smc/<id>.json` table used; `null` when no table lists this chip — then every temperature is `null`.
+    public var keyTable: Measured<String>
+    /// That table was checked on a real machine (`provenance.verified`).
+    public var keysVerified: Measured<Bool>
+    /// Average and hottest of the CPU core sensors, °C.
+    public var cpuAvgC: Measured<Double>
+    public var cpuMaxC: Measured<Double>
+    public var cpuSensors: Int
+    public var gpuAvgC: Measured<Double>
+    public var gpuMaxC: Measured<Double>
+    public var gpuSensors: Int
+    /// `[]` = the machine has no fan (`FNum` 0, e.g. a MacBook Air); `null` = could not be read.
+    public var fans: Measured<[Fan]>
+
+    public init(chip: Measured<String> = nil, keyTable: Measured<String> = nil, keysVerified: Measured<Bool> = nil,
+                cpuAvgC: Measured<Double> = nil, cpuMaxC: Measured<Double> = nil, cpuSensors: Int = 0,
+                gpuAvgC: Measured<Double> = nil, gpuMaxC: Measured<Double> = nil, gpuSensors: Int = 0, fans: Measured<[Fan]> = nil) {
+        self.chip = chip; self.keyTable = keyTable; self.keysVerified = keysVerified
+        self.cpuAvgC = cpuAvgC; self.cpuMaxC = cpuMaxC; self.cpuSensors = cpuSensors
+        self.gpuAvgC = gpuAvgC; self.gpuMaxC = gpuMaxC; self.gpuSensors = gpuSensors; self.fans = fans
+    }
+
+    public static let unmeasured = HeatInfo()
+
+    public struct Fan: Codable, Sendable, Equatable {
+        /// `F<index>Ac` …: 0 is the first fan.
+        public var index: Int
+        public var rpm: Measured<Int>
+        public var minRpm: Measured<Int>
+        public var maxRpm: Measured<Int>
+        public init(index: Int, rpm: Measured<Int>, minRpm: Measured<Int> = nil, maxRpm: Measured<Int> = nil) {
+            self.index = index; self.rpm = rpm; self.minRpm = minRpm; self.maxRpm = maxRpm
+        }
+    }
 }
 
 /// One line of "most CPU": `pct` is % of one core (100 = one core fully busy); `count` = processes summed.

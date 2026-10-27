@@ -1,0 +1,32 @@
+{
+  "id": "m2",
+  "chips": [
+    "Apple M2",
+    "Apple M2 Pro",
+    "Apple M2 Max",
+    "Apple M2 Ultra"
+  ],
+  "cpu_keys": [
+    "Tp1h",
+    "Tp1t",
+    "Tp1p",
+    "Tp1l",
+    "Tp01",
+    "Tp05",
+    "Tp09",
+    "Tp0D",
+    "Tp0X",
+    "Tp0b",
+    "Tp0f",
+    "Tp0j"
+  ],
+  "gpu_keys": [
+    "Tg0f",
+    "Tg0j"
+  ],
+  "provenance": {
+    "added": "2026-10-27",
+    "source": "docs",
+    "verified": false
+  }
+}

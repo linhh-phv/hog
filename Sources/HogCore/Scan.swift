@@ -26,6 +26,10 @@ public struct Scan: Sendable {
     public var sessions: [Int32: ClaudeSession]?
     public var watchman: ExternalSensors.Watchman?
     public var containers: [DockerClient.Container]?
+    /// Temperatures and fans (SMC); unmeasured when not read.
+    public var heat: HeatInfo = .unmeasured
+    /// Problems with data files the scan itself reads (`smc/*.json`), for the snapshot's `warnings`.
+    public var dataWarnings: [String] = []
     public var sensors: [SensorStatus]
 
     public init(takenAt: Date = Date(), home: String = NSHomeDirectory(), selfPid: Int32 = getpid(), selfUid: UInt32 = getuid(),
@@ -55,11 +59,15 @@ public struct Scanner: Sendable {
     public var fast: Bool
     /// Seconds between the two CPU samples.
     public var cpuInterval: TimeInterval
+    /// Which SMC keys are the CPU and GPU temperatures of each chip.
+    public var smcKeys: SMCKeyTable
 
-    public init(external: ExternalSensors = ExternalSensors(), fast: Bool = false, cpuInterval: TimeInterval = 1) {
+    public init(external: ExternalSensors = ExternalSensors(), fast: Bool = false, cpuInterval: TimeInterval = 1,
+                smcKeys: SMCKeyTable? = nil) {
         self.external = external
         self.fast = fast
         self.cpuInterval = cpuInterval
+        self.smcKeys = smcKeys ?? .load(.standard("smc", home: external.home))
     }
 
     public func scan() -> Scan {
@@ -134,6 +142,9 @@ public struct Scanner: Sendable {
         var sensors: [SensorStatus] = [
             SensorStatus(name: "native-proc", status: .ok, tookMs: Int(Date().timeIntervalSince(started) * 1000)),
         ]
+        // Cheap (a few ms, no command): read in `--fast` too, after the CPU window like the other native numbers.
+        let heat = HeatReader.read(table: smcKeys)
+        sensors.append(heat.status)
         sensors += [launchd?.status, network?.status, sessions?.status, docker?.status].compactMap { $0 }
         if fast {
             sensors.append(SensorStatus(name: "vscode", status: .skipped, tookMs: 0, note: "--fast"))
@@ -149,6 +160,8 @@ public struct Scanner: Sendable {
                     vscode: vscode?.value ?? (vscodeRunning ? CodeStatusParser.fallback(processes) : nil), sessions: sessions?.value, watchman: watchman?.value,
                     containers: docker?.value, sensors: sensors.sorted { $0.name < $1.name })
             .with {
+                $0.heat = heat.heat
+                $0.dataWarnings = smcKeys.warnings.map(\.description)
                 guard !fast else { return }
                 $0.cpuSampledAt = sampledAt
                 $0.hogCpuPct = Self.cpuPercent(from: usage0, to: usage1)
