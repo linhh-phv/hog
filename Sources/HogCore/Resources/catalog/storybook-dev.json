@@ -20,7 +20,7 @@
   "match": [
     {
       "exe": "node",
-      "args_contains": "storybook/dist/bin/"
+      "args_contains": "storybook/dist/bin/dispatcher.js dev"
     }
   ],
   "provenance": {

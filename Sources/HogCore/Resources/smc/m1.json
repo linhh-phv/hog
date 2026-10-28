@@ -2,7 +2,6 @@
   "id": "m1",
   "chips": [
     "Apple M1",
-    "Apple M1 Pro",
     "Apple M1 Max",
     "Apple M1 Ultra"
   ],
@@ -26,7 +25,7 @@
   ],
   "provenance": {
     "added": "2026-10-27",
-    "source": "measured",
-    "verified": true
+    "source": "docs",
+    "verified": false
   }
 }

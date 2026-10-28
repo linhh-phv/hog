@@ -20,7 +20,11 @@
   "match": [
     {
       "exe": "node",
-      "args_contains": "bin/pnpm"
+      "args_contains": "bin/pnpm "
+    },
+    {
+      "exe": "node",
+      "args_contains": "bin/pnpm.cjs "
     }
   ],
   "provenance": {

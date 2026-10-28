@@ -287,8 +287,8 @@ public struct ShareInfo: Encodable, Sendable, Equatable {
         let known = item.catalogId.map { lang == .vi ? "hog nhận ra đây là `\($0)`." : "hog identifies this as `\($0)`." }
             ?? (lang == .vi ? "hog chưa biết thứ này là gì." : "hog does not know what this is.")
         let noArgs = item.kind == .process && item.args == nil
-            ? (lang == .vi ? " hog không đọc được lệnh của nó (thường vì nó vừa thoát), nên `args` là null." :
-                             " hog could not read its command line (usually because it just exited), so `args` is null.")
+            ? (lang == .vi ? " hog không đọc được lệnh của nó (nó vừa thoát, hoặc hog không có quyền đọc), nên `args` là null." :
+                             " hog could not read its command line (it just exited, or hog may not read it), so `args` is null.")
             : ""
         let lead = lang == .vi
             ? "hog (trình xem tài nguyên máy macOS): \(known)\(noArgs) Nó là gì, có nên tắt không, tắt thì mất gì? Số đo của hog, đã bỏ tên dự án, thư mục và mật khẩu:"

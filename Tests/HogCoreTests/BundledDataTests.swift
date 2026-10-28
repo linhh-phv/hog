@@ -72,6 +72,17 @@ import Testing
         #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/node_modules/typescript/bin/tsc --watch")) == "tsc")
         #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/node_modules/typescript/lib/tsserver.js --useNodeIpc")) != "tsc",
                 "the language server is not tsc")
+        // Word boundaries (QA 2026-10-28): other tools named like these are not them.
+        for args in ["node /x/node_modules/.bin/tsc-alias -p tsconfig.json", "node /x/node_modules/.bin/tsc-watch --onSuccess x",
+                     "node /x/mybin/tscheck.js run"] {
+            #expect(catalog.match(MatchSubject(exeName: "node", args: args)) != "tsc", "\(args)")
+        }
+        for args in ["node /x/bin/pnpmfile.js x", "node /x/bin/pnpm-x.js y"] {
+            #expect(catalog.match(MatchSubject(exeName: "node", args: args)) != "pnpm", "\(args)")
+        }
+        #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/corepack/pnpm/bin/pnpm.cjs dev")) == "pnpm")
+        #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/storybook/dist/bin/dispatcher.js build -o out")) != "storybook-dev",
+                "a Storybook build is not the dev server")
         #expect(catalog.match(MatchSubject(exeName: "Code Helper (Plugin)", args: "Code Helper (Plugin) --type=utility --utility-sub-type=node.mojom.NodeService --inspect-port=0")) == "vscode-extension-host")
         #expect(catalog.match(MatchSubject(exeName: "Code Helper", args: "Code Helper --type=utility --utility-sub-type=node.mojom.NodeService", vscodeRole: "file-watcher")) == "vscode-file-watcher")
         #expect(catalog.match(MatchSubject(exeName: "Code Helper", args: "Code Helper --type=gpu-process")) == "vscode-gpu")

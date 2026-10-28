@@ -35,7 +35,8 @@ public struct Overview: Sendable, Equatable {
     /// "những tiến trình con bên trong có thể thêm nhãn để biết cái nào an toàn có thể tắt"). A line of several processes takes
     /// the strongest; `nil` (no label) when hog has no conclusion, e.g. a small process it does not analyse.
     public enum Safety: Int, Sendable, Comparable {
-        /// A pre-checked "Nên dọn" suggestion: measured unused, hog can stop it.
+        /// A pre-checked "Nên dọn" suggestion: measured unused, hog can stop it. Decided before `restarts` (see `safety`),
+        /// never combined with protection (a protected thing is not may-stop).
         case canStop = 1
         /// Soft protection: part of a Claude session, window or app in use.
         case inUse = 2
@@ -164,9 +165,11 @@ public struct Overview: Sendable, Equatable {
         let cleanupOf = Dictionary(uniqueKeysWithValues: cleanups.map { ($0.itemId, $0) })
         func safety(_ item: Item?, catalogId: String?) -> Safety? {
             if item?.protection.value?.level == .hard { return .keep }
+            // A may-stop thing hog stops itself wins over its catalog's `by-parent`: an orphaned language server has no
+            // parent left to start it again (reviewer 2026-10-28), and "Nên dọn" (`givesBack`) already lets may-stop through.
+            if let c = item.flatMap({ cleanupOf[$0.id] }), c.preselected { return .canStop }
             if catalogId.flatMap({ catalog.entries[$0]?.respawns }) == .byParent { return .restarts }
             if item?.protection.value?.level == .soft { return .inUse }
-            if let c = item.flatMap({ cleanupOf[$0.id] }), c.preselected { return .canStop }
             return nil
         }
 

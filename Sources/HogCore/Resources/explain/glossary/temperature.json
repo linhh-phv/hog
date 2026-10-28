@@ -10,8 +10,8 @@
     "en": "CPU temperature (average of the cores), read from the machine's internal sensors.\nThese sensors are unofficial: Apple does not publish them, hog uses a table per chip generation."
   },
   "how_to_read": {
-    "vi": "Chip Apple chạy nặng có thể lên 85–95 °C mà vẫn chưa phải chậm lại (đã đo trên M1 Pro) — số cao không có nghĩa là hỏng.\nChữ bên cạnh là quạt đang quay bao nhiêu % sức.\nMáy chỉ tự chậm lại khi macOS báo \"nóng\" hoặc \"rất nóng\".",
-    "en": "An Apple chip under load can reach 85–95 °C without having to slow down (measured on an M1 Pro) — a high number does not mean something is wrong.\nThe word next to it is how hard the fans work, in %.\nThe machine only slows itself down when macOS says \"hot\" or \"very hot\"."
+    "vi": "Chip Apple chạy nặng có thể lên 85–95 °C mà vẫn chưa phải chậm lại (đã đo trên M1 Pro) — số cao không có nghĩa là hỏng.\nChữ bên cạnh là quạt đang quay bao nhiêu % sức.\nMáy thường chỉ tự chậm lại khi macOS báo \"nóng\" hoặc \"rất nóng\".",
+    "en": "An Apple chip under load can reach 85–95 °C without having to slow down (measured on an M1 Pro) — a high number does not mean something is wrong.\nThe word next to it is how hard the fans work, in %.\nThe machine usually only slows itself down when macOS says \"hot\" or \"very hot\"."
   },
   "act": {
     "vi": "Nóng mà bạn không làm gì nặng → xem thứ ăn CPU nhiều nhất và tắt thứ không dùng.\nĐể máy chỗ thoáng.",

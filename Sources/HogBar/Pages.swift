@@ -89,7 +89,7 @@ struct MainPage: View {
                 let degrees = o.heat.cpuAvgC.value.map { Format.celsius($0, model.lang) }
                 let tag = degrees != nil ? Format.heatTag(o.heat, thermal: o.thermal, model.lang) : nil
                 MetricChip(label: model.t("Nhiệt", "Heat") + (tag.map { " · " + $0 } ?? ""),
-                           glossaryId: "temperature",
+                           glossaryId: degrees != nil ? "temperature" : "thermal-state",
                            extra: Format.heatDetail(o.heat, thermal: o.thermal, model.lang).joined(separator: "\n")) {
                     Text(degrees ?? word?.capitalizedFirst ?? "–").foregroundStyle(Theme.thermal(o.thermal))
                 }

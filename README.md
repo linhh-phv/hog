@@ -78,8 +78,8 @@ hog sends nothing over the network.
 
 Temperatures and fans come from the SMC, read without root and **read-only**: hog never controls the fans. These sensors
 are unofficial — Apple does not publish their keys, and they differ per chip — so the keys are data (below). A chip with
-no table gets no degrees rather than a guess; the M1 table was checked on a real Mac, M2–M4 come from the open-source
-[Stats](https://github.com/exelban/stats) app and are marked unverified.
+no table gets no degrees rather than a guess. The M1 Pro keys were checked on a real Mac; the other M1 chips (same keys)
+and M2–M4 come from the open-source [Stats](https://github.com/exelban/stats) app and are marked unverified.
 
 ## Data, not code
 

@@ -49,8 +49,11 @@ import Testing
 
     @Test func bundledTablesPickTheChipExactly() {
         #expect(bundled.warnings.isEmpty, "\(bundled.warnings)")
-        #expect(bundled.entry(chip: "Apple M1 Pro")?.id == "m1")
-        #expect(bundled.entry(chip: "Apple M1 Pro")?.provenance.verified == true)
+        #expect(bundled.entry(chip: "Apple M1 Pro")?.id == "m1-pro")
+        #expect(bundled.entry(chip: "Apple M1 Pro")?.provenance.verified == true, "measured on an M1 Pro")
+        for chip in ["Apple M1", "Apple M1 Max", "Apple M1 Ultra"] {
+            #expect(bundled.entry(chip: chip)?.id == "m1" && bundled.entry(chip: chip)?.provenance.verified == false, "\(chip): same keys, not checked")
+        }
         #expect(bundled.entry(chip: "Apple M2 Max")?.id == "m2")
         #expect(bundled.entry(chip: "Apple M3")?.id == "m3")
         #expect(bundled.entry(chip: "Apple M4")?.id == "m4")
@@ -155,6 +158,8 @@ import Testing
         #expect(Format.fans(h([f(0, 5779), f(2512, nil)]), .vi) == "quạt 2512 vòng/phút", "no maximum: no %")
         #expect(Format.fans(h([f(3861, 5779), f(4154, 6241)]), .vi) == "quạt 4154 vòng/phút (67 %)")
         #expect(Format.fans(h([f(nil, 5779)]), .vi) == nil, "no fan speed read: say nothing, not \"stopped\"")
+        #expect(Format.fans(h([f(0, 5779), f(nil, 6241)]), .vi) == nil, "one stopped, one unread: not \"fans stopped\" (QA)")
+        #expect(Format.heatTag(h([f(0, 5779), f(nil, 6241)]), thermal: .nominal, .vi) == "bình thường")
     }
 
     @Test func fanPercentIsOfEachFansOwnMaximum() {
@@ -188,7 +193,7 @@ import Testing
                                                  cpuAvgC: Measured(52.8), cpuMaxC: Measured(54.6), cpuSensors: 10,
                                                  gpuAvgC: Measured(51.6), fans: fans), thermal: .nominal, .vi)
         #expect(checked == [
-            "CPU: trung bình 53 °C, nóng nhất 55 °C (10 cảm biến)", "GPU: 52 °C", "Quạt 1: đứng (chạy 1200–5779)", "macOS: bình thường, chưa phải giảm tốc vì nóng",
+            "CPU: trung bình 53 °C, nóng nhất 55 °C (10 cảm biến)", "GPU: 52 °C", "Quạt 1: đứng (chạy 1200–5779)", "macOS: bình thường — macOS chưa báo nóng",
             "Nguồn: cảm biến SMC không chính thức (Apple không công bố) — khoá của Apple M1 Pro đã kiểm trên máy thật.",
         ], "\(checked)")
 
@@ -197,7 +202,7 @@ import Testing
         #expect(unchecked.last?.contains("not checked on a real Mac yet") == true)
 
         let unknown = Format.heatDetail(HeatInfo(chip: Measured("Apple M9"), fans: Measured([])), thermal: .fair, .vi)
-        #expect(unknown == ["Máy không có quạt", "macOS: hơi nóng, chưa giảm tốc", "Chưa đo được độ C: hog chưa biết khoá cảm biến của Apple M9."])
+        #expect(unknown == ["Máy không có quạt", "macOS: hơi nóng", "Chưa đo được độ C: hog chưa biết khoá cảm biến của Apple M9."])
         let spinning = Format.heatDetail(HeatInfo(cpuAvgC: Measured(88.7), cpuMaxC: Measured(93.5), cpuSensors: 10,
                                                   fans: Measured([HeatInfo.Fan(index: 1, rpm: Measured(4154), minRpm: Measured(1200), maxRpm: Measured(6241))])),
                                          thermal: .nominal, .vi)

@@ -189,7 +189,9 @@ public enum Format {
     public static func fans(_ h: HeatInfo, _ lang: Lang) -> String? {
         guard let fans = h.fans.value else { return nil }
         if fans.isEmpty { return lang == .vi ? "không có quạt" : "no fan" }
-        guard let fastest = fans.compactMap(\.rpm.value).max() else { return nil }
+        // Every fan read, or nothing said: one stopped fan and one unread is not "fans stopped" (QA 2026-10-28).
+        let speeds = fans.map(\.rpm.value)
+        guard !speeds.contains(nil), let fastest = speeds.compactMap({ $0 }).max() else { return nil }
         if fastest == 0 { return lang == .vi ? "quạt đứng" : (fans.count == 1 ? "fan stopped" : "fans stopped") }
         return (lang == .vi ? "quạt " : (fans.count == 1 ? "fan " : "fans ")) + rpm(fastest, lang) + (h.fanPct.map { " (\($0) %)" } ?? "")
     }
@@ -200,24 +202,25 @@ public enum Format {
     /// No temperature thresholds of hog's own: Apple does not publish them and they differ per chip (user chose 2026-10-27).
     public static func heatTag(_ h: HeatInfo, thermal: ThermalState?, _ lang: Lang) -> String? {
         if let th = thermal, th >= .serious { return Self.thermal(th, lang) }
-        if let fans = h.fans.value, !fans.isEmpty {
+        if let fans = h.fans.value, !fans.isEmpty, !fans.contains(where: { $0.rpm.value == nil }) {
             if fans.compactMap(\.rpm.value).max() == 0 { return lang == .vi ? "quạt đứng" : "fans stopped" }
             if let pct = h.fanPct { return (lang == .vi ? "quạt " : "fans ") + "\(pct) %" }
         }
         return thermal.map { Self.thermal($0, lang) }
     }
 
-    /// What macOS's thermal state means for the machine (it is about slowing down, not about how warm it is).
+    /// What macOS's thermal state means for the machine. Only what is known: nominal measured with no CPU limit at 89 °C
+    /// (`pmset -g therm`); fair is not measured, so nothing is said about slowing down there (reviewer 2026-10-28).
     public static func thermalMeaning(_ t: ThermalState, _ lang: Lang) -> String {
         switch (t, lang) {
-        case (.nominal, .vi): "bình thường, chưa phải giảm tốc vì nóng"
-        case (.fair, .vi): "hơi nóng, chưa giảm tốc"
+        case (.nominal, .vi): "bình thường — macOS chưa báo nóng"
+        case (.fair, .vi): "hơi nóng"
         case (.serious, .vi): "nóng, có thể giảm tốc"
-        case (.critical, .vi): "rất nóng, đang giảm tốc"
-        case (.nominal, .en): "normal, no need to slow down for heat"
-        case (.fair, .en): "slightly hot, not slowing down"
+        case (.critical, .vi): "rất nóng, có thể giảm tốc mạnh"
+        case (.nominal, .en): "normal — macOS reports no heat"
+        case (.fair, .en): "slightly hot"
         case (.serious, .en): "hot, may slow down"
-        case (.critical, .en): "very hot, slowing down"
+        case (.critical, .en): "very hot, may slow down a lot"
         }
     }
 

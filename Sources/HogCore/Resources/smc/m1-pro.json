@@ -1,0 +1,29 @@
+{
+  "id": "m1-pro",
+  "chips": [
+    "Apple M1 Pro"
+  ],
+  "cpu_keys": [
+    "Tp09",
+    "Tp0T",
+    "Tp01",
+    "Tp05",
+    "Tp0D",
+    "Tp0H",
+    "Tp0L",
+    "Tp0P",
+    "Tp0X",
+    "Tp0b"
+  ],
+  "gpu_keys": [
+    "Tg05",
+    "Tg0D",
+    "Tg0L",
+    "Tg0T"
+  ],
+  "provenance": {
+    "added": "2026-10-27",
+    "source": "measured",
+    "verified": true
+  }
+}

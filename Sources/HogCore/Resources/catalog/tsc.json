@@ -20,7 +20,7 @@
   "match": [
     {
       "exe": "node",
-      "args_contains": "bin/tsc"
+      "args_contains": "bin/tsc "
     }
   ],
   "provenance": {
