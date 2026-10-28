@@ -478,7 +478,7 @@ Một mục = một file `catalog/<id>.json`: "đây là cái gì, tắt thì sa
 - `match`: **một** phần tử khớp là đủ; trong một phần tử **mọi** điều kiện phải đúng. Điều kiện: `exe` (so tên file từ đường dẫn thực thi đã resolve — `proc_pidpath`, không phải `argv[0]`: qa thấy `screen` có
   `argv[0]` = `/usr/bin/SCREEN` còn `proc_pidpath` = `/usr/bin/screen`), `exe_path_contains`,
   `args_contains`, `parent_catalog`, `listens_port`, `container_image` (`""` = mọi container), `vscode_role` (vai trò trong `code --status`:
-  file watcher, pty host và shared process của VS Code có **tham số giống hệt nhau**, chỉ phân biệt được bằng vai trò). Nhiều mục cùng khớp → mục nhiều điều kiện hơn thắng.
+  file watcher, pty host và shared process của VS Code có **tham số giống hệt nhau**, chỉ phân biệt được bằng vai trò). Nhiều mục cùng khớp → mục nhiều điều kiện hơn thắng; bằng nhau thì mục có chuỗi khớp dài hơn (đặc thù hơn) thắng, rồi tới id.
 - `detached_by_design` (bool, mặc định `false`): thứ người dùng **cố ý** để chạy nền tách khỏi shell (tmux, screen, Gradle daemon). Cho
   fact `catalog.detached` = true, nên `orphan-quiet` không đề xuất dừng nó dù khớp định nghĩa mồ côi (mục 3.4).
 - `respawns`: `never` · `by-parent` · `on-demand` · `supervisor`. Dừng thứ `by-parent` là vô ích → hog gợi ý đóng cửa sổ.
@@ -506,7 +506,7 @@ Ghi đè cục bộ: `~/.config/hog/catalog.d/*.json`, cùng quy tắc như mụ
 | 10 | `watchman` | theo dõi file, unix socket | ✔ | 20 | `android-emulator` | emulator Android (qemu) | ○ |
 | 21 | `tmux-server` | máy chủ tmux, `detached_by_design` | ○ | 22 | `screen` | GNU screen, `detached_by_design` | ✔ (qa) |
 
-Thêm sau bộ khởi đầu: `shell`; `tsc` (2026-10-27, từ "Chép thông tin": `tsc --noEmit` một phiên Claude chạy; khớp `bin/tsc ` (có dấu cách: không khớp `tsc-alias`, `tsc-watch`), không
+Thêm sau bộ khởi đầu: `shell` (shell mở trong terminal); `react-native-bundle` (bước đóng gói JS một lần của React Native qua Re.Pack, ✔); `tsc` (2026-10-27, từ "Chép thông tin": `tsc --noEmit` một phiên Claude chạy; khớp `bin/tsc ` (có dấu cách: không khớp `tsc-alias`, `tsc-watch`), không
 khớp `tsserver.js`); `pnpm`, `storybook-dev` (2026-10-27, từ "Chép thông tin": một `pnpm dev` mồ côi và Storybook nó mở;
 `pnpm` khớp `bin/pnpm ` hoặc `bin/pnpm.cjs `, không khớp kho `.pnpm/` hay `pnpmfile.js`; `storybook-dev` chỉ khớp `dispatcher.js dev`, không khớp `build`); `jest-worker` (2026-10-27 — tiến trình phụ của Jest/Metro/Next.js, `exe: node` + `args_contains:
 "jest-worker/"`, `stop: manual`; từ thông tin "Chép thông tin" user dán vào. `respawns: never`: theo mã nguồn jest-worker (`ChildProcessWorker._onExit`), worker chết vì SIGTERM/SIGKILL không được mở lại, lượt chạy báo lỗi — reviewer đọc, chưa đo, nên `verified: false`).
