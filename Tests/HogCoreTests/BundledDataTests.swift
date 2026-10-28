@@ -81,6 +81,13 @@ import Testing
             #expect(catalog.match(MatchSubject(exeName: "node", args: args)) != "pnpm", "\(args)")
         }
         #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/corepack/pnpm/bin/pnpm.cjs dev")) == "pnpm")
+        // The bare command has no space after it (review + QA round 2): still matched.
+        #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/node_modules/typescript/bin/tsc")) == "tsc")
+        #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/node_modules/.bin/tsc")) == "tsc")
+        #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/bin/pnpm")) == "pnpm")
+        #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/pnpm/bin/pnpm.cjs")) == "pnpm")
+        // jest-worker does not start a stopped worker again (its source, read in review): "never", unverified.
+        #expect(catalog.entries["jest-worker"]?.respawns == .never && catalog.entries["jest-worker"]?.provenance.verified == false)
         #expect(catalog.match(MatchSubject(exeName: "node", args: "node /x/storybook/dist/bin/dispatcher.js build -o out")) != "storybook-dev",
                 "a Storybook build is not the dev server")
         #expect(catalog.match(MatchSubject(exeName: "Code Helper (Plugin)", args: "Code Helper (Plugin) --type=utility --utility-sub-type=node.mojom.NodeService --inspect-port=0")) == "vscode-extension-host")

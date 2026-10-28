@@ -165,9 +165,10 @@ public struct Overview: Sendable, Equatable {
         let cleanupOf = Dictionary(uniqueKeysWithValues: cleanups.map { ($0.itemId, $0) })
         func safety(_ item: Item?, catalogId: String?) -> Safety? {
             if item?.protection.value?.level == .hard { return .keep }
-            // A may-stop thing hog stops itself wins over its catalog's `by-parent`: an orphaned language server has no
-            // parent left to start it again (reviewer 2026-10-28), and "Nên dọn" (`givesBack`) already lets may-stop through.
-            if let c = item.flatMap({ cleanupOf[$0.id] }), c.preselected { return .canStop }
+            // A may-stop suggestion wins over its catalog's `by-parent`: an orphaned language server has no parent left to start
+            // it again (reviewer 2026-10-28), and "Nên dọn" (`givesBack`) already lets may-stop through. Things only a person
+            // closes (`manual`, as every by-parent catalog entry is) get no label: their row shows the reason instead.
+            if let c = item.flatMap({ cleanupOf[$0.id] }), c.verdict == .mayStop { return c.preselected ? .canStop : nil }
             if catalogId.flatMap({ catalog.entries[$0]?.respawns }) == .byParent { return .restarts }
             if item?.protection.value?.level == .soft { return .inUse }
             return nil

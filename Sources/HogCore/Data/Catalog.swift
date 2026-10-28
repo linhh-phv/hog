@@ -126,7 +126,9 @@ public struct Catalog: Sendable {
     static func matches(_ m: CatalogEntry.Match, _ s: MatchSubject) -> Bool {
         if let exe = m.exe, s.exeName != exe { return false }
         if let p = m.exePathContains, !(s.exePath?.contains(p) ?? false) { return false }
-        if let a = m.argsContains, !(s.args?.contains(a) ?? false) { return false }
+        // Matched with a space after the command line, so a clause ending in a space ("bin/tsc ") marks the end of a word and
+        // still matches the bare command (`node …/bin/tsc`) — but not `tsc-alias` (review + QA 2026-10-28).
+        if let a = m.argsContains, !(s.args.map { $0 + " " }?.contains(a) ?? false) { return false }
         if let pc = m.parentCatalog, s.parentCatalog != pc { return false }
         if let port = m.listensPort, !s.listenPorts.contains(port) { return false }
         if let img = m.containerImage {

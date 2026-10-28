@@ -219,13 +219,20 @@ import Testing
         #expect(entries["grep"].map { $0.safety == nil } == true, "no conclusion, no label")
         #expect(Overview.Safety.keep > .restarts && Overview.Safety.restarts > .inUse && Overview.Safety.inUse > .canStop)
 
-        // An orphaned language server (may-stop) has no parent left to restart it: "can stop", as in "Nên dọn" (reviewer).
-        let orphan = Overview.make(snapshot([proc(8, "node", mb: 900, item: "o", catalogId: "tsserver")],
-            items: [Item(id: "o", kind: .process, label: "tsserver", catalogId: "tsserver", pids: [8])],
-            findings: [Finding(itemId: "o", verdict: .mayStop, confidence: .high, rules: ["orphan-quiet"], reason: "r", evidence: [:],
-                               unmeasured: [], stop: StopAdvice(strategy: .signal, respawns: .byParent, effect: "e"))]), catalog: catalog)
-        #expect(orphan.groups.flatMap(\.entries).first { $0.itemId == "o" }?.safety == .canStop)
-        #expect(orphan.cleanups.map(\.itemId) == ["o"])
+        // An orphaned language server (may-stop) has no parent left to restart it: never "comes back" (reviewer). With the
+        // catalog's real advice (tsserver is `stop: manual`) the row shows its reason, no label; a signal-stoppable one "can stop".
+        let ts = try #require(catalog.entries["tsserver"])
+        #expect(ts.stop.strategy == .manual && ts.respawns == .byParent)
+        func orphan(_ strategy: StopStrategy) -> Overview.Entry? {
+            Overview.make(snapshot([proc(8, "node", mb: 900, item: "o", catalogId: "tsserver")],
+                items: [Item(id: "o", kind: .process, label: "tsserver", catalogId: "tsserver", pids: [8])],
+                findings: [Finding(itemId: "o", verdict: .mayStop, confidence: .high, rules: ["orphan-quiet"], reason: "r", evidence: [:],
+                                   unmeasured: [], stop: StopAdvice(strategy: strategy, respawns: ts.respawns, effect: "e"))]), catalog: catalog)
+                .groups.flatMap(\.entries).first { $0.itemId == "o" }
+        }
+        let manual = try #require(orphan(ts.stop.strategy))
+        #expect(manual.safety == nil && manual.cleanup?.manual == true, "not \"comes back\": the reason shows instead")
+        #expect(orphan(.signal)?.safety == .canStop)
         #expect(Format.safety(.canStop, .vi) == "có thể tắt" && Format.safety(.restarts, .vi) == "tắt vô ích")
         // Every page says what stopping costs, with or without a suggestion: the catalog's effect, none when hog does not know.
         #expect(entries["TypeScript language server"]?.stopEffect?.contains("starts it again") == true, "no finding, still explained")
