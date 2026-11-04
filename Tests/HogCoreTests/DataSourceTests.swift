@@ -40,7 +40,7 @@ import Testing
         "local:c-dangling.json": "broken symbolic link",
         "local:d-dir.json": "is a directory",
         "local:e-fifo.json": "not a regular file",
-        "local:f-big.json": "larger than 1 MB",
+        "local:f-big.json": "larger than 1 MiB",
     ]
 
     func check(_ warnings: [DataWarning]) {
@@ -87,7 +87,7 @@ import Testing
         #expect(explain.headlines != nil)
     }
 
-    @Test func fifoDoesNotBlock() throws {
+    @Test(.timeLimit(.minutes(1))) func fifoDoesNotBlock() throws {
         let dir = try tempDir()
         defer { cleanUp(dir) }
         #expect(mkfifo(dir.appendingPathComponent("x.json").path, 0o600) == 0)
@@ -98,13 +98,66 @@ import Testing
         #expect(Date().timeIntervalSince(start) < 1)
     }
 
-    @Test func unreadableHeadlineOverrideIsReported() throws {
+    @Test(.timeLimit(.minutes(1))) func unreadableHeadlineOverrideIsReported() throws {
         let dir = try tempDir()
         defer { cleanUp(dir) }
-        try FileManager.default.createDirectory(at: dir.appendingPathComponent("headline.json"), withIntermediateDirectories: false)
-        let explain = Explanations.load(DataSource(bundledDirectory: DataSource.standard("explain").bundledDirectory, localDirectory: dir))
-        #expect(explain.warnings.map(\.description) == ["local:headline.json: skipped: is a directory, not a file"])
-        #expect(explain.headlines != nil, "falls back to the bundled headlines")
+        let headline = dir.appendingPathComponent("headline.json")
+        let bundled = DataSource.standard("explain").bundledDirectory
+        let cases: [(String, () throws -> Void)] = [
+            ("is a directory, not a file", { try FileManager.default.createDirectory(at: headline, withIntermediateDirectories: false) }),
+            ("cannot open (Permission denied)", { try "{}".write(to: headline, atomically: true, encoding: .utf8); chmod(headline.path, 0) }),
+            ("not a regular file", { #expect(mkfifo(headline.path, 0o600) == 0) }),
+            ("broken symbolic link", { try FileManager.default.createSymbolicLink(atPath: headline.path, withDestinationPath: dir.appendingPathComponent("missing").path) }),
+        ]
+        for (reason, make) in cases {
+            try make()
+            let explain = Explanations.load(DataSource(bundledDirectory: bundled, localDirectory: dir))
+            #expect(explain.warnings.map(\.description) == ["local:headline.json: skipped: \(reason)"])
+            #expect(explain.headlines != nil, "falls back to the bundled headlines")
+            chmod(headline.path, 0o600)
+            try FileManager.default.removeItem(at: headline)
+        }
+    }
+
+    @Test func unlistableFoldersAreReported() throws {
+        let dir = try tempDir()
+        defer { cleanUp(dir) }
+        let catalog = DataSource.standard("catalog").bundledDirectory
+        let noAccess = dir.appendingPathComponent("a.d")
+        try FileManager.default.createDirectory(at: noAccess, withIntermediateDirectories: false)
+        try "{}".write(to: noAccess.appendingPathComponent("x.json"), atomically: true, encoding: .utf8)
+        #expect(chmod(noAccess.path, 0) == 0)
+        try FileManager.default.createSymbolicLink(atPath: dir.appendingPathComponent("b.d").path,
+                                                   withDestinationPath: dir.appendingPathComponent("missing").path)
+        try "{}".write(to: dir.appendingPathComponent("c.d"), atomically: true, encoding: .utf8)
+        for (name, reason) in [("a.d", "cannot list (Permission denied)"), ("b.d", "broken symbolic link"), ("c.d", "not a directory")] {
+            let c = Catalog.load(DataSource(bundledDirectory: catalog, localDirectory: dir.appendingPathComponent(name)))
+            #expect(c.warnings.map(\.description) == ["local:\(name): skipped: \(reason)"])
+            #expect(!c.entries.isEmpty, "the bundled entries still load")
+        }
+
+        // explain.d without permission: both the glossary folder and headline.json inside it are reported.
+        let explainDir = dir.appendingPathComponent("explain.d")
+        try FileManager.default.createDirectory(at: explainDir.appendingPathComponent("glossary"), withIntermediateDirectories: true)
+        #expect(chmod(explainDir.path, 0) == 0)
+        let explain = Explanations.load(DataSource(bundledDirectory: DataSource.standard("explain").bundledDirectory, localDirectory: explainDir))
+        #expect(explain.warnings.map(\.description) == ["local:glossary: skipped: cannot open (Permission denied)",
+                                                          "local:headline.json: skipped: cannot open (Permission denied)"])
+        #expect(explain.headlines != nil)
+    }
+
+    @Test func sizeLimitIsInclusive() throws {
+        let dir = try tempDir()
+        defer { cleanUp(dir) }
+        let body = #"{"id": "x", "chips": ["X"], "cpu_keys": ["Tp01"], "gpu_keys": [], \#(prov)}"#
+        for (name, size) in [("a.json", DataSource.maxFileBytes), ("b.json", DataSource.maxFileBytes + 1)] {
+            var data = Data(body.utf8)
+            data.append(Data(repeating: UInt8(ascii: " "), count: size - data.count))
+            try data.write(to: dir.appendingPathComponent(name))
+        }
+        let (files, warnings) = DataSource(bundledDirectory: nil, localDirectory: dir).files()
+        #expect(files.map(\.name) == ["local:a.json"], "exactly 1 MiB is read")
+        #expect(warnings.map(\.description) == ["local:b.json: skipped: larger than 1 MiB (1048577 bytes)"])
     }
 
     @Test func missingFilesAreNotWarnings() throws {
@@ -144,6 +197,18 @@ import Testing
         var reads = 0
         _ = HeatReader.heat(chip: "X", table: t) { _ in reads += 1; return nil }
         #expect(reads <= 2 * SMCKeyEntry.maxKeys + 8, "fan keys aside, at most the capped keys are read")
+    }
+
+    @Test func smcCapIsExact() throws {
+        let dir = try tempDir()
+        defer { cleanUp(dir) }
+        func keys(_ n: Int) -> String { (0..<n).map { String(format: "\"T%03X\"", $0) }.joined(separator: ",") }
+        try #"{"id": "x", "chips": ["X"], "cpu_keys": [\#(keys(64))], "gpu_keys": [\#(keys(65))], \#(prov)}"#
+            .write(to: dir.appendingPathComponent("x.json"), atomically: true, encoding: .utf8)
+        let t = SMCKeyTable.load(DataSource(bundledDirectory: nil, localDirectory: dir))
+        #expect(t.entry(chip: "X")?.cpuKeys.count == 64 && t.entry(chip: "X")?.gpuKeys.count == 64)
+        #expect(t.entry(chip: "X")?.gpuKeys.last == "T03F", "the 65th key is the one dropped")
+        #expect(t.warnings.map(\.description) == ["local:x.json: gpu_keys has 65 keys, only the first 64 are read"])
     }
 
     @Test func bundledTablesAreUnderTheCap() {

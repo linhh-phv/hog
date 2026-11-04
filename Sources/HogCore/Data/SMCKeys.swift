@@ -13,7 +13,7 @@ public struct SMCKeyEntry: Codable, Sendable, Equatable {
 
     static let keys: Set<String> = ["id", "chips", "cpu_keys", "gpu_keys", "provenance"]
 
-    /// Keys read per list. Every key costs an SMC call on each scan (~220 µs); real chips list at most 16.
+    /// Keys read per list. Every key costs an SMC call on each scan (~220 µs); the bundled tables list at most 16.
     public static let maxKeys = 64
 }
 

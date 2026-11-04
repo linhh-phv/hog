@@ -101,7 +101,15 @@ public struct DataSource: Sendable {
         var out: [(String, Data, Bool)] = []
         var warnings: [DataWarning] = []
         for (dir, local) in [(bundledDirectory, false), (localDirectory, true)] {
-            guard let dir, let names = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { continue }
+            guard let dir else { continue }
+            let names: [String]
+            do {
+                guard let listed = try Self.list(dir) else { continue }
+                names = listed
+            } catch {
+                warnings.append(DataWarning(file: (local ? "local:" : "") + dir.lastPathComponent, message: "skipped: \(error)"))
+                continue
+            }
             for name in names.sorted() where name.hasSuffix(".json") {
                 let label = (local ? "local:" : "") + name
                 do {
@@ -119,28 +127,59 @@ public struct DataSource: Sendable {
 
     struct Unreadable: Error, CustomStringConvertible { var description: String }
 
+    static func reason(_ err: Int32) -> String { String(cString: strerror(err)) }
+
+    /// The names in a data directory, `nil` when nothing is there. A folder that is there but cannot be listed (no
+    /// permission, dangling symlink, a file) is an error: every override in it would silently stop working.
+    static func list(_ dir: URL) throws -> [String]? {
+        let path = dir.path
+        var link = stat(), info = stat()
+        guard lstat(path, &link) == 0 else {
+            let err = errno
+            if err == ENOENT { return nil }
+            throw Unreadable(description: "cannot open (\(reason(err)))")
+        }
+        guard stat(path, &info) == 0 else {
+            let err = errno
+            if err == ENOENT { throw Unreadable(description: "broken symbolic link") }
+            throw Unreadable(description: "cannot open (\(reason(err)))")
+        }
+        guard info.st_mode & S_IFMT == S_IFDIR else { throw Unreadable(description: "not a directory") }
+        guard let d = opendir(path) else { throw Unreadable(description: "cannot list (\(reason(errno)))") }
+        closedir(d)
+        do {
+            return try FileManager.default.contentsOfDirectory(atPath: path)
+        } catch {
+            throw Unreadable(description: "cannot list (\(error.localizedDescription))")
+        }
+    }
+
     /// The contents of a data file, `nil` when nothing is there. Only a regular file of at most `maxFileBytes` is read:
     /// a huge file would slow every scan. Opened non-blocking: a plain `open` of a FIFO waits for a writer forever.
     static func read(_ url: URL) throws -> Data? {
         let path = url.path
         var link = stat()
-        guard lstat(path, &link) == 0 else { return nil }
+        guard lstat(path, &link) == 0 else {
+            let err = errno
+            if err == ENOENT { return nil }
+            throw Unreadable(description: "cannot open (\(reason(err)))")
+        }
         let fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC)
         guard fd >= 0 else {
             let err = errno
             if err == ENOENT, link.st_mode & S_IFMT == S_IFLNK { throw Unreadable(description: "broken symbolic link") }
-            throw Unreadable(description: "cannot open (\(String(cString: strerror(err))))")
+            throw Unreadable(description: "cannot open (\(reason(err)))")
         }
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
         var info = stat()
-        guard fstat(fd, &info) == 0 else { throw Unreadable(description: "cannot read (\(String(cString: strerror(errno))))") }
+        guard fstat(fd, &info) == 0 else { throw Unreadable(description: "cannot read (\(reason(errno)))") }
         switch info.st_mode & S_IFMT {
         case S_IFREG: break
         case S_IFDIR: throw Unreadable(description: "is a directory, not a file")
         default: throw Unreadable(description: "not a regular file")
         }
         guard info.st_size <= maxFileBytes else {
-            throw Unreadable(description: "larger than \(maxFileBytes / 1_048_576) MB (\(info.st_size) bytes)")
+            throw Unreadable(description: "larger than \(maxFileBytes / 1_048_576) MiB (\(info.st_size) bytes)")
         }
         do {
             return try handle.readToEnd() ?? Data()
