@@ -12,6 +12,9 @@ public struct Stopper: Sendable {
     public var dockerSocket: @Sendable () -> String?
     public var locator: CommandLocator
     public var lang: Lang
+    /// What stopping costs when hog has no suggestion: the catalog, as the page shows it. Callers set the catalog they show
+    /// (empty: "unknown"); the same stopper must plan and re-check an agreed plan, or the plan reads as changed.
+    public var catalog = Catalog(entries: [])
 
     public init(plans: PlanStore = .standard(), log: ActionLog = .standard(), lang: Lang = .vi,
                 locator: CommandLocator = CommandLocator(),
@@ -179,18 +182,24 @@ public struct Stopper: Sendable {
         return StopPlan(planId: StopPlan.makeId(identity, action), createdAt: created, expiresAt: created.addingTimeInterval(StopPlan.lifetime),
                         identity: identity, action: action, label: label, ownerLabel: ownerLabel, itemId: item?.id,
                         rules: finding?.rules ?? [], reason: finding?.reason, evidence: finding?.evidence ?? [:],
-                        unmeasured: finding?.unmeasured ?? [], effect: finding?.stop.effect ?? t("Chưa biết tắt thì ảnh hưởng gì.", "Effect of stopping it is unknown."),
+                        unmeasured: finding?.unmeasured ?? [], effect: finding?.stop.effect ?? catalogStopping(item)?.effect
+                            ?? t("Chưa biết tắt thì ảnh hưởng gì.", "Effect of stopping it is unknown."),
                         steps: steps, gates: gates, previousRestartPolicy: previousPolicy)
     }
 
     func defaultAction(identity: StopIdentity, item: Item?, finding: Finding?) -> StopAction {
         if identity.kind == .container { return .dockerStop }
-        switch finding?.stop.strategy {
+        switch finding?.stop.strategy ?? catalogStopping(item)?.strategy {
         case .manual?: return .manual
         case .watchmanShutdown?: return .watchmanShutdown
         case .dockerContainer?: return .dockerStop
         default: return item?.kind == .claudeSession ? .manual : .sigterm
         }
+    }
+
+    /// The catalog's advice for this item (orphan-aware, like the page); nil when it is not in the catalog.
+    func catalogStopping(_ item: Item?) -> (strategy: StopStrategy, respawns: Respawns, effect: String?)? {
+        item?.catalogId.value.flatMap { catalog.entries[$0] }?.stopping(orphan: item?.facts["orphan"] == .bool(true), lang)
     }
 
     func manualSteps(identity: StopIdentity, item: Item?) -> [String] {

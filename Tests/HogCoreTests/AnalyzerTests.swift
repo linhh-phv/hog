@@ -165,6 +165,9 @@ import Testing
         for line in Format.points(f.stop.effect) { #expect(line.count <= 150) }
         let live = try #require(finding(s, "proc:201:"))
         #expect(live.stop.strategy == .manual && live.stop.respawns.value == .byParent && live.stop.effect.contains("VS Code starts it again"))
+        // "Also running in 2 other VS Code windows" is about a window's own server, not one left behind by a closed window.
+        #expect(live.rules.contains("duplicate-language-server") && !f.rules.contains("duplicate-language-server"))
+        #expect(finding(s, "proc:810:") == nil, "orphaned minutes ago: nothing to say yet")
 
         let o = Overview.make(s, catalog: a.catalog)
         let cleanup = try #require(o.cleanups.first { $0.itemId == f.itemId })
@@ -183,11 +186,25 @@ import Testing
 
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("hog-orphan-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: dir) }
-        let stopper = Stopper(plans: PlanStore(directory: dir), log: ActionLog(file: dir.appendingPathComponent("a.jsonl")), lang: .en,
+        var stopper = Stopper(plans: PlanStore(directory: dir), log: ActionLog(file: dir.appendingPathComponent("a.jsonl")), lang: .en,
                               dockerSocket: { nil })
-        let item = try #require(s.items.first { $0.id == f.itemId })
-        let plan = stopper.plan(stopper.identity(of: item, scan: sc), item: item, snapshot: s, scan: sc)
-        #expect(plan.action == .sigterm && plan.blocked == nil, "\(plan.gates)")
+        stopper.catalog = a.catalog
+        func plan(_ pid: Int32, _ snap: Snapshot) throws -> StopPlan {
+            let item = try #require(snap.items.first { $0.pids == [pid] } ?? a.item(forPid: pid, in: sc))
+            return stopper.plan(stopper.identity(of: item, scan: sc), item: item, snapshot: snap, scan: sc)
+        }
+        let suggested = try plan(800, s)
+        #expect(suggested.action == .sigterm && suggested.blocked == nil, "\(suggested.gates)")
+        // Without a suggestion the plan says what the page says, from the catalog: an orphan is signalled, a server VS Code
+        // still runs is closed by hand — never "effect unknown" next to a page that knows (QA).
+        var bare = s
+        bare.findings = []
+        let young810 = try plan(810, bare)
+        #expect(young810.action == .sigterm && young810.effect.contains("nothing starts it again"), "\(young810.effect)")
+        let live201 = try plan(201, bare)
+        #expect(live201.action == .manual && live201.effect.contains("VS Code starts it again"), "\(live201.effect)")
+        let unknown = try plan(500, bare)
+        #expect(unknown.action == .sigterm && unknown.effect == "Effect of stopping it is unknown.", "not in the catalog: hog does not know")
     }
 
     @Test func englishSnapshot() throws {
