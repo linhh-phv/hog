@@ -173,12 +173,12 @@ import Testing
         let old = try #require(entries.first { $0.pids == [800] })
         #expect(old.safety == .canStop)
         let young = try #require(entries.first { $0.pids.contains(810) })
-        #expect(young.pids == [810] && young.detail == "orphaned", "its own line, not merged with tsservers VS Code still runs")
+        #expect(young.pids == [810] && young.orphaned && young.detail.isEmpty, "its own line, not merged with tsservers VS Code still runs")
         #expect(young.safety == nil, "no suggestion yet, but never \"pointless to stop\"")
         #expect(young.stopEffect?.contains("nothing starts it again") == true)
         let liveEntry = try #require(entries.first { $0.pids.contains(201) })
         // Window 2 also holds the session running hog (protect-self): "keep" outranks "pointless to stop" on the merged line.
-        #expect(liveEntry.pids.sorted() == [201, 211] && liveEntry.safety == .keep && liveEntry.detail.isEmpty)
+        #expect(liveEntry.pids.sorted() == [201, 211] && liveEntry.safety == .keep && !liveEntry.orphaned)
         #expect(liveEntry.stopEffect?.contains("VS Code starts it again") == true)
 
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("hog-orphan-\(UUID().uuidString)")

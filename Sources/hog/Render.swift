@@ -94,8 +94,9 @@ struct Render {
                        + padLeft(g.cpu.map { Format.percent($0, lang) } ?? "–", 7) + "   " + dim(trunc(g.summary, 40)))
             if all {
                 for e in g.entries {
-                    let label = trunc(e.name, 28) + (e.unknown ? yellow(" ?") : "") + (e.detail.isEmpty ? "" : dim(" · " + e.detail))
-                    let visible = trunc(e.name, 28).count + (e.unknown ? 2 : 0) + (e.detail.isEmpty ? 0 : e.detail.count + 3)
+                    let detail = [e.detail, e.orphaned ? t("mồ côi", "orphaned") : ""].filter { !$0.isEmpty }.joined(separator: " · ")
+                    let label = trunc(e.name, 28) + (e.unknown ? yellow(" ?") : "") + (detail.isEmpty ? "" : dim(" · " + detail))
+                    let visible = trunc(e.name, 28).count + (e.unknown ? 2 : 0) + (detail.isEmpty ? 0 : detail.count + 3)
                     out.append("      " + label + String(repeating: " ", count: max(1, 30 - visible)) + padLeft(bytes(e.bytes), 8)
                                + padLeft(e.cpu.map { Format.percent($0, lang) } ?? "–", 7)
                                + (e.pids.count > 1 ? dim("   ×\(e.pids.count)") : "")

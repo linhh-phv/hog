@@ -277,6 +277,7 @@ struct EntryRow: View {
                 Text(e.name).lineLimit(1).truncationMode(.tail)
                 if e.unknown { Image(systemName: "questionmark.circle").foregroundStyle(.orange).accessibilityLabel(model.t("chưa rõ", "unknown")) }
                 if !e.detail.isEmpty { Text("· " + e.detail).foregroundStyle(.secondary).lineLimit(1) }
+                if e.orphaned { Text("· " + model.t("mồ côi", "orphaned")).foregroundStyle(.secondary).lineLimit(1) }
                 if e.pids.count > 1 { Text("×\(e.pids.count)").foregroundStyle(.tertiary) }
                 Spacer(minLength: 4)
                 // A suggestion keeps its reason ("rảnh 4 giờ"); a pre-checked one and everything else say whether to stop it.

@@ -52,7 +52,7 @@ public struct Overview: Sendable, Equatable {
     public struct Entry: Sendable, Equatable, Identifiable {
         public var id: String
         public var name: String
-        /// "cổng 3000", "mồ côi" (an orphaned by-parent program), or empty.
+        /// "cổng 3000", or empty.
         public var detail: String
         public var bytes: Int64?
         public var cpu: Double?
@@ -66,6 +66,8 @@ public struct Overview: Sendable, Equatable {
         public var safety: Safety? = nil
         /// What stopping it does, from the catalog; nil when hog does not know (the page then says so).
         public var stopEffect: String? = nil
+        /// A by-parent program whose parent has exited: its own line, marked "mồ côi" in lists.
+        public var orphaned: Bool = false
     }
 
     public struct Group: Sendable, Equatable, Identifiable {
@@ -206,13 +208,12 @@ public struct Overview: Sendable, Equatable {
             let port = catalogName == nil || Self.portFamilies.contains(entry?.family ?? "") ? p.net.listen.map(\.port).min() : nil
             var e = entriesByGroup[gid]?[eid] ?? Entry(
                 id: eid, name: name,
-                detail: port.map { t("cổng \($0)", "port \($0)") } ?? (orphaned ? t("mồ côi", "orphaned") : ""), bytes: nil, cpu: nil,
-                pids: [], itemId: item?.id,
+                detail: port.map { t("cổng \($0)", "port \($0)") } ?? "", bytes: nil, cpu: nil, pids: [], itemId: item?.id,
                 // Not in the catalog and not explained by an app (a Chrome helper is Chrome): something to ask about.
                 unknown: catalogName == nil && kind != .app && Self.isUnknownProgram(p),
                 cleanup: item.flatMap { cleanupOf[$0.id] },
                 summary: entry?.summary.text(lang),
-                stopEffect: entry?.stopping(orphan: p.orphan.value, lang).effect)
+                stopEffect: entry?.stopping(orphan: p.orphan.value, lang).effect, orphaned: orphaned)
             e.pids.append(p.pid)
             if let s = safety(item, catalogId: catalogId, orphan: p.orphan.value) { e.safety = max(e.safety ?? s, s) }
             if let b = p.footprintBytes.value { e.bytes = (e.bytes ?? 0) + b }
