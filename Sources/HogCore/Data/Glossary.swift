@@ -50,9 +50,21 @@ public struct Explanations: Sendable {
     /// `glossary/*.json` (one entry per file) + `headline.json`, bundled then local.
     public static func load(_ source: DataSource) -> Explanations {
         var entries: [String: GlossaryEntry] = [:]
+        var source = source
+        var warnings: [DataWarning] = []
+        // `explain.d` itself first: one warning naming it, not one for each thing inside it.
+        if let local = source.localDirectory {
+            do {
+                _ = try DataSource.list(local)
+            } catch {
+                warnings.append(DataWarning(file: "local:" + local.lastPathComponent, message: "skipped: \(error)"))
+                source.localDirectory = nil
+            }
+        }
         let sub = DataSource(bundledDirectory: source.bundledDirectory?.appendingPathComponent("glossary"),
                              localDirectory: source.localDirectory?.appendingPathComponent("glossary"))
-        var (files, warnings) = sub.files()
+        let (files, fileWarnings) = sub.files()
+        warnings += fileWarnings
         for file in files {
             do {
                 let obj = try StrictJSON.object(file.data)

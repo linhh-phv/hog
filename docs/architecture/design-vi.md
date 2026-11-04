@@ -453,7 +453,7 @@ tồn tại → **bỏ qua file đó**, báo trong `warnings` kèm đường d�
 
 Cùng cách đọc cho mọi loại dữ liệu (`catalog`, `rules`, `explain`, `smc`; `DataSource` trong `Data/DataFile.swift`): một
 `*.json` **không đọc được** cũng bị bỏ qua kèm cảnh báo nói lý do, như file JSON hỏng — không quyền đọc, symlink treo, thư mục,
-không phải file thường (FIFO, thiết bị: mở không chặn nên không treo hog), lớn hơn 1 MiB; thư mục `<loại>.d` có mà không liệt kê được (không quyền, symlink treo, là file) cũng cảnh báo (file có sẵn lớn nhất ~3 KB).
+không phải file thường (FIFO, thiết bị: mở không chặn nên không treo hog), lớn hơn 1 MiB (file có sẵn lớn nhất ~3 KB). Thư mục `<loại>.d` (kể cả `explain.d`) có mà không liệt kê được (không quyền, symlink treo, là file) → một cảnh báo cho cả thư mục.
 `explain.d/headline.json` cục bộ không đọc được → cảnh báo rồi dùng bản có sẵn. Bảng khoá SMC: mỗi danh sách `cpu_keys` /
 `gpu_keys` đọc tối đa 64 khoá (mỗi khoá một lệnh SMC mỗi lần quét, ~220 µs; bảng có sẵn nhiều nhất 16), thừa → cảnh báo, bỏ phần sau.
 

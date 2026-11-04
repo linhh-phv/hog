@@ -30,7 +30,6 @@ import Testing
         try FileManager.default.createSymbolicLink(atPath: dir.appendingPathComponent("c-dangling.json").path,
                                                    withDestinationPath: dir.appendingPathComponent("missing").path)
         try FileManager.default.createDirectory(at: dir.appendingPathComponent("d-dir.json"), withIntermediateDirectories: false)
-        #expect(mkfifo(dir.appendingPathComponent("e-fifo.json").path, 0o600) == 0)
         let big = Data(repeating: UInt8(ascii: " "), count: DataSource.maxFileBytes + 1)
         try big.write(to: dir.appendingPathComponent("f-big.json"))
     }
@@ -39,7 +38,6 @@ import Testing
         "local:b-mode000.json": "Permission denied",
         "local:c-dangling.json": "broken symbolic link",
         "local:d-dir.json": "is a directory",
-        "local:e-fifo.json": "not a regular file",
         "local:f-big.json": "larger than 1 MiB",
     ]
 
@@ -87,18 +85,28 @@ import Testing
         #expect(explain.headlines != nil)
     }
 
-    @Test(.timeLimit(.minutes(1))) func fifoDoesNotBlock() throws {
+    /// The only test with FIFOs. Reads on another thread: a blocking `open` makes it fail after 5 s instead of hanging
+    /// the run (`.timeLimit` cannot interrupt a blocked system call).
+    @Test func fifoDoesNotBlock() throws {
         let dir = try tempDir()
         defer { cleanUp(dir) }
         #expect(mkfifo(dir.appendingPathComponent("x.json").path, 0o600) == 0)
-        let start = Date()
-        let (files, warnings) = DataSource(bundledDirectory: nil, localDirectory: dir).files()
-        #expect(files.isEmpty)
-        #expect(warnings.map(\.description) == ["local:x.json: skipped: not a regular file"])
-        #expect(Date().timeIntervalSince(start) < 1)
+        #expect(mkfifo(dir.appendingPathComponent("headline.json").path, 0o600) == 0)
+        final class Box: @unchecked Sendable { var warnings: [DataWarning]?; var count = -1; var explain: [DataWarning]? }
+        let box = Box(), done = DispatchSemaphore(value: 0), source = DataSource(bundledDirectory: nil, localDirectory: dir)
+        Thread.detachNewThread {
+            let (files, warnings) = source.files()
+            (box.count, box.warnings) = (files.count, warnings)
+            box.explain = Explanations.load(DataSource(bundledDirectory: DataSource.standard("explain").bundledDirectory, localDirectory: dir)).warnings
+            done.signal()
+        }
+        try #require(done.wait(timeout: .now() + 5) == .success, "reading a FIFO blocked")
+        #expect(box.count == 0)
+        #expect(box.warnings?.map(\.description) == ["local:headline.json: skipped: not a regular file", "local:x.json: skipped: not a regular file"])
+        #expect(box.explain?.map(\.description) == ["local:headline.json: skipped: not a regular file"])
     }
 
-    @Test(.timeLimit(.minutes(1))) func unreadableHeadlineOverrideIsReported() throws {
+    @Test func unreadableHeadlineOverrideIsReported() throws {
         let dir = try tempDir()
         defer { cleanUp(dir) }
         let headline = dir.appendingPathComponent("headline.json")
@@ -106,7 +114,6 @@ import Testing
         let cases: [(String, () throws -> Void)] = [
             ("is a directory, not a file", { try FileManager.default.createDirectory(at: headline, withIntermediateDirectories: false) }),
             ("cannot open (Permission denied)", { try "{}".write(to: headline, atomically: true, encoding: .utf8); chmod(headline.path, 0) }),
-            ("not a regular file", { #expect(mkfifo(headline.path, 0o600) == 0) }),
             ("broken symbolic link", { try FileManager.default.createSymbolicLink(atPath: headline.path, withDestinationPath: dir.appendingPathComponent("missing").path) }),
         ]
         for (reason, make) in cases {
@@ -136,14 +143,24 @@ import Testing
             #expect(!c.entries.isEmpty, "the bundled entries still load")
         }
 
-        // explain.d without permission: both the glossary folder and headline.json inside it are reported.
+        // explain.d holds a folder and a file: one warning naming explain.d, whatever is wrong with it.
         let explainDir = dir.appendingPathComponent("explain.d")
-        try FileManager.default.createDirectory(at: explainDir.appendingPathComponent("glossary"), withIntermediateDirectories: true)
-        #expect(chmod(explainDir.path, 0) == 0)
-        let explain = Explanations.load(DataSource(bundledDirectory: DataSource.standard("explain").bundledDirectory, localDirectory: explainDir))
-        #expect(explain.warnings.map(\.description) == ["local:glossary: skipped: cannot open (Permission denied)",
-                                                          "local:headline.json: skipped: cannot open (Permission denied)"])
-        #expect(explain.headlines != nil)
+        let explainCases: [(String, () throws -> Void)] = [
+            ("cannot list (Permission denied)", {
+                try FileManager.default.createDirectory(at: explainDir.appendingPathComponent("glossary"), withIntermediateDirectories: true)
+                chmod(explainDir.path, 0)
+            }),
+            ("broken symbolic link", { try FileManager.default.createSymbolicLink(atPath: explainDir.path, withDestinationPath: dir.appendingPathComponent("missing").path) }),
+            ("not a directory", { try "{}".write(to: explainDir, atomically: true, encoding: .utf8) }),
+        ]
+        for (reason, make) in explainCases {
+            try make()
+            let explain = Explanations.load(DataSource(bundledDirectory: DataSource.standard("explain").bundledDirectory, localDirectory: explainDir))
+            #expect(explain.warnings.map(\.description) == ["local:explain.d: skipped: \(reason)"])
+            #expect(explain.headlines != nil && !explain.glossary.isEmpty, "the bundled explanations still load")
+            chmod(explainDir.path, 0o700)
+            try FileManager.default.removeItem(at: explainDir)
+        }
     }
 
     @Test func sizeLimitIsInclusive() throws {
