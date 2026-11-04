@@ -140,7 +140,7 @@ struct Render {
         var out = [bold(item.label) + dim("  (\(item.id))")]
         if let cid = item.catalogId.value, let e = catalog.entries[cid] {
             out += points(e.summary.text(lang) ?? "")
-            out += points(e.stopEffect.text(lang) ?? "", title: t("Tắt thì sao", "If stopped"))
+            out += points(e.stopping(orphan: item.facts["orphan"] == .bool(true), lang).effect ?? "", title: t("Tắt thì sao", "If stopped"))
             if !e.provenance.verified { out.append(yellow("⚠ " + t("mục danh mục chưa kiểm trên máy thật", "catalog entry not verified on a real machine"))) }
         } else {
             out.append(dim(t("Chưa có trong danh mục.", "Not in the catalog yet.")))

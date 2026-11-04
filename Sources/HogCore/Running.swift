@@ -52,7 +52,7 @@ public struct Overview: Sendable, Equatable {
     public struct Entry: Sendable, Equatable, Identifiable {
         public var id: String
         public var name: String
-        /// "cổng 3000", or empty.
+        /// "cổng 3000", "mồ côi" (an orphaned by-parent program), or empty.
         public var detail: String
         public var bytes: Int64?
         public var cpu: Double?
@@ -163,13 +163,13 @@ public struct Overview: Sendable, Equatable {
             return ra != rb ? ra < rb : (a.bytes ?? 0, a.itemId) > (b.bytes ?? 0, b.itemId)
         }
         let cleanupOf = Dictionary(uniqueKeysWithValues: cleanups.map { ($0.itemId, $0) })
-        func safety(_ item: Item?, catalogId: String?) -> Safety? {
+        func safety(_ item: Item?, catalogId: String?, orphan: Bool?) -> Safety? {
             if item?.protection.value?.level == .hard { return .keep }
-            // A may-stop suggestion wins over its catalog's `by-parent`: an orphaned language server has no parent left to start
-            // it again (reviewer 2026-10-28), and "Nên dọn" (`givesBack`) already lets may-stop through. Things only a person
-            // closes (`manual`, as every by-parent catalog entry is) get no label: their row shows the reason instead.
+            // A may-stop suggestion wins over its catalog's `by-parent` (reviewer 2026-10-28), and "Nên dọn" (`givesBack`)
+            // already lets may-stop through. Things only a person closes (`manual`) get no label: their row shows the reason.
             if let c = item.flatMap({ cleanupOf[$0.id] }), c.verdict == .mayStop { return c.preselected ? .canStop : nil }
-            if catalogId.flatMap({ catalog.entries[$0]?.respawns }) == .byParent { return .restarts }
+            // An orphan has no parent left to start it again, suggestion or not.
+            if catalogId.flatMap({ catalog.entries[$0]?.stopping(orphan: orphan, lang).respawns }) == .byParent { return .restarts }
             if item?.protection.value?.level == .soft { return .inUse }
             return nil
         }
@@ -194,23 +194,27 @@ public struct Overview: Sendable, Equatable {
             // One entry per suggested item (it has its own reason and action), else one per program name in the group
             // (`Google Chrome Helper (Renderer) ×12`): the list stays complete without repeating the same line.
             let item = p.itemId.value.flatMap { items[$0] }
-            let catalogName = (p.catalogId.value ?? item?.catalogId.value).flatMap { catalog.entries[$0]?.name.text(lang) }.map(shortName)
+            let catalogId = p.catalogId.value ?? item?.catalogId.value
+            let entry = catalogId.flatMap { catalog.entries[$0] }
+            let catalogName = entry?.name.text(lang).map(shortName)
             let name = catalogName ?? p.exe.value ?? "pid \(p.pid)"
-            let eid = item.flatMap { cleanupOf[$0.id] != nil ? $0.id : nil } ?? "name:" + name
+            // An orphaned by-parent program stops differently from the same program still under its app: its own line.
+            let orphaned = p.orphan.value == true && entry?.respawns == .byParent
+            let eid = item.flatMap { cleanupOf[$0.id] != nil ? $0.id : nil } ?? "name:" + name + (orphaned ? "#orphan" : "")
             // A port says what something is for a server (dev server, bundler, unknown program), not for an editor's
             // internal debug port.
-            let family = (p.catalogId.value ?? item?.catalogId.value).flatMap { catalog.entries[$0]?.family }
-            let port = catalogName == nil || Self.portFamilies.contains(family ?? "") ? p.net.listen.map(\.port).min() : nil
+            let port = catalogName == nil || Self.portFamilies.contains(entry?.family ?? "") ? p.net.listen.map(\.port).min() : nil
             var e = entriesByGroup[gid]?[eid] ?? Entry(
                 id: eid, name: name,
-                detail: port.map { t("cổng \($0)", "port \($0)") } ?? "", bytes: nil, cpu: nil, pids: [], itemId: item?.id,
+                detail: port.map { t("cổng \($0)", "port \($0)") } ?? (orphaned ? t("mồ côi", "orphaned") : ""), bytes: nil, cpu: nil,
+                pids: [], itemId: item?.id,
                 // Not in the catalog and not explained by an app (a Chrome helper is Chrome): something to ask about.
                 unknown: catalogName == nil && kind != .app && Self.isUnknownProgram(p),
                 cleanup: item.flatMap { cleanupOf[$0.id] },
-                summary: (p.catalogId.value ?? item?.catalogId.value).flatMap { catalog.entries[$0]?.summary.text(lang) },
-                stopEffect: (p.catalogId.value ?? item?.catalogId.value).flatMap { catalog.entries[$0]?.stopEffect.text(lang) })
+                summary: entry?.summary.text(lang),
+                stopEffect: entry?.stopping(orphan: p.orphan.value, lang).effect)
             e.pids.append(p.pid)
-            if let s = safety(item, catalogId: p.catalogId.value ?? item?.catalogId.value) { e.safety = max(e.safety ?? s, s) }
+            if let s = safety(item, catalogId: catalogId, orphan: p.orphan.value) { e.safety = max(e.safety ?? s, s) }
             if let b = p.footprintBytes.value { e.bytes = (e.bytes ?? 0) + b }
             if let c = p.cpu.nowPct.value { e.cpu = (e.cpu ?? 0) + c }
             entriesByGroup[gid, default: [:]][eid] = e

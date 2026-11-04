@@ -338,16 +338,17 @@ public struct Analyzer: Sendable {
         let used = Set(outcome.fired.flatMap(\.when.facts)).subtracting(FactNames.structural)
         let evidence = item.facts.filter { used.contains($0.key) && !$0.value.isNull }
         let entry = item.catalogId.value.flatMap { catalog.entries[$0] }
-        var strategy = entry?.stop.strategy ?? (item.kind == .claudeSession ? .manual : (item.kind == .container ? .dockerContainer : .signal))
-        var effect = entry?.stopEffect.text(lang) ?? (lang == .vi ? "Chưa có trong danh mục: chưa biết tắt thì ảnh hưởng gì."
-                                                                 : "Not in the catalog yet: the effect of stopping it is unknown.")
+        let stopping = entry?.stopping(orphan: item.facts["orphan"] == .bool(true), lang)
+        var strategy = stopping?.strategy ?? (item.kind == .claudeSession ? .manual : (item.kind == .container ? .dockerContainer : .signal))
+        var effect = stopping?.effect ?? (lang == .vi ? "Chưa có trong danh mục: chưa biết tắt thì ảnh hưởng gì."
+                                                      : "Not in the catalog yet: the effect of stopping it is unknown.")
         if item.facts["launchd.label"].map({ !$0.isNull }) == true, item.facts["launchd.restarts_after_stop"] != .bool(false) {
             strategy = .manual
             effect += lang == .vi ? "\nNếu chỉ dừng, macOS sẽ tự bật lại nó." : "\nIf it is only stopped, macOS starts it again."
         }
         return Finding(itemId: item.id, verdict: verdict, confidence: outcome.confidence, rules: outcome.fired.map(\.id),
                        reason: reason, evidence: evidence, unmeasured: outcome.unmeasured,
-                       stop: StopAdvice(strategy: strategy, respawns: entry?.respawns, effect: effect), blockedBy: outcome.blockedBy)
+                       stop: StopAdvice(strategy: strategy, respawns: stopping?.respawns, effect: effect), blockedBy: outcome.blockedBy)
     }
 
     func rank(_ v: Verdict) -> Int { switch v { case .mayStop: 3; case .ask: 2; case .watch: 1; case .info: 0 } }

@@ -144,6 +144,52 @@ import Testing
         #expect(s.warnings.isEmpty, "\(s.warnings)")
     }
 
+    /// A language server whose VS Code has exited (user 2026-11-04): nothing starts it again, so it is an ordinary program —
+    /// not "VS Code starts it again at once", and hog stops it itself. The same program under a living window is unchanged.
+    @Test func orphanedLanguageServerIsAnOrdinaryProgram() throws {
+        var a = analyzer
+        a.lang = .en
+        var sc = scan()
+        let plugin = "/Applications/Visual Studio Code.app/Contents/Frameworks/Code Helper (Plugin).app/Contents/MacOS/Code Helper (Plugin)"
+        let args = [plugin, "/x/tsserver.js", "--useNodeIpc"]
+        // An old quiet one (orphan-quiet) and one orphaned minutes ago (no suggestion yet), both in web-app.
+        sc.processes[800] = p(800, 1, plugin, args: args, cwd: home + "/work/web-app", fp: 700_000_000, ageH: 5)
+        sc.processes[810] = p(810, 1, plugin, args: args, cwd: home + "/work/web-app", fp: 600_000_000, ageH: 0.1)
+        let s = a.analyze(sc)
+
+        let f = try #require(finding(s, "proc:800:"))
+        #expect(f.verdict == .mayStop && f.rules.contains("orphan-quiet"))
+        #expect(f.stop.strategy == .signal && f.stop.respawns.value == .never)
+        #expect(f.stop.effect.contains("nothing starts it again") && !f.stop.effect.contains("VS Code starts it again")
+                && !f.stop.effect.contains("Restart TS Server"), "\(f.stop.effect)")
+        for line in Format.points(f.stop.effect) { #expect(line.count <= 150) }
+        let live = try #require(finding(s, "proc:201:"))
+        #expect(live.stop.strategy == .manual && live.stop.respawns.value == .byParent && live.stop.effect.contains("VS Code starts it again"))
+
+        let o = Overview.make(s, catalog: a.catalog)
+        let cleanup = try #require(o.cleanups.first { $0.itemId == f.itemId })
+        #expect(cleanup.preselected && !cleanup.manual)
+        let entries = o.groups.flatMap(\.entries).filter { $0.name == "TypeScript language server" }
+        let old = try #require(entries.first { $0.pids == [800] })
+        #expect(old.safety == .canStop)
+        let young = try #require(entries.first { $0.pids.contains(810) })
+        #expect(young.pids == [810] && young.detail == "orphaned", "its own line, not merged with tsservers VS Code still runs")
+        #expect(young.safety == nil, "no suggestion yet, but never \"pointless to stop\"")
+        #expect(young.stopEffect?.contains("nothing starts it again") == true)
+        let liveEntry = try #require(entries.first { $0.pids.contains(201) })
+        // Window 2 also holds the session running hog (protect-self): "keep" outranks "pointless to stop" on the merged line.
+        #expect(liveEntry.pids.sorted() == [201, 211] && liveEntry.safety == .keep && liveEntry.detail.isEmpty)
+        #expect(liveEntry.stopEffect?.contains("VS Code starts it again") == true)
+
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("hog-orphan-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let stopper = Stopper(plans: PlanStore(directory: dir), log: ActionLog(file: dir.appendingPathComponent("a.jsonl")), lang: .en,
+                              dockerSocket: { nil })
+        let item = try #require(s.items.first { $0.id == f.itemId })
+        let plan = stopper.plan(stopper.identity(of: item, scan: sc), item: item, snapshot: s, scan: sc)
+        #expect(plan.action == .sigterm && plan.blocked == nil, "\(plan.gates)")
+    }
+
     @Test func englishSnapshot() throws {
         var a = analyzer
         a.lang = .en

@@ -48,6 +48,16 @@ public struct CatalogEntry: Codable, Sendable, Equatable {
 
     static let keys: Set<String> = ["id", "name", "family", "summary", "stop_effect", "respawns", "stop", "match",
                                     "detached_by_design", "provenance"]
+
+    /// How stopping one process of this entry works. A program its parent starts again (`by-parent`) whose parent has exited
+    /// (`orphan` measured true) is an ordinary program: nothing starts it again, so hog may signal it, and the catalog's
+    /// advice about the parent ("VS Code starts it again", "restart the TS server") no longer applies (user 2026-11-04).
+    public func stopping(orphan: Bool?, _ lang: Lang) -> (strategy: StopStrategy, respawns: Respawns, effect: String?) {
+        guard orphan == true, respawns == .byParent else { return (stop.strategy, respawns, stopEffect.text(lang)) }
+        return (.signal, .never, lang == .vi
+            ? "Thứ đã mở nó đã tắt, nên tắt nó thì không ai bật lại: trả lại RAM nó đang giữ.\nMở lại dự án thì app tự bật bản mới khi cần."
+            : "Whatever started it has closed, so nothing starts it again: stopping it gives its memory back.\nOpen the project again and the app starts a new one when needed.")
+    }
 }
 
 /// What a process looks like to the matcher.
