@@ -81,8 +81,7 @@ struct CLI {
         // Full analysis: one item is looked up, so the size cap of `--json` must not hide ids that `--json --full` lists.
         let (scan, snapshot) = world(full: true)
         let analyzer = Analyzer.standard(lang: args.lang)
-        var stopper = Stopper(lang: args.lang)
-        stopper.catalog = analyzer.catalog
+        let stopper = Stopper(catalog: analyzer.catalog, lang: args.lang)
         guard let resolved = try? stopper.resolve(target, in: snapshot, scan: scan, itemFor: { analyzer.item(forPid: $0, in: scan) }),
               let item = resolved.item else {
             err(t("Không tìm thấy \(target) trong các thứ hog theo dõi. Thuật ngữ: `hog explain terms`.",
@@ -126,8 +125,7 @@ struct CLI {
     // MARK: stop
 
     func stop() -> Exit {
-        var stopper = Stopper(lang: args.lang)
-        stopper.catalog = .load(.standard("catalog"))
+        let stopper = Stopper(catalog: .load(.standard("catalog")), lang: args.lang)
         if let planId = args.plan {
             guard args.yes else {
                 err(t("`--plan` cần đi cùng `--yes` (nghĩa là: người đã đồng ý đúng kế hoạch này).",

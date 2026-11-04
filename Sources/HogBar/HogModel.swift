@@ -146,11 +146,7 @@ final class HogModel: ObservableObject {
 
     // MARK: Stop
 
-    var stopper: Stopper {
-        var s = Stopper(lang: lang)
-        s.catalog = catalog
-        return s
-    }
+    var stopper: Stopper { Stopper(catalog: catalog, lang: lang) }
 
     /// A stop target for an entry: its item, else its first process.
     func target(_ e: Overview.Entry) -> String { e.itemId ?? e.pids.first.map(String.init) ?? e.id }

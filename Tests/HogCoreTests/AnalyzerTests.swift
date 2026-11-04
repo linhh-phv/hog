@@ -155,6 +155,8 @@ import Testing
         // An old quiet one (orphan-quiet) and one orphaned minutes ago (no suggestion yet), both in web-app.
         sc.processes[800] = p(800, 1, plugin, args: args, cwd: home + "/work/web-app", fp: 700_000_000, ageH: 5)
         sc.processes[810] = p(810, 1, plugin, args: args, cwd: home + "/work/web-app", fp: 600_000_000, ageH: 0.1)
+        // ppid 1 but its folder unreadable: not known to be an orphan, so treated as before.
+        sc.processes[820] = p(820, 1, plugin, args: args, cwd: nil, fp: 500_000_000, ageH: 0.1)
         let s = a.analyze(sc)
 
         let f = try #require(finding(s, "proc:800:"))
@@ -168,6 +170,8 @@ import Testing
         // "Also running in 2 other VS Code windows" is about a window's own server, not one left behind by a closed window.
         #expect(live.rules.contains("duplicate-language-server") && !f.rules.contains("duplicate-language-server"))
         #expect(finding(s, "proc:810:") == nil, "orphaned minutes ago: nothing to say yet")
+        #expect(s.items.first { $0.pids == [820] }?.facts["orphan"] == .null)
+        #expect(finding(s, "proc:820:")?.rules == ["duplicate-language-server"], "orphan unknown: the rule still speaks")
 
         let o = Overview.make(s, catalog: a.catalog)
         let cleanup = try #require(o.cleanups.first { $0.itemId == f.itemId })
@@ -186,9 +190,8 @@ import Testing
 
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("hog-orphan-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: dir) }
-        var stopper = Stopper(plans: PlanStore(directory: dir), log: ActionLog(file: dir.appendingPathComponent("a.jsonl")), lang: .en,
-                              dockerSocket: { nil })
-        stopper.catalog = a.catalog
+        let stopper = Stopper(catalog: a.catalog, plans: PlanStore(directory: dir), log: ActionLog(file: dir.appendingPathComponent("a.jsonl")),
+                              lang: .en, dockerSocket: { nil })
         func plan(_ pid: Int32, _ snap: Snapshot) throws -> StopPlan {
             let item = try #require(snap.items.first { $0.pids == [pid] } ?? a.item(forPid: pid, in: sc))
             return stopper.plan(stopper.identity(of: item, scan: sc), item: item, snapshot: snap, scan: sc)

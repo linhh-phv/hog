@@ -12,14 +12,14 @@ public struct Stopper: Sendable {
     public var dockerSocket: @Sendable () -> String?
     public var locator: CommandLocator
     public var lang: Lang
-    /// What stopping costs when hog has no suggestion: the catalog, as the page shows it. Callers set the catalog they show
-    /// (empty: "unknown"); the same stopper must plan and re-check an agreed plan, or the plan reads as changed.
-    public var catalog = Catalog(entries: [])
+    /// How to stop something hog has no suggestion about, and what that costs: the catalog the page shows, so the plan says
+    /// what the page says (an empty catalog: SIGTERM, effect unknown). Required, so no caller can forget it.
+    public var catalog: Catalog
 
-    public init(plans: PlanStore = .standard(), log: ActionLog = .standard(), lang: Lang = .vi,
+    public init(catalog: Catalog, plans: PlanStore = .standard(), log: ActionLog = .standard(), lang: Lang = .vi,
                 locator: CommandLocator = CommandLocator(),
                 dockerSocket: @escaping @Sendable () -> String? = { DockerClient.findSocket() }) {
-        self.plans = plans; self.log = log; self.lang = lang; self.locator = locator; self.dockerSocket = dockerSocket
+        self.catalog = catalog; self.plans = plans; self.log = log; self.lang = lang; self.locator = locator; self.dockerSocket = dockerSocket
     }
 
     func t(_ vi: String, _ en: String) -> String { lang == .vi ? vi : en }

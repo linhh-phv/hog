@@ -12,8 +12,16 @@
         "eq": "language-server"
       },
       {
-        "fact": "orphan",
-        "ne": true
+        "any": [
+          {
+            "fact": "orphan",
+            "ne": true
+          },
+          {
+            "fact": "orphan",
+            "exists": false
+          }
+        ]
       },
       {
         "fact": "siblings.same_catalog_other_windows",

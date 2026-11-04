@@ -12,7 +12,7 @@ import Testing
     init() throws {
         state = FileManager.default.temporaryDirectory.appendingPathComponent("hog-stop-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: state, withIntermediateDirectories: true)
-        stopper = Stopper(plans: PlanStore(directory: state.appendingPathComponent("plans")),
+        stopper = Stopper(catalog: Catalog(entries: []), plans: PlanStore(directory: state.appendingPathComponent("plans")),
                           log: ActionLog(file: state.appendingPathComponent("actions.jsonl")), lang: .en,
                           dockerSocket: { nil })
         stopper.sigtermWait = 1
@@ -182,7 +182,7 @@ import Testing
     deinit { try? FileManager.default.removeItem(at: dir) }
 
     func stopper(_ fake: FakeDocker) -> Stopper {
-        return Stopper(plans: PlanStore(directory: dir), log: ActionLog(file: dir.appendingPathComponent("a.jsonl")), lang: .en,
+        return Stopper(catalog: Catalog(entries: []), plans: PlanStore(directory: dir), log: ActionLog(file: dir.appendingPathComponent("a.jsonl")), lang: .en,
                        dockerSocket: { fake.path })
     }
 

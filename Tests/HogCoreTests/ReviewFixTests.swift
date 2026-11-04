@@ -7,7 +7,7 @@ import Testing
 @Suite(.serialized) final class ReviewFixTests {
     let state = FileManager.default.temporaryDirectory.appendingPathComponent("hog-rev-\(UUID().uuidString)")
     lazy var stopper: Stopper = {
-        var s = Stopper(plans: PlanStore(directory: state.appendingPathComponent("plans")),
+        var s = Stopper(catalog: Catalog(entries: []), plans: PlanStore(directory: state.appendingPathComponent("plans")),
                         log: ActionLog(file: state.appendingPathComponent("a.jsonl")), lang: .en, dockerSocket: { nil })
         s.sigtermWait = 1
         return s
