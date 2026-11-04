@@ -12,6 +12,9 @@ public struct SMCKeyEntry: Codable, Sendable, Equatable {
     public var provenance: CatalogEntry.Provenance
 
     static let keys: Set<String> = ["id", "chips", "cpu_keys", "gpu_keys", "provenance"]
+
+    /// Keys read per list. Every key costs an SMC call on each scan (~220 µs); real chips list at most 16.
+    public static let maxKeys = 64
 }
 
 public struct SMCKeyTable: Sendable {
@@ -25,10 +28,15 @@ public struct SMCKeyTable: Sendable {
 
     public static func load(_ source: DataSource) -> SMCKeyTable {
         var entries: [SMCKeyEntry] = []
-        var warnings: [DataWarning] = []
-        for file in source.files() {
+        var (files, warnings) = source.files()
+        for file in files {
             do {
-                let e = try parse(file.data)
+                var e = try parse(file.data)
+                for (list, keys) in [("cpu_keys", \SMCKeyEntry.cpuKeys), ("gpu_keys", \SMCKeyEntry.gpuKeys)]
+                where e[keyPath: keys].count > SMCKeyEntry.maxKeys {
+                    warnings.append(DataWarning(file: file.name, message: "\(list) has \(e[keyPath: keys].count) keys, only the first \(SMCKeyEntry.maxKeys) are read"))
+                    e[keyPath: keys] = Array(e[keyPath: keys].prefix(SMCKeyEntry.maxKeys))
+                }
                 entries.removeAll { $0.id == e.id }
                 entries.append(e)
             } catch {

@@ -50,10 +50,10 @@ public struct Explanations: Sendable {
     /// `glossary/*.json` (one entry per file) + `headline.json`, bundled then local.
     public static func load(_ source: DataSource) -> Explanations {
         var entries: [String: GlossaryEntry] = [:]
-        var warnings: [DataWarning] = []
         let sub = DataSource(bundledDirectory: source.bundledDirectory?.appendingPathComponent("glossary"),
                              localDirectory: source.localDirectory?.appendingPathComponent("glossary"))
-        for file in sub.files() {
+        var (files, warnings) = sub.files()
+        for file in files {
             do {
                 let obj = try StrictJSON.object(file.data)
                 try StrictJSON.check(obj, allowed: GlossaryEntry.keys)
@@ -69,14 +69,14 @@ public struct Explanations: Sendable {
             }
         }
         var headlines: HeadlineTemplates?
-        for dir in [source.localDirectory, source.bundledDirectory].compactMap({ $0 }) {
-            let url = dir.appendingPathComponent("headline.json")
-            guard let data = FileManager.default.contents(atPath: url.path) else { continue }
+        for (dir, local) in [(source.localDirectory, true), (source.bundledDirectory, false)] {
+            guard let url = dir?.appendingPathComponent("headline.json") else { continue }
             do {
+                guard let data = try DataSource.read(url) else { continue }
                 headlines = try StrictJSON.decoder().decode(HeadlineTemplates.self, from: data)
                 break
             } catch {
-                warnings.append(DataWarning(file: url.lastPathComponent, message: "skipped: \(error)"))
+                warnings.append(DataWarning(file: (local ? "local:" : "") + url.lastPathComponent, message: "skipped: \(error)"))
             }
         }
         if headlines == nil { warnings.append(DataWarning(file: "headline.json", message: "missing")) }

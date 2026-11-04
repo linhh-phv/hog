@@ -451,6 +451,12 @@ thực tế mà không cần bản mới. Mọi file qua kiểm tra nghiêm ng�
 tồn tại → **bỏ qua file đó**, báo trong `warnings` kèm đường dẫn + lý do; không bao giờ làm hog dừng chạy. Quy tắc cục bộ
 **không được hạ** hay tắt một bảo vệ `hard`.
 
+Cùng cách đọc cho mọi loại dữ liệu (`catalog`, `rules`, `explain`, `smc`; `DataSource` trong `Data/DataFile.swift`): một
+`*.json` **không đọc được** cũng bị bỏ qua kèm cảnh báo nói lý do, như file JSON hỏng — không quyền đọc, symlink treo, thư mục,
+không phải file thường (FIFO, thiết bị: mở không chặn nên không treo hog), lớn hơn 1 MiB (file có sẵn lớn nhất ~3 KB).
+`explain.d/headline.json` cục bộ không đọc được → cảnh báo rồi dùng bản có sẵn. Bảng khoá SMC: mỗi danh sách `cpu_keys` /
+`gpu_keys` đọc tối đa 64 khoá (mỗi khoá một lệnh SMC mỗi lần quét, ~220 µs; chip thật nhiều nhất 16), thừa → cảnh báo, bỏ phần sau.
+
 ## 7. Tầng 2 — Danh mục
 
 Một mục = một file `catalog/<id>.json`: "đây là cái gì, tắt thì sao" thành dữ liệu cho người và Claude đọc.
@@ -724,3 +730,4 @@ Ghi khi code giai đoạn 1 (task `hog/phase-1`), theo lời user *"sau khi tri�
 | 2026-10-27 | Nhãn trên từng thứ đang chạy (task `temperature-fans`, góp ý khi cài thử) | `Overview.Entry.safety`: đừng tắt (bảo vệ `hard`) > tắt vô ích (danh mục `respawns: by-parent`) > đang dùng (bảo vệ `soft`) > có thể tắt (gợi ý `may-stop` hog tự dừng được, tức thứ được tick sẵn). Dòng gộp nhiều tiến trình lấy nhãn mạnh nhất; tiến trình hog không phân tích (nhỏ, không trong danh mục) không có nhãn. App: nhãn cạnh RAM; `hog --all`: cột cuối | User: *"những tiến trình con bên trong có thể thêm nhãn để biết cái nào an toàn có thể tắt không nhỉ?"*. "Tắt vô ích" thắng "đang dùng": máy chủ ngôn ngữ của cửa sổ đang mở tắt cũng bật lại ngay, đó là lý do quyết định |
 | 2026-10-27 | Trang của một thứ: "Nếu dừng" | Mọi trang có phần "Nếu dừng": nhãn mức độ (`Format.safetyMeaning`) + `stop_effect` của danh mục (hoặc của đề xuất), thứ chưa có trong danh mục ghi "hog chưa biết… nên chưa biết tắt thì ảnh hưởng gì". Trước: chỉ trang có đề xuất mới có "Tắt thì sao" | User (trang cửa sổ VS Code, không có đề xuất): *"nếu lỡ mình dừng thì sao? nên giải thích mức độ của nó nhỉ"* |
 | 2026-10-28 | Cổng chốt `temperature-fans` (reviewer + qa) | Bảng `m1-pro` riêng (đo); `m1` (M1/Max/Ultra) chưa kiểm. `jest-worker` `respawns: never`. Nhãn: gợi ý `may-stop` thắng `by-parent` (thứ mồ côi không còn cha bật lại) — hog tự dừng được thì "có thể tắt", chỉ đóng tay (mọi mục `by-parent` là `manual`) thì không nhãn, dòng hiện lý do. `thermalMeaning` chỉ nói điều đã đo (`fair` không nói về giảm tốc; `critical` "có thể giảm tốc mạnh"); giải nghĩa nhiệt độ "thường chỉ". Ô Nhiệt không có °C mở `thermal-state`. Quạt: có quạt không đọc được → không nói "quạt đứng". Danh mục khớp theo ranh giới (`bin/tsc `, `bin/pnpm `, `dispatcher.js dev`): `args_contains` so trên dòng lệnh + một dấu cách, nên lệnh trần (`node …/bin/tsc`) vẫn khớp. `args: null` nói cả lý do quyền | Reviewer: khẳng định chưa kiểm chứng (bảng M1 gộp, jest-worker by-parent, "chỉ khi"), nhãn mâu thuẫn với "Nên dọn", popover sai khi không có °C. QA: "quạt đứng" khi một quạt chưa đọc, khớp nhầm `tsc-alias`/`pnpmfile.js`/`storybook build` |
+| 2026-11-04 | Ghi đè cục bộ, mục 6.3 (task `data-override-warnings`) | File dữ liệu không đọc được (quyền, symlink treo, thư mục, FIFO, > 1 MiB) → bỏ qua **kèm cảnh báo** cho cả 4 loại; `headline.json` cục bộ cũng vậy; bảng khoá SMC tối đa 64 khoá mỗi danh sách | QA cổng chốt `temperature-fans`: các file đó bị bỏ im lặng; 20 000 khoá làm mỗi lần quét mất 4,4 s |

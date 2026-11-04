@@ -74,8 +74,8 @@ public struct RuleSet: Sendable {
     public static func load(_ source: DataSource) -> RuleSet {
         var byId: [String: Rule] = [:]
         var order: [String] = []
-        var warnings: [DataWarning] = []
-        for file in source.files() {
+        var (files, warnings) = source.files()
+        for file in files {
             do {
                 let r = try parse(file.data)
                 if file.isLocal, let existing = byId[r.id], existing.ruleClass == .protect, existing.level == .hard {

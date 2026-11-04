@@ -79,8 +79,8 @@ public struct Catalog: Sendable {
     /// Loads bundled entries then local overrides (same id: local wins). Bad files are skipped with a warning.
     public static func load(_ source: DataSource) -> Catalog {
         var entries: [String: CatalogEntry] = [:]
-        var warnings: [DataWarning] = []
-        for file in source.files() {
+        var (files, warnings) = source.files()
+        for file in files {
             do {
                 let e = try parse(file.data)
                 entries[e.id] = e

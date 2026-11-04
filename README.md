@@ -98,7 +98,8 @@ Paste it into a chat with Claude (or any assistant), and add the answer as a cat
 assistant and sends nothing anywhere.
 
 Local additions go to `~/.config/hog/catalog.d/`, `~/.config/hog/rules.d/` and `~/.config/hog/smc.d/` (same id overrides; hard protections
-cannot be overridden). Data files cannot contain commands. Check them with `hog catalog check` / `hog rules check`.
+cannot be overridden). Data files cannot contain commands. A file that cannot be read, is not a regular file or is larger than 1 MB
+is skipped with a warning. Check them with `hog catalog check` / `hog rules check`; every warning is also in `hog --json`.
 
 ## Develop
 

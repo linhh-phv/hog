@@ -95,17 +95,57 @@ public struct DataSource: Sendable {
         return Bundle.module
     }()
 
-    /// `(file name, data, isLocal)` for every `*.json`, bundled first, each group sorted by name.
-    func files() -> [(name: String, data: Data, isLocal: Bool)] {
+    /// `(file name, data, isLocal)` for every `*.json`, bundled first, each group sorted by name. A file that cannot be
+    /// read is left out with a warning, like a file with bad JSON (design 6.3).
+    func files() -> (files: [(name: String, data: Data, isLocal: Bool)], warnings: [DataWarning]) {
         var out: [(String, Data, Bool)] = []
+        var warnings: [DataWarning] = []
         for (dir, local) in [(bundledDirectory, false), (localDirectory, true)] {
             guard let dir, let names = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { continue }
             for name in names.sorted() where name.hasSuffix(".json") {
-                if let data = FileManager.default.contents(atPath: dir.appendingPathComponent(name).path) {
-                    out.append(((local ? "local:" : "") + name, data, local))
+                let label = (local ? "local:" : "") + name
+                do {
+                    if let data = try Self.read(dir.appendingPathComponent(name)) { out.append((label, data, local)) }
+                } catch {
+                    warnings.append(DataWarning(file: label, message: "skipped: \(error)"))
                 }
             }
         }
-        return out
+        return (out, warnings)
+    }
+
+    /// Largest data file hog reads; the bundled ones are a few KB.
+    static let maxFileBytes = 1 << 20
+
+    struct Unreadable: Error, CustomStringConvertible { var description: String }
+
+    /// The contents of a data file, `nil` when nothing is there. Only a regular file of at most `maxFileBytes` is read:
+    /// a huge file would slow every scan. Opened non-blocking: a plain `open` of a FIFO waits for a writer forever.
+    static func read(_ url: URL) throws -> Data? {
+        let path = url.path
+        var link = stat()
+        guard lstat(path, &link) == 0 else { return nil }
+        let fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC)
+        guard fd >= 0 else {
+            let err = errno
+            if err == ENOENT, link.st_mode & S_IFMT == S_IFLNK { throw Unreadable(description: "broken symbolic link") }
+            throw Unreadable(description: "cannot open (\(String(cString: strerror(err))))")
+        }
+        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        var info = stat()
+        guard fstat(fd, &info) == 0 else { throw Unreadable(description: "cannot read (\(String(cString: strerror(errno))))") }
+        switch info.st_mode & S_IFMT {
+        case S_IFREG: break
+        case S_IFDIR: throw Unreadable(description: "is a directory, not a file")
+        default: throw Unreadable(description: "not a regular file")
+        }
+        guard info.st_size <= maxFileBytes else {
+            throw Unreadable(description: "larger than \(maxFileBytes / 1_048_576) MB (\(info.st_size) bytes)")
+        }
+        do {
+            return try handle.readToEnd() ?? Data()
+        } catch {
+            throw Unreadable(description: "cannot read (\(error.localizedDescription))")
+        }
     }
 }
